@@ -1,0 +1,16 @@
+*.pyc*
+*.pyo*
+*.sublime-project
+*.sublime-workspace
+
+.DS_Store
+.*.swp
+*~
+._*
+.\#*
+\#*\#
+*.csv
+*.json
+log*
+build/*
+*.swp
