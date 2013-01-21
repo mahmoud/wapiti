@@ -11,9 +11,10 @@ but check back soon.
 # TODO
  * Create client class
  * Port more API calls
+ * Support namespace filtering in a general fashion
  * Retry and timeout behaviors
- * Save warnings
  * Get my shit together and finish the HTTP client. then remove requests dependency
+ * Automatically add 'g' to prefix if static_params has key 'generator'
  * Underscoring args
  * Support lists of static params (which are then joined automatically)
  * pause/resume
@@ -21,6 +22,7 @@ but check back soon.
    * Network/connectivity
    * Logic
    * Actual Mediawiki API errors ('no such category', etc.)
+ * Relatedly: Save MediaWiki API warnings
 '''
 
 
@@ -242,6 +244,7 @@ class QueryOperation(Operation):
 
     @classmethod
     def is_multi(cls):
+        # coooould be a property via metaclass
         static_params = cls.static_params
         query_param_name = cls.query_param_name
         # TODO: some explicit way
@@ -295,13 +298,13 @@ class QueryOperation(Operation):
 
 
 class GetCategory(QueryOperation):
-    name = 'get_category'
     param_prefix = 'gcm'
+    query_param_name = param_prefix + 'title'
+    query_param_prefix = 'Category:'
     static_params = {'generator': 'categorymembers',
                      'prop': 'info',
                      'inprop': 'title|pageid|ns|subjectid|protection'}
-    query_param_name = param_prefix + 'title'
-    query_param_prefix = 'Category:'
+
 
     def extract_results(self, query_resp):
         ret = []
@@ -318,14 +321,67 @@ class GetCategory(QueryOperation):
         return ret
 
 
-class GetCategoryByPageID(GetCategory):
+class GetRandom(QueryOperation):
+    param_prefix = 'grn'
+    static_params = {'generator': 'random',
+                     'prop': 'info',
+                     'inprop': 'subjectid|protection'}
+    query_param_name = param_prefix + 'title'
+
+    # TODO: remove query arg parameter, random doesn't need it
+    #def __init__(self, limit):
+    #    pass
+
+    def extract_results(self, query_resp):
+        ret = []
+        for k, cm in query_resp['pages'].iteritems():
+            page_id = cm.get('pageid')
+            if not page_id:
+                continue
+            ns = cm['ns']
+            title = cm['title']
+            ret.append(PageIdentifier(title=title,
+                                      page_id=page_id,
+                                      ns=ns,
+                                      source=self.source))
+        return ret
+
+
+class GetSubcategoryInfos(QueryOperation):
     param_prefix = 'gcm'
-    query_param_name = param_prefix + 'pageid'
+    static_params = {'generator': 'categorymembers',
+                     'prop': 'categoryinfo',
+                     'gcmtype': 'subcat'}
+    query_param_name = param_prefix + 'title'
+    query_param_prefix = 'Category:'
 
+    def extract_results(self, query_resp):
+        ret = []
+        for k, cm in query_resp['pages'].iteritems():
+            if not cm.get('pageid') or k < 0:
+                continue
+            namespace = cm['ns']
+            title = cm['title']
+            page_id = cm['pageid']
+            ci = cm.get('categoryinfo')
+            if ci:
+                size = ci['size']
+                pages = ci['pages']
+                files = ci['files']
+                subcats = ci['subcats']
+            else:
+                size, pages, files, subcats = (0, 0, 0, 0)
+            ret.append(CategoryInfo(title=title,
+                                    page_id=page_id,
+                                    ns=namespace,
+                                    source=self.source,
+                                    total_count=size,
+                                    page_count=pages,
+                                    file_count=files,
+                                    subcat_count=subcats))
+        return ret
 
-
-
-##########################################33
+##########################################
 
 
 # What follows is bona fide unfortunateness due to the lack of a decent
