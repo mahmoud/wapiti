@@ -275,7 +275,7 @@ class QueryOperation(Operation):
         self.started = True
         while self.remaining:  # TODO: +retry behavior
             # this should come from client
-            print self.remaining
+            #print self.remaining
             cur_limit = min(self.remaining, PER_CALL_LIMIT)
             params = self.prepare_params(cur_limit,
                                          self.last_cont_str,
@@ -291,7 +291,6 @@ class QueryOperation(Operation):
                 raise
             self.results.extend(new_results[:self.remaining])
             new_cont_str = self.get_cont_str(resp, params)
-            print new_cont_str
             self.cont_strs.append(new_cont_str)
 
         return self.results
@@ -328,9 +327,10 @@ class GetRandom(QueryOperation):
                      'inprop': 'subjectid|protection'}
     query_param_name = param_prefix + 'title'
 
-    # TODO: remove query arg parameter, random doesn't need it
-    #def __init__(self, limit):
-    #    pass
+    def __init__(self, limit, namespaces=None, retries=DEFAULT_RETRIES, **kw):
+        # TODO: removed query arg parameter, random doesn't need it, but is
+        # there a less ugly way?
+        super(GetRandom, self).__init__(None, limit, namespaces, retries, **kw)
 
     def extract_results(self, query_resp):
         ret = []
@@ -345,6 +345,9 @@ class GetRandom(QueryOperation):
                                       ns=ns,
                                       source=self.source))
         return ret
+
+    def get_cont_str(self, *a, **kw):
+        return ''
 
 
 class GetSubcategoryInfos(QueryOperation):
@@ -421,7 +424,7 @@ def fake_requests(url, params=None, headers=None, use_gzip=True):
 
     req = requests.Request(url, params=params, headers=headers, method='GET', prefetch=False)
     full_url = req.full_url  # oh lawd, usin requests to create the url for now
-    print req.full_url
+    #print req.full_url
     req = urllib2.Request(full_url, headers=headers)
     resp = urllib2.urlopen(req)
     resp_text = resp.read()
