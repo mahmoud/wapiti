@@ -39,8 +39,8 @@ def get_keys(iterable):
     return OrderedDict(iterable).keys()
 
 
-def is_iterable(obj):
-    return hasattr(obj, '__iter__') and not isinstance(obj, basestring)
+def is_scalar(obj):
+    return not hasattr(obj, '__iter__') or isinstance(obj, basestring)
 
 
 def get_encoded(val):
@@ -88,7 +88,7 @@ def encode_url_params(params, keep_blank=False):
     # TODO: handle case where params is just a string
     res = []
     for k, vs in get_items(params):
-        if not is_iterable(vs):
+        if is_scalar(vs):
             vs = [vs]
         for v in vs:
             if not v:
@@ -147,7 +147,6 @@ class Client(object):
             headers['Accept-encoding'] = 'gzip'
 
         full_url = construct_url(url, params)
-        print full_url
         ret = Response()
         resp_text = None
         resp_status = None
@@ -158,7 +157,6 @@ class Client(object):
             resp_text = resp.read()
             resp.close()
             if 'gzip' in resp.info().get('Content-Encoding', ''):  # TODO
-                comp_resp_text = resp_text
                 resp_text = gunzip(resp_text)
             resp_status = resp.getcode()
             resp_headers = resp.headers
@@ -176,8 +174,9 @@ class Client(object):
         return self.req('post', url, params, headers, use_gzip)
 
 
+# lol compat
 requests = Client()
 
 
 if __name__ == '__main__':
-    print requests.get('https://www.google.com/webhp', params={'q':'python double encode unicode'}).text
+    print requests.get('https://www.google.com/webhp', params={'q':'python'}).text

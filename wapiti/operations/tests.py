@@ -1,4 +1,7 @@
-from wapiti import GetCategory, GetRandom
+import base
+from category import GetCategory
+from rand import GetRandom
+from protection import GetProtections
 
 PDB_ALL = False
 PDB_ERROR = False
@@ -19,6 +22,24 @@ def test_category_basic():
     get_2k_featured = GetCategory('Featured_articles', 2000)
     pages = call_and_ret(get_2k_featured)
     return len(pages) == 2000
+
+
+def test_single_prot():
+    get_coffee_prot = GetProtections('Coffee')
+    prots = call_and_ret(get_coffee_prot)
+    return len(prots) == 1
+
+
+def test_multi_prots_list():
+    get_prots = GetProtections(['Coffee', 'House'])
+    prots = call_and_ret(get_prots)
+    return len(prots) == 2
+
+
+def test_multi_prots_str():
+    get_prots = GetProtections('Coffee|House')
+    prots = call_and_ret(get_prots)
+    return len(prots) == 2
 
 
 def test_random():
