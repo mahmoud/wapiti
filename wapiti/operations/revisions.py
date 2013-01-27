@@ -78,3 +78,7 @@ class GetCurrentContent(QueryOperation):
                         is_parsed=is_parsed)
             ret.append(page)
         return ret
+
+
+class GetCurrentTalkContent(GetCurrentContent):
+    query_param_prefix = 'Talk:'

@@ -4,7 +4,7 @@ from rand import GetRandom
 from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
 from feedback import GetFeedbackV4, GetFeedbackV5
-from revisions import GetRevisionInfos, GetCurrentContent
+from revisions import GetRevisionInfos, GetCurrentContent, GetCurrentTalkContent
 from templates import GetTranscludes
 
 PDB_ALL = False
@@ -110,6 +110,12 @@ def test_current_content_redirect():
     get_page = GetCurrentContent('Obama')
     page = call_and_ret(get_page)
     return page[0].title == 'Barack Obama'
+
+
+def test_current_talk_content():
+    get_talk_page = GetCurrentTalkContent('Obama')
+    page = call_and_ret(get_talk_page)
+    return page[0].title == 'Talk:Barack Obama'
 
 
 def main():
