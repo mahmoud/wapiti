@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from collections import defaultdict
-
 from base import PageIdentifier, QueryOperation
 from collections import namedtuple
 

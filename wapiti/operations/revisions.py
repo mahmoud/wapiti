@@ -6,6 +6,7 @@ from collections import namedtuple
 from base import QueryOperation, parse_timestamp
 
 RevisionInfo = namedtuple('RevisionInfo', 'page_title, page_id, namespace, rev_id, rev_parent_id, user_text, user_id, length, time, sha1, comment, tags')
+Page = namedtuple("Page", "title, req_title, namespace, page_id, rev_id, rev_text, is_parsed")
 
 
 class GetRevisionInfos(QueryOperation):
@@ -38,4 +39,42 @@ class GetRevisionInfos(QueryOperation):
                                         comment=rev.get('comment', ''),  # comments can also be oversighted
                                         tags=rev['tags'])
                 ret.append(rev_info)
+        return ret
+
+
+class GetCurrentContent(QueryOperation):
+    param_prefix = 'rv'
+    query_param_name = 'titles'
+    static_params = {'prop': 'revisions',
+                     'rvprop': 'content|ids|contentmodel|sha1|size'}
+    multiargument = False
+    bijective = True
+
+    def prepare_params(self, *a, **kw):
+        ret = super(GetCurrentContent, self).prepare_params(*a, **kw)
+        # TODO: better defaulting mechanism / dynamic argument handling
+        if self.kwargs.get('rvparse', False):
+            ret['rvparse'] = True
+        if self.kwargs.get('redirects', True):
+            ret['redirects'] = True
+        return ret
+
+    def extract_results(self, query_resp):
+        ret = []
+        #redirect_list = query_resp.get('redirects', [])
+        #redirects = dict([(r['from'], r['to']) for r in redirect_list])
+
+        pages = query_resp.get('pages', {})
+        for pd in pages.values():
+            title = pd['title']
+            requested_title = self.query_param
+            is_parsed = self.kwargs.get('rvparse', False)
+            page = Page(title=title,
+                        req_title=requested_title,
+                        namespace=pd['ns'],
+                        page_id=pd['pageid'],
+                        rev_id=pd['revisions'][0]['revid'],
+                        rev_text=pd['revisions'][0]['*'],
+                        is_parsed=is_parsed)
+            ret.append(page)
         return ret

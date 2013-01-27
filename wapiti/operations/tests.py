@@ -4,7 +4,7 @@ from rand import GetRandom
 from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
 from feedback import GetFeedbackV4, GetFeedbackV5
-from revisions import GetRevisionInfos
+from revisions import GetRevisionInfos, GetCurrentContent
 from templates import GetTranscludes
 
 PDB_ALL = False
@@ -99,6 +99,19 @@ def test_transclusions():
     tr_list = call_and_ret(get_transcludes)
     return len(tr_list) == 20
 
+
+def test_current_content():
+    get_page = GetCurrentContent('Coffee')
+    page = call_and_ret(get_page)
+    return page[0].title == 'Coffee'
+
+
+def test_current_content_redirect():
+    get_page = GetCurrentContent('Obama')
+    page = call_and_ret(get_page)
+    return page[0].title == 'Barack Obama'
+
+
 def main():
     tests = dict([(k, v) for k, v in globals().items()
                   if callable(v) and k.startswith('test_')])
@@ -109,6 +122,5 @@ def main():
 if __name__ == '__main__':
     PDB_ALL = False
     PDB_ERROR = True
-    test_transclusions()
     from pprint import pprint
     pprint(main())

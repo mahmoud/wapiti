@@ -29,22 +29,10 @@ Types of API calls:
  * many arguments -> up to one result per argument (get protections)
  * multiple arguments -> multiple results per argument (get language links)
    * TODO: establish return format convention for this
+
+Need generic support for:
+ * Talk -> respective namespace mapping
+ * APIs which support both pageid and title lookup
+ * Redirect following
+ * Namespace filtering
 '''
-
-'''
-def get_transcluded(page_title=None, page_id=None, namespaces=None, limit=PER_CALL_LIMIT, to_zero_ns=True)
-def get_articles(page_ids=None, titles=None, parsed=True, follow_redirects=False, **kwargs):
-def get_talk_page(title):
-'''
-
-
-
-
-
-
-
-
-
-
-#Page = namedtuple("Page", "title, req_title, namespace, page_id, rev_id, rev_text, is_parsed, fetch_date, fetch_duration")
-#RevisionInfo = namedtuple('RevisionInfo', 'page_title, page_id, namespace, rev_id, rev_parent_id, user_text, user_id, length, time, sha1, comment, tags')

@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 
 from collections import namedtuple
-from datetime import datetime
 
 from base import QueryOperation, parse_timestamp
 
