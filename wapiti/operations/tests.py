@@ -5,6 +5,7 @@ from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
 from feedback import GetFeedbackV4, GetFeedbackV5
 from revisions import GetRevisionInfos
+from templates import GetTranscludes
 
 PDB_ALL = False
 PDB_ERROR = False
@@ -93,6 +94,11 @@ def test_missing_revisions():
     return len(rev_list) == 0
 
 
+def test_transclusions():
+    get_transcludes = GetTranscludes('Template:ArticleHistory', 20)
+    tr_list = call_and_ret(get_transcludes)
+    return len(tr_list) == 20
+
 def main():
     tests = dict([(k, v) for k, v in globals().items()
                   if callable(v) and k.startswith('test_')])
@@ -103,6 +109,6 @@ def main():
 if __name__ == '__main__':
     PDB_ALL = False
     PDB_ERROR = True
-    test_revisions()
+    test_transclusions()
     from pprint import pprint
     pprint(main())
