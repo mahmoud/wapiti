@@ -13,7 +13,7 @@ but check back soon.
  * Port more API calls
  * Support namespace filtering in a general fashion
  * Retry and timeout behaviors
- * Get my shit together and finish the HTTP client. then remove requests dependency
+ * Get my shit together and continue work on the HTTP client.
  * Automatically add 'g' to prefix if static_params has key 'generator'
  * Underscoring args
  * Support lists of static params (which are then joined automatically)
@@ -33,6 +33,13 @@ DEFAULT_RETRIES = 0
 DEFAULT_TIMEOUT  = 15
 DEFAULT_HEADERS = { 'User-Agent': 'Loupe/0.0.0 Mahmoud Hashemi makuro@gmail.com' }
 
+import socket
+socket.setdefaulttimeout(DEFAULT_TIMEOUT)  # TODO: better timeouts for reqs
+
+from ransom import Client
+import json
+
+requests = Client({'headers': DEFAULT_HEADERS})
 
 if IS_BOT:
     PER_CALL_LIMIT = 5000  # most of these globals will be set on client
@@ -70,6 +77,9 @@ AUTOCONFIRMED = 1
 SYSOP = 0
 Protection = namedtuple('Protection', 'level, expiry')
 PROTECTION_ACTIONS = ['create', 'edit', 'move', 'upload']
+
+def parse_timestamp(timestamp):
+    return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
 
 class Permissions(object):
     """
@@ -384,79 +394,7 @@ class GetSubcategoryInfos(QueryOperation):
                                     subcat_count=subcats))
         return ret
 
-##########################################
-
-
-# What follows is bona fide unfortunateness due to the lack of a decent
-# http client in python. yeah, lookin at you, requests.
-from datetime import datetime
-import urllib2
-import socket
-from StringIO import StringIO
-import gzip
-import json
-
-import requests
-socket.setdefaulttimeout(DEFAULT_TIMEOUT)  # TODO: better timeouts for fake requests
-
-def parse_timestamp(timestamp):
-    return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
-
-
-class FakeResponse(object):
-    pass
-
-
-def fake_requests(url, params=None, headers=None, use_gzip=True):
-    ret = FakeResponse()
-    full_url = url
-    """try:
-        if params:
-            url_vals = encode_url_params(params)
-            full_url = url + '?' + url_vals
-    except:
-        pass
-    """
-    if not headers:
-        headers = DEFAULT_HEADERS
-    if use_gzip and not headers.get('Accept-encoding'):
-        headers['Accept-encoding'] = 'gzip'
-
-    req = requests.Request(url, params=params, headers=headers, method='GET', prefetch=False)
-    full_url = req.full_url  # oh lawd, usin requests to create the url for now
-    #print req.full_url
-    req = urllib2.Request(full_url, headers=headers)
-    resp = urllib2.urlopen(req)
-    resp_text = resp.read()
-    resp.close()
-    if resp.info().get('Content-Encoding') == 'gzip':
-        comp_resp_text = resp_text
-        buf = StringIO(comp_resp_text)
-        f = gzip.GzipFile(fileobj=buf)
-        resp_text = f.read()
-
-    ret.text = resp_text
-    ret.status_code = resp.getcode()
-    ret.headers = resp.headers
-    return ret
-
-
-def get_url(url, params=None, raise_exc=True):
-    resp = FakeResponse()
-    try:
-        resp = fake_requests(url, params)
-    except Exception as e:
-        if raise_exc:
-            raise
-        else:
-            resp.error = e
-    return resp
-
-
-def get_json(*args, **kwargs):
-    resp = get_url(*args, **kwargs)
-    return json.loads(resp.text)
-
+from ransom import Response
 
 def api_req(action, params=None, raise_exc=True, **kwargs):
     all_params = {'format': 'json',
@@ -464,17 +402,16 @@ def api_req(action, params=None, raise_exc=True, **kwargs):
     all_params.update(kwargs)
     all_params.update(params)
     all_params['action'] = action
-
     headers = {'accept-encoding': 'gzip'}
 
-    resp = FakeResponse()
+    resp = Response()
     resp.results = None
     try:
         if action == 'edit':
             #TODO
             resp = requests.post(API_URL, params=all_params, headers=headers, timeout=DEFAULT_TIMEOUT)
         else:
-            resp = fake_requests(API_URL, all_params)
+            resp = requests.get(API_URL, all_params)
     except Exception as e:
         if raise_exc:
             raise
