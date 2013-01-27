@@ -3,6 +3,8 @@ from category import GetCategory
 from rand import GetRandom
 from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
+from feedback import GetFeedbackV4, GetFeedbackV5
+
 
 PDB_ALL = False
 PDB_ERROR = False
@@ -64,8 +66,19 @@ def test_lang_links():
 def test_interwiki_links():
     get_coffee_iwlinks = GetInterwikiLinks('Coffee', 5)
     iw_list = call_and_ret(get_coffee_iwlinks)
-    print iw_list
     return len(iw_list) == 5
+
+
+def test_feedback_v4():
+    get_v4 = GetFeedbackV4(604727)
+    v4_list = call_and_ret(get_v4)
+    return len(v4_list) > 1
+
+
+def test_feedback_v5():
+    get_v5 = GetFeedbackV5(604727)
+    v5_list = call_and_ret(get_v5)
+    return isinstance(v5_list, list)
 
 
 def main():
@@ -78,4 +91,5 @@ def main():
 if __name__ == '__main__':
     PDB_ALL = False
     PDB_ERROR = True
-    print main()
+    from pprint import pprint
+    pprint(main())

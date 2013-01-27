@@ -22,6 +22,7 @@ if IS_BOT:
 else:
     PER_CALL_LIMIT = 500
 
+DEFAULT_LIMIT = 500  # TODO
 
 SOURCES = {'enwp': 'http://en.wikipedia.org/w/api.php'}
 API_URL = SOURCES['enwp']  # TODO: hardcoded for nowskies
@@ -151,6 +152,19 @@ class QueryOperation(Operation):
         self.namespaces = namespaces  # TODO: needs remapping/checking?
         self.kwargs = kw
 
+    def _set_query_param(self, query_param):
+        if query_param is None:
+            query_param = ''
+        if is_scalar(query_param):
+            query_param = unicode(query_param)
+        if isinstance(query_param, basestring):
+            query_param = query_param.split('|')
+        if not self.is_multiargument() and len(query_param) > 1:
+            raise ValueError('operation expected single argument, not %r'
+                             % query_param)
+        query_param = join_multi_args(query_param, self.query_param_prefix)
+        self.query_param = query_param
+
     def _set_limit(self, limit):
         if limit is None and self.is_bijective():
             query_param = self.query_param
@@ -161,16 +175,6 @@ class QueryOperation(Operation):
             else:
                 limit = len(query_param)
         self.limit = limit
-
-    def _set_query_param(self, query_param):
-        query_param = query_param or ''
-        if isinstance(query_param, basestring):
-            query_param = query_param.split('|')
-        if not self.is_multiargument() and len(query_param) > 1:
-            raise ValueError('operation expected single argument, not %r'
-                             % query_param)
-        query_param = join_multi_args(query_param, self.query_param_prefix)
-        self.query_param = query_param
 
     def get_query_param(self):
         return self.query_param
@@ -186,6 +190,8 @@ class QueryOperation(Operation):
 
     @property
     def remaining(self):
+        if not self.limit:
+            return DEFAULT_LIMIT  # TODO
         return self.limit - len(self.results)
 
     def prepare_params(self, limit, cont_str, **kw):
@@ -260,6 +266,7 @@ class QueryOperation(Operation):
             query_resp = resp.results.get(self.api_action)
             if not query_resp:
                 print "that's an error"
+                import pdb;pdb.set_trace()
                 continue
             try:
                 new_results = self.extract_results(query_resp)
