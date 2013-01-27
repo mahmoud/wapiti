@@ -256,6 +256,7 @@ class QueryOperation(Operation):
                                          self.last_cont_str,
                                          **self.kwargs)
             resp = self.fetch(params)
+            # TODO: check resp for api errors/warnings
             query_resp = resp.results.get(self.api_action)
             if not query_resp:
                 print "that's an error"

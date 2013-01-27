@@ -2,7 +2,7 @@ import base
 from category import GetCategory
 from rand import GetRandom
 from protection import GetProtections
-from links import GetBacklinks
+from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
 
 PDB_ALL = False
 PDB_ERROR = False
@@ -48,10 +48,24 @@ def test_backlinks():
     bls = call_and_ret(get_bls)
     return len(bls) == 10
 
+
 def test_random():
     get_fifty_random = GetRandom(50)
     pages = call_and_ret(get_fifty_random)
     return len(pages) == 50
+
+
+def test_lang_links():
+    get_coffee_langs = GetLanguageLinks('Coffee', 5)
+    lang_list = call_and_ret(get_coffee_langs)
+    return len(lang_list) == 5
+
+
+def test_interwiki_links():
+    get_coffee_iwlinks = GetInterwikiLinks('Coffee', 5)
+    iw_list = call_and_ret(get_coffee_iwlinks)
+    print iw_list
+    return len(iw_list) == 5
 
 
 def main():

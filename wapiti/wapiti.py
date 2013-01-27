@@ -23,6 +23,12 @@ but check back soon.
    * Logic
    * Actual Mediawiki API errors ('no such category', etc.)
  * Relatedly: Save MediaWiki API warnings
+
+Types of API calls:
+ * single argument -> multiple results (get category)
+ * many arguments -> up to one result per argument (get protections)
+ * multiple arguments -> multiple results per argument (get language links)
+   * TODO: establish return format convention for this
 '''
 
 

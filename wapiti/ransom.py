@@ -148,6 +148,7 @@ class Client(object):
 
         full_url = construct_url(url, params)
         ret = Response()
+        ret.url = full_url
         resp_text = None
         resp_status = None
         resp_headers = {}
