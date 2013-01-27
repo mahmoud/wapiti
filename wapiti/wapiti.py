@@ -31,7 +31,11 @@ Types of API calls:
    * TODO: establish return format convention for this
 '''
 
-
+'''
+def get_transcluded(page_title=None, page_id=None, namespaces=None, limit=PER_CALL_LIMIT, to_zero_ns=True)
+def get_articles(page_ids=None, titles=None, parsed=True, follow_redirects=False, **kwargs):
+def get_talk_page(title):
+'''
 
 
 

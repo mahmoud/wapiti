@@ -4,7 +4,7 @@ from rand import GetRandom
 from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
 from feedback import GetFeedbackV4, GetFeedbackV5
-
+from revisions import GetRevisionInfos
 
 PDB_ALL = False
 PDB_ERROR = False
@@ -81,6 +81,18 @@ def test_feedback_v5():
     return isinstance(v5_list, list)
 
 
+def test_revisions():
+    get_revs = GetRevisionInfos('Coffee', 10)
+    rev_list = call_and_ret(get_revs)
+    return len(rev_list) == 10
+
+
+def test_missing_revisions():
+    get_revs = GetRevisionInfos('Coffee_lololololol')
+    rev_list = call_and_ret(get_revs)
+    return len(rev_list) == 0
+
+
 def main():
     tests = dict([(k, v) for k, v in globals().items()
                   if callable(v) and k.startswith('test_')])
@@ -91,5 +103,6 @@ def main():
 if __name__ == '__main__':
     PDB_ALL = False
     PDB_ERROR = True
+    test_revisions()
     from pprint import pprint
     pprint(main())

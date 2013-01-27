@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from collections import namedtuple
 from datetime import datetime
 
-from base import QueryOperation
+from base import QueryOperation, parse_timestamp
 
 # Protections
 NEW = 'NEW'
@@ -12,9 +12,6 @@ AUTOCONFIRMED = 'AUTOCONFIRMED'
 SYSOP = 'SYSOP'
 PROTECTION_ACTIONS = ('create', 'edit', 'move', 'upload')
 
-
-def parse_timestamp(timestamp):
-    return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
 
 Protection = namedtuple('Protection', 'level, expiry')
 

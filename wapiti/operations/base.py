@@ -8,6 +8,7 @@ sys.path.append(dirname(dirname((__file__))))
 
 import json
 from collections import namedtuple
+from datetime import datetime
 
 from ransom import Client, Response
 
@@ -82,6 +83,10 @@ def join_multi_args(orig_args, prefix=None):
     else:
         args = list(orig_args)
     return u"|".join([prefixed(t, prefix) for t in args])
+
+
+def parse_timestamp(timestamp):
+    return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
 
 
 class WikiException(Exception):
