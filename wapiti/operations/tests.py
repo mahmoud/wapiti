@@ -2,6 +2,7 @@ import base
 from category import GetCategory
 from rand import GetRandom
 from protection import GetProtections
+from links import GetBacklinks
 
 PDB_ALL = False
 PDB_ERROR = False
@@ -41,6 +42,11 @@ def test_multi_prots_str():
     prots = call_and_ret(get_prots)
     return len(prots) == 2
 
+
+def test_backlinks():
+    get_bls = GetBacklinks('Coffee', 10)
+    bls = call_and_ret(get_bls)
+    return len(bls) == 10
 
 def test_random():
     get_fifty_random = GetRandom(50)
