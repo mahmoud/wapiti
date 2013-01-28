@@ -1,12 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from collections import namedtuple
-
 from base import QueryOperation, parse_timestamp
-
-RevisionInfo = namedtuple('RevisionInfo', 'page_title, page_id, namespace, rev_id, rev_parent_id, user_text, user_id, length, time, sha1, comment, tags')
-Page = namedtuple("Page", "title, req_title, namespace, page_id, rev_id, rev_text, is_parsed")
+from models import Page, RevisionInfo
 
 
 class GetRevisionInfos(QueryOperation):
@@ -22,8 +18,8 @@ class GetRevisionInfos(QueryOperation):
 
     def extract_results(self, query_resp):
         ret = []
-        pages = [ p for p in query_resp.get('pages', {}).values()
-                  if 'missing' not in p ]
+        pages = [p for p in query_resp.get('pages', {}).values()
+                 if 'missing' not in p]
         for page in pages:
             for rev in page.get('revisions', []):
                 rev_info = RevisionInfo(page_title=page['title'],

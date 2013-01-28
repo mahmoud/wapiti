@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation, PageIdentifier, DEFAULT_RETRIES
+from base import QueryOperation, DEFAULT_RETRIES
+from models import PageIdentifier
 
 
 class GetRandom(QueryOperation):
@@ -18,16 +19,13 @@ class GetRandom(QueryOperation):
 
     def extract_results(self, query_resp):
         ret = []
-        for k, cm in query_resp['pages'].iteritems():
-            page_id = cm.get('pageid')
-            if not page_id:
+        for k, pid_dict in query_resp['pages'].iteritems():
+            try:
+                page_ident = PageIdentifier.from_query_result(pid_dict,
+                                                              self.source)
+            except ValueError:
                 continue
-            ns = cm['ns']
-            title = cm['title']
-            ret.append(PageIdentifier(title=title,
-                                      page_id=page_id,
-                                      ns=ns,
-                                      source=self.source))
+            ret.append(page_ident)
         return ret
 
     def get_cont_str(self, *a, **kw):

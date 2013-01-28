@@ -7,10 +7,11 @@ from os.path import dirname
 sys.path.append(dirname(dirname((__file__))))
 
 import json
-from collections import namedtuple
 from datetime import datetime
 
 from ransom import Client, Response
+
+from models import WikiException, PageIdentifier
 
 DEFAULT_TIMEOUT  = 15
 import socket
@@ -87,16 +88,6 @@ def join_multi_args(orig_args, prefix=None):
 
 def parse_timestamp(timestamp):
     return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
-
-
-class WikiException(Exception):
-    pass
-
-BasePageIdentifier = namedtuple("PageIdentifier", "title, page_id, ns, source")
-
-
-class PageIdentifier(BasePageIdentifier):
-    pass
 
 
 class Operation(object):

@@ -1,17 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import PageIdentifier, QueryOperation
-
-
-class CategoryInfo(PageIdentifier):
-    def __init__(self, title, page_id, ns, source,
-                 total_count, page_count, file_count, subcat_count):
-        super(CategoryInfo, self).__init__(title, page_id, ns, source)
-        self.total_count = total_count
-        self.page_count = page_count
-        self.file_count = file_count
-        self.subcat_count = subcat_count
+from base import QueryOperation
+from models import CategoryInfo, PageIdentifier
 
 
 class GetCategory(QueryOperation):
@@ -24,16 +15,13 @@ class GetCategory(QueryOperation):
 
     def extract_results(self, query_resp):
         ret = []
-        for k, cm in query_resp['pages'].iteritems():
-            page_id = cm.get('pageid')
-            if not page_id:
+        for k, pid_dict in query_resp['pages'].iteritems():
+            try:
+                page_ident = PageIdentifier.from_query_result(pid_dict,
+                                                              self.source)
+            except ValueError:
                 continue
-            ns = cm['ns']
-            title = cm['title']
-            ret.append(PageIdentifier(title=title,
-                                      page_id=page_id,
-                                      ns=ns,
-                                      source=self.source))
+            ret.append(page_ident)
         return ret
 
 

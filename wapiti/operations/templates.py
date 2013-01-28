@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import PageIdentifier, QueryOperation
+from base import QueryOperation
+from models import PageIdentifier
 
 
 class GetTranscludes(QueryOperation):
@@ -17,10 +18,7 @@ class GetTranscludes(QueryOperation):
 
     def extract_results(self, query_resp):
         ret = []
-        for k, pi in query_resp.get('pages', {}).items():
-            if not pi.get('pageid'):
-                continue
-            ns = pi['ns']
+        for k, pid_dict in query_resp.get('pages', {}).items():
             #if ns != 0 and to_zero_ns:  # non-Main/zero namespace
             #    try:
             #        _, _, title = pi['title'].partition(':')
@@ -29,10 +27,11 @@ class GetTranscludes(QueryOperation):
             #    except KeyError as e:
             #        continue  # TODO: log
             #else:
-            title = pi['title']
-            page_id = pi['pageid']
-            ret.append(PageIdentifier(title=title,
-                                      page_id=page_id,
-                                      ns=ns,
-                                      source=self.source))
+            try:
+                page_ident = PageIdentifier.from_query_result(pid_dict,
+                                                              self.source)
+            except ValueError:
+                continue
+            ret.append(page_ident)
+
         return ret
