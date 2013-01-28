@@ -4,12 +4,15 @@ from rand import GetRandom
 from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
 from feedback import GetFeedbackV4, GetFeedbackV5
-from revisions import GetRevisionInfos, GetCurrentContent, GetCurrentTalkContent
+from revisions import (GetRevisionInfos,
+                       GetCurrentContent,
+                       GetCurrentTalkContent)
 from templates import GetTranscludes
 
 PDB_ALL = False
 PDB_ERROR = False
 DO_PRINT = False
+
 
 def call_and_ret(func):
     try:

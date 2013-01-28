@@ -10,7 +10,7 @@ import json
 
 from ransom import Client, Response
 
-from models import WikiException, PageIdentifier
+from models import WikiException
 
 DEFAULT_TIMEOUT  = 15
 import socket
