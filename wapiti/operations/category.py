@@ -17,8 +17,7 @@ class GetCategory(QueryOperation):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
-                page_ident = PageIdentifier.from_query_result(pid_dict,
-                                                              self.source)
+                page_ident = PageIdentifier.from_query(pid_dict, self.source)
             except ValueError:
                 continue
             ret.append(page_ident)
@@ -35,26 +34,12 @@ class GetSubcategoryInfos(QueryOperation):
 
     def extract_results(self, query_resp):
         ret = []
-        for k, cm in query_resp['pages'].iteritems():
-            if not cm.get('pageid') or k < 0:
+        for k, pid_dict in query_resp['pages'].iteritems():
+            try:
+                cat_info = CategoryInfo.from_query(pid_dict, self.source)
+            except ValueError:
                 continue
-            namespace = cm['ns']
-            title = cm['title']
-            page_id = cm['pageid']
-            ci = cm.get('categoryinfo')
-            if ci:
-                size = ci['size']
-                pages = ci['pages']
-                files = ci['files']
-                subcats = ci['subcats']
-            else:
-                size, pages, files, subcats = (0, 0, 0, 0)
-            ret.append(CategoryInfo(title=title,
-                                    page_id=page_id,
-                                    ns=namespace,
-                                    source=self.source,
-                                    total_count=size,
-                                    page_count=pages,
-                                    file_count=files,
-                                    subcat_count=subcats))
+            if cat_info.page_id < 0:
+                continue
+            ret.append(cat_info)
         return ret

@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation, parse_timestamp
-from models import Page, RevisionInfo
+from base import QueryOperation
+from models import PageIdentifier, RevisionInfo, Revision
+
+DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|tags'
 
 
 class GetRevisionInfos(QueryOperation):
@@ -12,7 +14,7 @@ class GetRevisionInfos(QueryOperation):
     param_prefix = 'rv'
     query_param_name = 'titles'
     static_params = {'prop': 'revisions',
-                     'rvprop': 'ids|flags|timestamp|user|userid|size|sha1|comment|tags'}
+                     'rvprop': DEFAULT_PROPS}
     multiargument = False  # for now. it's not a big help in this case anyway.
     bijective = False
 
@@ -20,20 +22,16 @@ class GetRevisionInfos(QueryOperation):
         ret = []
         pages = [p for p in query_resp.get('pages', {}).values()
                  if 'missing' not in p]
-        for page in pages:
-            for rev in page.get('revisions', []):
-                rev_info = RevisionInfo(page_title=page['title'],
-                                        page_id=page['pageid'],
-                                        namespace=page['ns'],
-                                        rev_id=rev['revid'],
-                                        rev_parent_id=rev['parentid'],
-                                        user_text=rev.get('user', '!userhidden'),  # user info can be oversighted
-                                        user_id=rev.get('userid', -1),
-                                        time=parse_timestamp(rev['timestamp']),
-                                        length=rev['size'],
-                                        sha1=rev['sha1'],
-                                        comment=rev.get('comment', ''),  # comments can also be oversighted
-                                        tags=rev['tags'])
+        for pid_dict in pages:
+            try:
+                pid = PageIdentifier.from_query(pid_dict, self.source)
+            except ValueError:
+                continue
+            if pid.page_id < 0:
+                continue
+
+            for rev in pid_dict.get('revisions', []):
+                rev_info = RevisionInfo.from_query(pid, rev, self.source)
                 ret.append(rev_info)
         return ret
 
@@ -42,7 +40,7 @@ class GetCurrentContent(QueryOperation):
     param_prefix = 'rv'
     query_param_name = 'titles'
     static_params = {'prop': 'revisions',
-                     'rvprop': 'content|ids|contentmodel|sha1|size'}
+                     'rvprop': DEFAULT_PROPS + '|content'}
     multiargument = False
     bijective = True
 
@@ -59,20 +57,22 @@ class GetCurrentContent(QueryOperation):
         ret = []
         #redirect_list = query_resp.get('redirects', [])
         #redirects = dict([(r['from'], r['to']) for r in redirect_list])
+        requested_title = self.query_param
+        is_parsed = self.kwargs.get('rvparse', False)
 
         pages = query_resp.get('pages', {})
-        for pd in pages.values():
-            title = pd['title']
-            requested_title = self.query_param
-            is_parsed = self.kwargs.get('rvparse', False)
-            page = Page(title=title,
-                        req_title=requested_title,
-                        namespace=pd['ns'],
-                        page_id=pd['pageid'],
-                        rev_id=pd['revisions'][0]['revid'],
-                        rev_text=pd['revisions'][0]['*'],
-                        is_parsed=is_parsed)
-            ret.append(page)
+        for pid_dict in pages.values():
+            try:
+                pid = PageIdentifier.from_query(pid_dict,
+                                                self.source,
+                                                requested_title)
+            except ValueError:
+                continue
+            if pid.page_id < 0:
+                continue
+            rev = pid_dict['revisions'][0]
+            revision = Revision.from_query(pid, rev, self.source, is_parsed)
+            ret.append(revision)
         return ret
 
 

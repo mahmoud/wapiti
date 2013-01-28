@@ -21,8 +21,7 @@ class GetRandom(QueryOperation):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
-                page_ident = PageIdentifier.from_query_result(pid_dict,
-                                                              self.source)
+                page_ident = PageIdentifier.from_query(pid_dict, self.source)
             except ValueError:
                 continue
             ret.append(page_ident)

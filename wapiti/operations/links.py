@@ -14,8 +14,7 @@ class GetBacklinks(QueryOperation):
         ret = []
         for pid_dict in query_resp.get('backlinks', []):
             try:
-                page_ident = PageIdentifier.from_query_result(pid_dict,
-                                                              self.source)
+                page_ident = PageIdentifier.from_query(pid_dict, self.source)
             except ValueError:
                 continue
             ret.append(page_ident)
@@ -32,8 +31,7 @@ class GetLanguageLinks(QueryOperation):
         ret = []
         for pid_dict in query_resp.get('pages', {}).values():
             try:
-                page_ident = PageIdentifier.from_query_result(pid_dict,
-                                                              self.source)
+                page_ident = PageIdentifier.from_query(pid_dict, self.source)
             except ValueError:
                 continue
             for ld in pid_dict.get('langlinks', []):
@@ -54,8 +52,7 @@ class GetInterwikiLinks(QueryOperation):
         ret = []
         for pid_dict in query_resp.get('pages', {}).values():
             try:
-                page_ident = PageIdentifier.from_query_result(pid_dict,
-                                                              self.source)
+                page_ident = PageIdentifier.from_query(pid_dict, self.source)
             except ValueError:
                 continue
             for iwd in pid_dict.get('iwlinks', []):

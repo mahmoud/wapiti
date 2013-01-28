@@ -28,10 +28,8 @@ class GetTranscludes(QueryOperation):
             #        continue  # TODO: log
             #else:
             try:
-                page_ident = PageIdentifier.from_query_result(pid_dict,
-                                                              self.source)
+                page_ident = PageIdentifier.from_query(pid_dict, self.source)
             except ValueError:
                 continue
             ret.append(page_ident)
-
         return ret

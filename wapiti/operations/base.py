@@ -7,7 +7,6 @@ from os.path import dirname
 sys.path.append(dirname(dirname((__file__))))
 
 import json
-from datetime import datetime
 
 from ransom import Client, Response
 
@@ -84,10 +83,6 @@ def join_multi_args(orig_args, prefix=None):
     else:
         args = list(orig_args)
     return u"|".join([prefixed(t, prefix) for t in args])
-
-
-def parse_timestamp(timestamp):
-    return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
 
 
 class Operation(object):
@@ -261,8 +256,7 @@ class QueryOperation(Operation):
             # TODO: check resp for api errors/warnings
             query_resp = resp.results.get(self.api_action)
             if not query_resp:
-                print "that's an error"
-                import pdb;pdb.set_trace()
+                print "that's an error: '%s'" % getattr(resp, 'url', '')
                 continue
             try:
                 new_results = self.extract_results(query_resp)

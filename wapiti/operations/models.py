@@ -13,6 +13,10 @@ class WikiException(Exception):
     pass
 
 
+LanguageLink = namedtuple('LanguageLink', 'url language origin_page')
+InterwikiLink = namedtuple('InterwikiLink', 'url prefix origin_page')
+
+
 class _PageIdentMixin(object):
     # this is just temporary so I can see what I'm doing a little better
     def _to_string(self, raise_exc=False):
@@ -85,11 +89,6 @@ class PageIdentifier(_PageIdentMixin):
         return cls(title, page_id, ns, source, req_title)
 
 
-Page = namedtuple("Page", "title, req_title, namespace, page_id, rev_id, rev_text, is_parsed")
-LanguageLink = namedtuple('LanguageLink', 'url language origin_page')
-InterwikiLink = namedtuple('InterwikiLink', 'url prefix origin_page')
-
-
 class RevisionInfo(_PageIdentMixin):
     def __init__(self, page_ident, rev_id, parent_rev_id, user_text,
                  user_id, size, timestamp, sha1, comment, tags,
@@ -157,7 +156,8 @@ class CategoryInfo(_PageIdentMixin):
         return self.page_ident.source
 
     @classmethod
-    def from_query(cls, page_ident, res_dict, source):
+    def from_query(cls, res_dict, source):
+        page_ident = PageIdentifier.from_query(res_dict, source)
         ci = res_dict.get('categoryinfo')
         if ci:
             size = ci['size']

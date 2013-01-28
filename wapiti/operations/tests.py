@@ -1,5 +1,5 @@
 import base
-from category import GetCategory
+from category import GetCategory, GetSubcategoryInfos
 from rand import GetRandom
 from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
@@ -9,6 +9,7 @@ from templates import GetTranscludes
 
 PDB_ALL = False
 PDB_ERROR = False
+DO_PRINT = False
 
 def call_and_ret(func):
     try:
@@ -19,6 +20,8 @@ def call_and_ret(func):
         raise
     if PDB_ALL:
         import pdb;pdb.set_trace()
+    if ret:
+        print repr(ret[0])[:50] + '...'
     return ret
 
 
@@ -26,6 +29,12 @@ def test_category_basic():
     get_2k_featured = GetCategory('Featured_articles', 2000)
     pages = call_and_ret(get_2k_featured)
     return len(pages) == 2000
+
+
+def test_subcategory_infos():
+    get_subcats = GetSubcategoryInfos('FA-Class_articles', 100)
+    subcats = call_and_ret(get_subcats)
+    return len(subcats) == 100
 
 
 def test_single_prot():
@@ -128,5 +137,6 @@ def main():
 if __name__ == '__main__':
     PDB_ALL = False
     PDB_ERROR = True
+    DO_PRINT = True
     from pprint import pprint
     pprint(main())
