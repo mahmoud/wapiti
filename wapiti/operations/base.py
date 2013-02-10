@@ -128,11 +128,19 @@ class QueryOperation(Operation):
     param_prefix = None        # e.g., 'gcm'
     query_param_name = None    # e.g., 'title'
     query_param_prefix = None  # e.g., 'Category:'
+    per_call_limit = PER_CALL_LIMIT
 
-    def __init__(self, query_param, limit=None, namespaces=None, retries=DEFAULT_RETRIES, **kw):
+    def __init__(self,
+                 query_param,
+                 limit=None,
+                 namespaces=None,
+                 retries=DEFAULT_RETRIES,
+                 owner=None,
+                 **kw):
         self._orig_query_param = query_param
         self._set_query_param(query_param)
         self._set_limit(limit)
+        self.owner = owner
 
         self.started = False
         self.cont_strs = []
@@ -181,24 +189,41 @@ class QueryOperation(Operation):
 
     @property
     def remaining(self):
-        if not self.limit:
-            return DEFAULT_LIMIT  # TODO
-        return self.limit - len(self.results)
+        if self.owner:
+            return self.owner.remaining
+        if self.limit:
+            return self.limit - len(self.results)
+        return DEFAULT_LIMIT  # TODO
 
-    def prepare_params(self, limit, cont_str, **kw):
+    @property
+    def current_limit(self):
+        return min(self.remaining, self.per_call_limit)
+
+    def prepare_params(self, **kw):
         params = dict(self.static_params)
         query_param_name = self.get_query_param_name()
         query_param = self.get_query_param()
         prefix = self.param_prefix
 
         params[query_param_name] = query_param
-        params[prefix + 'limit'] = min(limit, PER_CALL_LIMIT)
-        if cont_str:
-            params[prefix + 'continue'] = cont_str
+        params[prefix + 'limit'] = self.current_limit
+        if self.last_cont_str:
+            params[prefix + 'continue'] = self.last_cont_str
         return params
 
     def fetch(self, params):
-        return api_req(self.api_action, params)
+        params = self.prepare_params(**self.kwargs)
+        resp = api_req(self.api_action, params)
+        # TODO: check resp for api errors/warnings
+
+        new_cont_str = self.get_cont_str(resp, params)
+        if new_cont_str is None:
+            break
+        else:
+            self.cont_strs.append(new_cont_str)
+
+        query_resp = resp.results.get(self.api_action)
+        return query_resp
 
     def extract_results(self, resp):
         """
@@ -248,13 +273,7 @@ class QueryOperation(Operation):
         while self.remaining:  # TODO: +retry behavior
             # this should come from client
             #print self.remaining
-            cur_limit = min(self.remaining, PER_CALL_LIMIT)
-            params = self.prepare_params(cur_limit,
-                                         self.last_cont_str,
-                                         **self.kwargs)
-            resp = self.fetch(params)
-            # TODO: check resp for api errors/warnings
-            query_resp = resp.results.get(self.api_action)
+            query_resp = self.do_request()
             if not query_resp:
                 print "that's an error: '%s'" % getattr(resp, 'url', '')
                 continue
@@ -263,11 +282,8 @@ class QueryOperation(Operation):
             except Exception:
                 raise
             self.results.extend(new_results[:self.remaining])
-            new_cont_str = self.get_cont_str(resp, params)
-            if new_cont_str is None:
-                break
-            else:
-                self.cont_strs.append(new_cont_str)
+            if self.owner:
+                self.owner.extract_results(new_results)
 
         return self.results
 
@@ -322,3 +338,15 @@ def api_req(action, params=None, raise_exc=True, **kwargs):
             return resp
 
     return resp
+
+
+class CompoundOperation(Operation):
+    """
+    An operation that consists of multiple suboperations.
+    It is distinguishable in that it doesn't do any API calls
+    directly, getting all of its end results from other
+    operations.
+    """
+
+    def extract_results(self, hmm):
+        pass
