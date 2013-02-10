@@ -1,5 +1,8 @@
 import base
-from category import GetCategory, GetSubcategoryInfos, GetFlattenedCategory
+from category import (GetCategory,
+                      GetSubcategoryInfos,
+                      GetFlattenedCategory,
+                      GetCategoryRecursive)
 from rand import GetRandom
 from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
@@ -38,6 +41,12 @@ def test_subcategory_infos():
     get_subcats = GetSubcategoryInfos('FA-Class_articles', 100)
     subcats = call_and_ret(get_subcats)
     return len(subcats) == 100
+
+
+def test_category_recursive():
+    get_2k_recursive = GetCategoryRecursive('Africa', 2000)
+    pages = call_and_ret(get_2k_recursive)
+    return len(pages) == 2000
 
 
 def test_single_prot():
@@ -134,7 +143,7 @@ def test_flatten_category():
     get_flat_cat = GetFlattenedCategory('Africa', 2000)
     cat_infos = call_and_ret(get_flat_cat)
     assert len(set([ci.title for ci in cat_infos])) == len(cat_infos)
-    return len(cat_infos) > 1999
+    return len(cat_infos) == 2000
 
 
 def main():
@@ -145,7 +154,7 @@ def main():
 
 
 def _main():
-    return test_flatten_category()
+    return test_category_recursive()
 
 if __name__ == '__main__':
     PDB_ALL = False

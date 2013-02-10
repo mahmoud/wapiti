@@ -31,7 +31,7 @@ IS_BOT = False
 DEFAULT_RETRIES = 0
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   'mahmoudrhashemi@gmail.com') }
-DEFAULT_MAX_COUNT = sys.maxint
+MAX_LIMIT = sys.maxint
 MAX_ARTICLES_LIST = 50
 
 requests = Client({'headers': DEFAULT_HEADERS})
@@ -442,6 +442,14 @@ class PriorityQueue(object):
 
     def __len__(self):
         return len(self._entry_map)
+
+    def __getitem__(self, index):
+        # this is hacky! could make a sorted copy from the
+        # heap and index into that at some point.
+        if index != -1:
+            raise IndexError('priority queues only support indexing on -1')
+        _, _, task = self._pq[0]
+        return task
 
 
 class CompoundQueryOperation(BaseQueryOperation):
