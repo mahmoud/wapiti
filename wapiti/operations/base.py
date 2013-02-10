@@ -394,6 +394,41 @@ def api_req(action, params=None, raise_exc=True, **kwargs):
 
     return resp
 
+from heapq import heappush, heappop
+import itertools
+REMOVED = '<removed-task>'
+class PriorityQueue(object):
+    """
+    Real quick type based on the heapq docs.
+    """
+    def __init__(self):
+        self._pq = []
+        self._entry_map = {}
+        self.counter = itertools.count()
+
+    def add(self, task, priority=None):
+        priority = priority or 0  # todo: more complex logics
+        if task in self._entry_map:
+            self.remove_task(task)
+        count = next(self.counter)
+        entry = [priority, count, task]
+        self._entry_map[task] = entry
+        heappush(self._pq, entry)
+
+    def remove(self, task):
+        entry = self._entry_map.pop(task)
+        entry[-1] = REMOVED
+
+    def pop(self):
+        while self._pq:
+            priority, count, task = heappop(self._pq)
+            if task is not REMOVED:
+                del self._entry_map[task]
+                return task
+        raise KeyError('pop from an empty priority queue')
+
+    def __len__(self):
+        return len(self._entry_map)
 
 
 class CompoundQueryOperation(BaseQueryOperation):
