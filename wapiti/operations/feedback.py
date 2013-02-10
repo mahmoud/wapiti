@@ -24,14 +24,10 @@ class GetFeedbackV5(QueryOperation):
     query_param_name = param_prefix + 'pageid'
     static_params = {'list': 'articlefeedbackv5-view-feedback'}
 
-    def fetch(self, params):
-        tmp_resp = super(GetFeedbackV5, self).fetch(params)
-        try:
-            query_dict = dict(tmp_resp.results)
-            tmp_resp.results['query'] = query_dict
-        except TypeError:
-            return tmp_resp
-        return tmp_resp
+    def post_process_response(self, response):
+        if not response.results:
+            return {}
+        return dict(response.results)
 
     def extract_results(self, query_resp):
         count = query_resp['articlefeedbackv5-view-feedback']['count']

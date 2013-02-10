@@ -85,6 +85,10 @@ def join_multi_args(orig_args, prefix=None):
     return u"|".join([prefixed(t, prefix) for t in args])
 
 
+class NoMoreResults(Exception):
+    pass
+
+
 class Operation(object):
     """
     Mostly an abstract class representing an operation that can
@@ -121,50 +125,142 @@ one argument at a time, like GetCategory.
 is an example of a bijective query. Bijective queries do not require an
 explicit limit on the number of results to be set by the user.
 """
+class BaseQueryOperation(Operation):
+    per_call_limit = PER_CALL_LIMIT
+    default_limit = DEFAULT_LIMIT
+
+    def __init__(self, query_param, limit=None, owner=None, *a, **kw):
+        self.set_query_param(query_param)
+        self.set_limit(limit)
+        self.owner = owner
+
+        self.started = False
+        self.results = []
+
+    @property
+    def query_param(self):
+        return self._query_param
+
+    @property
+    def limit(self):
+        return self._limit
+
+    def set_query_param(self, qp):
+        self._query_param = qp
+
+    def set_limit(self, limit):
+        self._limit = limit
+
+    @property
+    def remaining(self):
+        if self.owner:
+            return self.owner.remaining
+        if self.limit:
+            return self.limit - len(self.results)
+        return self.default_limit
+
+    @property
+    def current_limit(self):
+        return min(self.remaining, self.per_call_limit)
+
+    @classmethod
+    def is_multiargument(cls):
+        if hasattr(cls, 'multiargument'):
+            return cls.multiargument
+        return False
+
+    @classmethod
+    def is_bijective(cls):
+        if hasattr(cls, 'bijective'):
+            return cls.bijective
+        return True
+
+    def fetch(self):
+        raise NotImplementedError('inheriting classes should return'
+                                  ' a list of results from the response')
+
+    def post_process_response(self, response):
+        """
+        Used to rectify inconsistencies in API responses
+        (looking at you, Feedback API)
+        """
+        return response
+
+    def extract_results(self, resp):
+        raise NotImplementedError('inheriting classes should return'
+                                  ' a list of results from the response')
+
+    def store_results(self, results):
+        self.results.extend(results)
+        if self.owner:
+            self.owner.store_results(results)
+
+    def fetch_and_store(self):
+        resp = self.fetch()
+        resp = self.post_process_response(resp)
+        if not resp:
+            print "that's an error: '%s'" % getattr(resp, 'url', '')
+            return []
+        try:
+            new_results = self.extract_results(resp)
+        except Exception:
+            raise
+        self.store_results(new_results)
+        return new_results
+
+    def get_next_task(self):
+        if not self.remaining:
+            return None
+        return self.fetch_and_store
+
+    def process(self):
+        self.started = True
+        task = self.get_next_task()
+        if task is None:
+            raise NoMoreResults()
+        results = task()
+        return results
+
+    def process_all(self):
+        while 1:  # TODO: +retry behavior
+            try:
+                self.process()
+            except NoMoreResults:
+                break
+        return self.results
+
+    __call__ = process_all
 
 
-class QueryOperation(Operation):
+class QueryOperation(BaseQueryOperation):
     api_action = 'query'
     param_prefix = None        # e.g., 'gcm'
     query_param_name = None    # e.g., 'title'
     query_param_prefix = None  # e.g., 'Category:'
-    per_call_limit = PER_CALL_LIMIT
 
-    def __init__(self,
-                 query_param,
-                 limit=None,
-                 namespaces=None,
-                 retries=DEFAULT_RETRIES,
-                 owner=None,
-                 **kw):
-        self._orig_query_param = query_param
-        self._set_query_param(query_param)
-        self._set_limit(limit)
-        self.owner = owner
-
-        self.started = False
+    def __init__(self, query_param, limit=None, *a, **kw):
+        super(QueryOperation, self).__init__(query_param, limit, *a, **kw)
         self.cont_strs = []
-        self.max_retries = retries
-        self.retries = 0
-        self.results = []
-
-        self.namespaces = namespaces  # TODO: needs remapping/checking?
+        self.namespaces = kw.pop('namespaces', None)  # TODO: needs remapping/checking?
         self.kwargs = kw
 
-    def _set_query_param(self, query_param):
-        if query_param is None:
-            query_param = ''
-        if is_scalar(query_param):
-            query_param = unicode(query_param)
-        if isinstance(query_param, basestring):
-            query_param = query_param.split('|')
-        if not self.is_multiargument() and len(query_param) > 1:
-            raise ValueError('operation expected single argument, not %r'
-                             % query_param)
-        query_param = join_multi_args(query_param, self.query_param_prefix)
-        self.query_param = query_param
+    def set_query_param(self, qp):
+        self._orig_query_param = qp
+        if qp is None:
+            qp = ''
+        if is_scalar(qp):
+            qp = unicode(qp)
+        if isinstance(qp, basestring):
+            qp = qp.split('|')
+        if not self.is_multiargument() and len(qp) > 1:
+            cn = self.__class__.__name__
+            tmpl = '%s expected singular query parameter, not %r'
+            raise ValueError(tmpl % (cn, qp))
+        qp = join_multi_args(qp, self.query_param_prefix)
+        super(QueryOperation, self).set_query_param(qp)
 
-    def _set_limit(self, limit):
+    def set_limit(self, limit):
+        self._orig_limit = limit
         if limit is None and self.is_bijective():
             query_param = self.query_param
             if isinstance(query_param, basestring):
@@ -173,13 +269,13 @@ class QueryOperation(Operation):
                 limit = 1
             else:
                 limit = len(query_param)
-        self.limit = limit
+        super(QueryOperation, self).set_limit(limit)
 
-    def get_query_param(self):
-        return self.query_param
-
-    def get_query_param_name(self):
-        return self.query_param_name
+    @property
+    def remaining(self):
+        if self.cont_strs and self.last_cont_str is None:
+            return 0
+        return super(QueryOperation, self).remaining
 
     @property
     def last_cont_str(self):
@@ -187,53 +283,8 @@ class QueryOperation(Operation):
             return None
         return self.cont_strs[-1]
 
-    @property
-    def remaining(self):
-        if self.owner:
-            return self.owner.remaining
-        if self.limit:
-            return self.limit - len(self.results)
-        return DEFAULT_LIMIT  # TODO
-
-    @property
-    def current_limit(self):
-        return min(self.remaining, self.per_call_limit)
-
-    def prepare_params(self, **kw):
-        params = dict(self.static_params)
-        query_param_name = self.get_query_param_name()
-        query_param = self.get_query_param()
-        prefix = self.param_prefix
-
-        params[query_param_name] = query_param
-        params[prefix + 'limit'] = self.current_limit
-        if self.last_cont_str:
-            params[prefix + 'continue'] = self.last_cont_str
-        return params
-
-    def fetch(self, params):
-        params = self.prepare_params(**self.kwargs)
-        resp = api_req(self.api_action, params)
-        # TODO: check resp for api errors/warnings
-
-        new_cont_str = self.get_cont_str(resp, params)
-        if new_cont_str is None:
-            break
-        else:
-            self.cont_strs.append(new_cont_str)
-
-        query_resp = resp.results.get(self.api_action)
-        return query_resp
-
-    def extract_results(self, resp):
-        """
-        inheriting classes should return a list from the query results
-        """
-        pass
-
     @classmethod
     def is_multiargument(cls):
-        # coooould be a property via metaclass
         if hasattr(cls, 'multiargument'):
             return cls.multiargument
         static_params = cls.static_params
@@ -268,24 +319,27 @@ class QueryOperation(Operation):
             raise KeyError("couldn't find contstr")
         return qc_val[next_key][self.param_prefix + 'continue']
 
-    def __call__(self):
-        self.started = True
-        while self.remaining:  # TODO: +retry behavior
-            # this should come from client
-            #print self.remaining
-            query_resp = self.do_request()
-            if not query_resp:
-                print "that's an error: '%s'" % getattr(resp, 'url', '')
-                continue
-            try:
-                new_results = self.extract_results(query_resp)
-            except Exception:
-                raise
-            self.results.extend(new_results[:self.remaining])
-            if self.owner:
-                self.owner.extract_results(new_results)
+    def prepare_params(self, **kw):
+        params = dict(self.static_params)
+        prefix = self.param_prefix
 
-        return self.results
+        params[self.query_param_name] = self.query_param
+        params[prefix + 'limit'] = self.current_limit
+        if self.last_cont_str:
+            params[prefix + 'continue'] = self.last_cont_str
+        return params
+
+    def fetch(self):
+        params = self.prepare_params(**self.kwargs)
+        resp = api_req(self.api_action, params)
+        # TODO: check resp for api errors/warnings
+
+        new_cont_str = self.get_cont_str(resp, params)
+        self.cont_strs.append(new_cont_str)
+        return resp
+
+    def post_process_response(self, response):
+        return response.results.get(self.api_action)
 
 
 def api_req(action, params=None, raise_exc=True, **kwargs):
@@ -338,6 +392,8 @@ def api_req(action, params=None, raise_exc=True, **kwargs):
             return resp
 
     return resp
+
+
 
 
 class CompoundOperation(Operation):

@@ -43,3 +43,11 @@ class GetSubcategoryInfos(QueryOperation):
                 continue
             ret.append(cat_info)
         return ret
+
+
+class GetFlattenedCategory(GetSubcategoryInfos):
+    def get_query_param(self):
+        pass
+
+    def extract_results(self):
+        pass
