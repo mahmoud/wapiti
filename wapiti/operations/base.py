@@ -228,6 +228,19 @@ class BaseQueryOperation(Operation):
 
     __call__ = process_all
 
+    def __repr__(self):
+        cn = self.__class__.__name__
+        if self.owner:
+            ret = '%s(%r, %r, owner=%r)' % (cn,
+                                            self.query_param,
+                                            self.limit,
+                                            self.owner)
+        else:
+            ret = '%s(%r, %r)' % (cn,
+                                  self.query_param,
+                                  self.limit)
+        return ret
+
 
 class QueryOperation(BaseQueryOperation):
     api_action = 'query'

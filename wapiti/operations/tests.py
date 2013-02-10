@@ -131,10 +131,10 @@ def test_current_talk_content():
 
 
 def test_flatten_category():
-    get_flat_cat = GetFlattenedCategory('Africa', 200)
+    get_flat_cat = GetFlattenedCategory('Africa', 2000)
     cat_infos = call_and_ret(get_flat_cat)
     assert len(set([ci.title for ci in cat_infos])) == len(cat_infos)
-    return len(cat_infos) > 199
+    return len(cat_infos) > 1999
 
 
 def main():

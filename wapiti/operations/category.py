@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from collections import deque
-from base import QueryOperation, BaseQueryOperation, NoMoreResults
+from base import QueryOperation, BaseQueryOperation, NoMoreResults, PriorityQueue
 from models import CategoryInfo, PageIdentifier
 
 
@@ -45,41 +45,48 @@ class GetSubcategoryInfos(QueryOperation):
             ret.append(cat_info)
         return ret
 
-
+from functools import partial
 class GetFlattenedCategory(BaseQueryOperation):
     bijective = False
     multiargument = False
 
     def __init__(self, query_param, *a, **kw):
         super(GetFlattenedCategory, self).__init__(query_param, *a, **kw)
-        self.suboperations = [GetSubcategoryInfos(query_param, owner=self)]
+        self.suboperations = PriorityQueue()
+        root_subop = GetSubcategoryInfos(query_param, self.limit, owner=self)
+        self.suboperations.add(root_subop)
         self.seen_cat_names = set([query_param])
 
     def get_current_task(self):
         if not self.remaining:
             return None
         while self.suboperations:
-            subop = self.suboperations[-1]
+            subop = self.suboperations.pop()
             if subop.remaining:
-                return self.fetch_and_store
-            else:
-                self.suboperations.pop()
+                return partial(self.fetch_and_store, op=subop)
         return None
 
-    def fetch_and_store(self):
-        subop = self.suboperations[-1]
+    def fetch_and_store(self, op=None):
+        if op is None:
+            if self.suboperations:
+                op = self.suboperations.pop()
+            else:
+                return []
         try:
-            res = subop.process()
+            res = op.process()
         except NoMoreResults:
             return []
-        self.store_results(res)
+        return self.store_results(res)
 
     def store_results(self, results):
         for cat_info in results:
-            if cat_info.title in self.seen_cat_names:
+            title = cat_info.title
+            if title in self.seen_cat_names:
                 continue
-            self.seen_cat_names.add(cat_info.title)
+            self.seen_cat_names.add(title)
             self.results.append(cat_info)
             if cat_info.subcat_count:
-                self.suboperations.append(GetSubcategoryInfos(cat_info.title, owner=self))
-        return
+                priority = -cat_info.subcat_count
+                subop = GetSubcategoryInfos(title, self.limit, owner=self)
+                self.suboperations.add(subop, priority)
+        return results
