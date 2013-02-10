@@ -155,9 +155,9 @@ class BaseQueryOperation(Operation):
     def remaining(self):
         if self.owner:
             return self.owner.remaining
-        if self.limit:
-            return self.limit - len(self.results)
-        return self.default_limit
+
+        limit = self.limit or self.default_limit
+        return limit - len(self.results)
 
     @property
     def current_limit(self):
@@ -186,14 +186,11 @@ class BaseQueryOperation(Operation):
         """
         return response
 
-    def extract_results(self, resp):
-        raise NotImplementedError('inheriting classes should return'
-                                  ' a list of results from the response')
+    def extract_results(self, response):
+        return response
 
     def store_results(self, results):
         self.results.extend(results)
-        if self.owner:
-            self.owner.store_results(results)
 
     def fetch_and_store(self):
         resp = self.fetch()
@@ -208,14 +205,14 @@ class BaseQueryOperation(Operation):
         self.store_results(new_results)
         return new_results
 
-    def get_next_task(self):
+    def get_current_task(self):
         if not self.remaining:
             return None
         return self.fetch_and_store
 
     def process(self):
         self.started = True
-        task = self.get_next_task()
+        task = self.get_current_task()
         if task is None:
             raise NoMoreResults()
         results = task()
@@ -338,6 +335,10 @@ class QueryOperation(BaseQueryOperation):
         self.cont_strs.append(new_cont_str)
         return resp
 
+    def extract_results(self, resp):
+        raise NotImplementedError('inheriting classes should return'
+                                  ' a list of results from the response')
+
     def post_process_response(self, response):
         return response.results.get(self.api_action)
 
@@ -395,14 +396,11 @@ def api_req(action, params=None, raise_exc=True, **kwargs):
 
 
 
-
-class CompoundOperation(Operation):
+class CompoundQueryOperation(BaseQueryOperation):
     """
     An operation that consists of multiple suboperations.
     It is distinguishable in that it doesn't do any API calls
     directly, getting all of its end results from other
     operations.
     """
-
-    def extract_results(self, hmm):
-        pass
+    pass

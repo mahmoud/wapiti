@@ -18,7 +18,8 @@ class GetFeedbackV5(QueryOperation):
     """
     article feedback v5 breaks standards in a couple ways.
       * the various v5 APIs use different prefixes (af/afvf)
-      * it doesn't put its results under 'query', requiring a custom fetch()
+      * it doesn't put its results under 'query', requiring a custom
+      post_process_response()
     """
     param_prefix = 'afvf'
     query_param_name = param_prefix + 'pageid'

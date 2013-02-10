@@ -1,5 +1,5 @@
 import base
-from category import GetCategory, GetSubcategoryInfos
+from category import GetCategory, GetSubcategoryInfos, GetFlattenedCategory
 from rand import GetRandom
 from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
@@ -130,6 +130,13 @@ def test_current_talk_content():
     return page[0].title == 'Talk:Barack Obama'
 
 
+def test_flatten_category():
+    get_flat_cat = GetFlattenedCategory('Africa', 200)
+    cat_infos = call_and_ret(get_flat_cat)
+    assert len(set([ci.title for ci in cat_infos])) == len(cat_infos)
+    return len(cat_infos) > 199
+
+
 def main():
     tests = dict([(k, v) for k, v in globals().items()
                   if callable(v) and k.startswith('test_')])
@@ -137,9 +144,12 @@ def main():
     return results
 
 
+def _main():
+    return test_flatten_category()
+
 if __name__ == '__main__':
     PDB_ALL = False
     PDB_ERROR = True
     DO_PRINT = True
     from pprint import pprint
-    pprint(main())
+    pprint(_main())

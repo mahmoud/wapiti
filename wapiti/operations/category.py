@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation
+from collections import deque
+from base import QueryOperation, BaseQueryOperation, NoMoreResults
 from models import CategoryInfo, PageIdentifier
 
 
@@ -45,9 +46,40 @@ class GetSubcategoryInfos(QueryOperation):
         return ret
 
 
-class GetFlattenedCategory(GetSubcategoryInfos):
-    def get_query_param(self):
-        pass
+class GetFlattenedCategory(BaseQueryOperation):
+    bijective = False
+    multiargument = False
 
-    def extract_results(self):
-        pass
+    def __init__(self, query_param, *a, **kw):
+        super(GetFlattenedCategory, self).__init__(query_param, *a, **kw)
+        self.suboperations = [GetSubcategoryInfos(query_param, owner=self)]
+        self.seen_cat_names = set([query_param])
+
+    def get_current_task(self):
+        if not self.remaining:
+            return None
+        while self.suboperations:
+            subop = self.suboperations[-1]
+            if subop.remaining:
+                return self.fetch_and_store
+            else:
+                self.suboperations.pop()
+        return None
+
+    def fetch_and_store(self):
+        subop = self.suboperations[-1]
+        try:
+            res = subop.process()
+        except NoMoreResults:
+            return []
+        self.store_results(res)
+
+    def store_results(self, results):
+        for cat_info in results:
+            if cat_info.title in self.seen_cat_names:
+                continue
+            self.seen_cat_names.add(cat_info.title)
+            self.results.append(cat_info)
+            if cat_info.subcat_count:
+                self.suboperations.append(GetSubcategoryInfos(cat_info.title, owner=self))
+        return
