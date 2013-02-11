@@ -419,7 +419,9 @@ class PriorityQueue(object):
         self.counter = itertools.count()
 
     def add(self, task, priority=None):
-        priority = priority or 0  # todo: more complex logics
+        # larger numbers = higher priority
+        # todo: more complex logics
+        priority = -int(priority or 0)
         if task in self._entry_map:
             self.remove_task(task)
         count = next(self.counter)
@@ -449,13 +451,3 @@ class PriorityQueue(object):
             raise IndexError('priority queues only support indexing on -1')
         _, _, task = self._pq[0]
         return task
-
-
-class CompoundQueryOperation(BaseQueryOperation):
-    """
-    An operation that consists of multiple suboperations.
-    It is distinguishable in that it doesn't do any API calls
-    directly, getting all of its end results from other
-    operations.
-    """
-    pass
