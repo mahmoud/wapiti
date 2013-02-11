@@ -128,11 +128,11 @@ explicit limit on the number of results to be set by the user.
 class BaseQueryOperation(Operation):
     per_call_limit = PER_CALL_LIMIT
     default_limit = DEFAULT_LIMIT
+    dynamic_limit = False
 
-    def __init__(self, query_param, limit=None, owner=None, *a, **kw):
+    def __init__(self, query_param, limit=None, *a, **kw):
         self.set_query_param(query_param)
         self.set_limit(limit)
-        self.owner = owner
 
         self.started = False
         self.results = []
@@ -143,21 +143,25 @@ class BaseQueryOperation(Operation):
 
     @property
     def limit(self):
-        return self._limit
+        return self._get_limit()
 
     def set_query_param(self, qp):
         self._query_param = qp
 
     def set_limit(self, limit):
-        self._limit = limit
+        self.dynamic_limit = True
+        if hasattr(limit, 'remaining'):  # replaces 'owner' functionality
+            self._get_limit = lambda: limit.remaining
+        elif callable(limit):
+            self._get_limit = limit
+        else:
+            self.dynamic_limit = False
+            self._get_limit = lambda: limit
 
     @property
     def remaining(self):
-        if self.owner:
-            return self.owner.remaining
-
         limit = self.limit or self.default_limit
-        return limit - len(self.results)
+        return max(0, limit - len(self.results))
 
     @property
     def current_limit(self):
@@ -230,16 +234,11 @@ class BaseQueryOperation(Operation):
 
     def __repr__(self):
         cn = self.__class__.__name__
-        if self.owner:
-            ret = '%s(%r, %r, owner=%r)' % (cn,
-                                            self.query_param,
-                                            self.limit,
-                                            self.owner)
+        if self.dynamic_limit:
+            tmpl = '%s(%r, limit=lambda: %r)'
         else:
-            ret = '%s(%r, %r)' % (cn,
-                                  self.query_param,
-                                  self.limit)
-        return ret
+            tmpl = '%s(%r, limit=%r)'
+        return tmpl % (cn, self.query_param, self.limit)
 
 
 class QueryOperation(BaseQueryOperation):

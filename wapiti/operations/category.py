@@ -88,7 +88,7 @@ class GetFlattenedCategory(BaseQueryOperation):
             self.results.append(cat_info)
             if cat_info.subcat_count:
                 priority = -cat_info.subcat_count
-                subop = GetSubcategoryInfos(title, self.limit, owner=self)
+                subop = GetSubcategoryInfos(title, self)
                 self.suboperations.add(subop, priority)
         return results
 
@@ -131,7 +131,7 @@ class GetCategoryRecursive(BaseQueryOperation):
         for g in generated:
             title = g.title
             priority = -g.page_count
-            subop = GetCategory(g.title, self.limit, owner=self)
+            subop = GetCategory(g.title, self)
             self.suboperations.add(subop, priority)
 
     def fetch_and_store(self, op=None):
