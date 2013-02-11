@@ -6,6 +6,7 @@ from os.path import dirname
 # just until ransom becomes its own package
 sys.path.append(dirname(dirname((__file__))))
 
+from functools import partial
 import json
 
 from ransom import Client, Response
@@ -169,15 +170,11 @@ class BaseQueryOperation(Operation):
 
     @classmethod
     def is_multiargument(cls):
-        if hasattr(cls, 'multiargument'):
-            return cls.multiargument
-        return False
+        return getattr(cls, 'multiargument', False)
 
     @classmethod
     def is_bijective(cls):
-        if hasattr(cls, 'bijective'):
-            return cls.bijective
-        return True
+        return getattr(cls, 'bijective', True)
 
     def fetch(self):
         raise NotImplementedError('inheriting classes should return'
@@ -451,3 +448,77 @@ class PriorityQueue(object):
             raise IndexError('priority queues only support indexing on -1')
         _, _, task = self._pq[0]
         return task
+
+
+class CompoundQueryOperation(BaseQueryOperation):
+    def __init__(self, *a, **kw):
+        generator = kw.pop('generator', None)
+        super(CompoundQueryOperation, self).__init__(*a, **kw)
+
+        self.suboperations = PriorityQueue()
+        root_op_kwargs = dict(kw)
+        root_op_kwargs['query_param'] = self.query_param
+        root_op_kwargs['limit'] = self
+        root_op = self.suboperation_type(**root_op_kwargs)
+        self.suboperations.add(root_op)
+
+        self.setup_generator(generator)
+
+    def setup_generator(self, generator=None):
+        if isinstance(generator, Operation):
+            self.generator = generator
+            return
+        generator_type = getattr(self, 'default_generator', None)
+        if not generator_type:
+            self.generator = None
+            return
+        gen_kw_tmpl = getattr(self, 'generator_params', {})
+        gen_kw = {'query_param': self.query_param,
+                  'limit': MAX_LIMIT}
+        for k, v in gen_kw_tmpl.items():
+            if callable(v):
+                gen_kw[k] = v(self)
+        self.generator = generator_type(**gen_kw)
+        return
+
+    def produce_suboperations(self):
+        if not self.generator or not self.generator.remaining:
+            return None
+        ret = []
+        generated = self.generator.process()
+        subop_kw_tmpl = getattr(self, 'suboperation_params', {})
+        for g in generated:
+            subop_kw = {}
+            for k, v in subop_kw_tmpl.items():
+                if callable(v):
+                    subop_kw[k] = v(g)
+            priority = subop_kw.pop('priority', 0)
+            subop_kw['limit'] = self
+            subop = self.suboperation_type(**subop_kw)
+            self.suboperations.add(subop, priority)
+            ret.append(subop)
+        return ret
+
+    def get_current_task(self):
+        if not self.remaining:
+            return None
+        while 1:
+            while self.suboperations:
+                subop = self.suboperations[-1]
+                if subop.remaining:
+                    print subop, len(self.suboperations), len(self.results)
+                    return partial(self.fetch_and_store, op=subop)
+                else:
+                    self.suboperations.pop()
+            if not self.generator or not self.generator.remaining:
+                break
+            else:
+                self.produce_suboperations()
+        return None
+
+    def fetch_and_store(self, op):
+        try:
+            res = op.process()
+        except NoMoreResults:
+            return []
+        return self.store_results(res)

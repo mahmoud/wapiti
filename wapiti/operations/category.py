@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from collections import deque
-from base import QueryOperation, BaseQueryOperation, NoMoreResults, PriorityQueue, MAX_LIMIT
+from base import QueryOperation, BaseQueryOperation, CompoundQueryOperation, NoMoreResults, PriorityQueue, MAX_LIMIT
 from models import CategoryInfo, PageIdentifier
 
 
@@ -45,39 +45,16 @@ class GetSubcategoryInfos(QueryOperation):
             ret.append(cat_info)
         return ret
 
-from functools import partial
-class GetFlattenedCategory(BaseQueryOperation):
+
+class GetFlattenedCategory(CompoundQueryOperation):
     bijective = False
     multiargument = False
 
+    suboperation_type = GetSubcategoryInfos
+
     def __init__(self, query_param, *a, **kw):
         super(GetFlattenedCategory, self).__init__(query_param, *a, **kw)
-        self.suboperations = PriorityQueue()
-        root_subop = GetSubcategoryInfos(query_param, self.limit, owner=self)
-        self.suboperations.add(root_subop)
         self.seen_cat_names = set([query_param])
-
-    def get_current_task(self):
-        if not self.remaining:
-            return None
-        while self.suboperations:
-            subop = self.suboperations[-1]
-            if subop.remaining:
-                return partial(self.fetch_and_store, op=subop)
-            else:
-                self.suboperations.pop()
-        return None
-
-    def fetch_and_store(self, op=None):
-        if op is None:
-            op = self.get_current_task()
-            if op is None:
-                return []
-        try:
-            res = op.process()
-        except NoMoreResults:
-            return []
-        return self.store_results(res)
 
     def store_results(self, results):
         for cat_info in results:
@@ -87,63 +64,24 @@ class GetFlattenedCategory(BaseQueryOperation):
             self.seen_cat_names.add(title)
             self.results.append(cat_info)
             if cat_info.subcat_count:
-                priority = -cat_info.subcat_count
+                priority = cat_info.subcat_count
                 subop = GetSubcategoryInfos(title, self)
                 self.suboperations.add(subop, priority)
         return results
 
 
-class GetCategoryRecursive(BaseQueryOperation):
+class GetCategoryRecursive(CompoundQueryOperation):
     bijective = False
     multiargument = False
 
+    default_generator = GetFlattenedCategory
+    suboperation_type = GetCategory
+    suboperation_params = {'query_param': lambda ci: ci.title,
+                           'priority': lambda ci: ci.page_count}
+
     def __init__(self, query_param, *a, **kw):
         super(GetCategoryRecursive, self).__init__(query_param, *a, **kw)
-        self.generator = GetFlattenedCategory(query_param, MAX_LIMIT)
-
-        self.suboperations = PriorityQueue()
-        root_cat_subop = GetCategory(query_param, self.limit, owner=self)
-        self.suboperations.add(root_cat_subop)
-
         self.seen_titles = set([query_param])
-
-    def get_current_task(self):
-        if not self.remaining:
-            return None
-        while 1:
-            while self.suboperations:
-                subop = self.suboperations[-1]
-                if subop.remaining:
-                    print subop, len(self.suboperations), len(self.results)
-                    return partial(self.fetch_and_store, op=subop)
-                else:
-                    self.suboperations.pop()
-            if not self.generator or not self.generator.remaining:
-                break
-            else:
-                self.produce_suboperations()
-        return None
-
-    def produce_suboperations(self):
-        if not self.generator or not self.generator.remaining:
-            return None
-        generated = self.generator.process()
-        for g in generated:
-            title = g.title
-            priority = -g.page_count
-            subop = GetCategory(g.title, self)
-            self.suboperations.add(subop, priority)
-
-    def fetch_and_store(self, op=None):
-        if op is None:
-            op = self.get_current_task()
-            if op is None:
-                return []
-        try:
-            res = op.process()
-        except NoMoreResults:
-            return []
-        return self.store_results(res)
 
     def store_results(self, results):
         for page_ident in results:

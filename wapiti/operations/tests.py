@@ -27,7 +27,11 @@ def call_and_ret(func):
     if PDB_ALL:
         import pdb;pdb.set_trace()
     if ret:
-        print repr(ret[0])[:50] + '...'
+        try:
+            disp = ret[0]
+        except TypeError:
+            disp = ret
+        print repr(disp)[:50] + '...'
     return ret
 
 
@@ -154,7 +158,7 @@ def main():
 
 
 def _main():
-    return test_category_recursive()
+    return call_and_ret(test_flatten_category)
 
 if __name__ == '__main__':
     PDB_ALL = False
