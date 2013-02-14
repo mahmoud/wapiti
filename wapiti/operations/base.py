@@ -86,6 +86,44 @@ def join_multi_args(orig_args, prefix=None):
     return u"|".join([prefixed(t, prefix) for t in args])
 
 
+def normalize_param(orig_arg, multi=False, prefix=None):
+    qp = orig_arg
+    if qp is None:
+        qp = ''
+    if is_scalar(qp):
+        qp = unicode(qp)
+    if isinstance(qp, basestring):
+        qp = qp.split('|')
+    if not multi and len(qp) > 1:
+        tmpl = 'expected singular query parameter, not %r'
+        raise ValueError(tmpl % qp)
+    return join_multi_args(qp, prefix)
+
+
+class Param(object):
+    def __init__(self, default=None, prefix=None, required=False):
+        self.default = default
+        self.prefix = prefix
+        self.required = required
+
+    def __call__(self, new_val=None):
+        self._orig_value = new_val
+        if new_val is None:
+            if self.required:
+                raise ValueError('param is required')
+            new_val = self.default
+        self._value = normalize_param(new_val, self.multi, self.prefix)
+        return self._value
+
+
+class SingleParam(object):
+    multi = False
+
+
+class MultiParam(object):
+    multi = True
+
+
 class NoMoreResults(Exception):
     pass
 
