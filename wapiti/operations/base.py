@@ -78,50 +78,75 @@ def prefixed(arg, prefix=None):
     return arg
 
 
-def join_multi_args(orig_args, prefix=None):
-    if isinstance(orig_args, basestring):
-        args = orig_args.split('|')
+def param_list2str(p_list, prefix=None, keep_empty=False):
+    if is_scalar(p_list):
+        p_list = param_str2list(p_list, keep_empty)
+    ret = "|".join([prefixed(t, prefix) for t in p_list if (t or keep_empty)])
+    return unicode(ret)
+
+
+def param_str2list(p, keep_empty=False):
+    p = p or ''
+    if is_scalar(p):
+        p = unicode(p)
     else:
-        args = list(orig_args)
-    return u"|".join([prefixed(t, prefix) for t in args])
+        p = param_list2str(p)
+    p_list = p.split('|')
+    if not keep_empty:
+        p_list = [sp for sp in p_list if sp]
+    return p_list
 
 
-def normalize_param(orig_arg, multi=False, prefix=None):
-    qp = orig_arg
-    if qp is None:
-        qp = ''
-    if is_scalar(qp):
-        qp = unicode(qp)
-    if isinstance(qp, basestring):
-        qp = qp.split('|')
-    if not multi and len(qp) > 1:
-        tmpl = 'expected singular query parameter, not %r'
-        raise ValueError(tmpl % qp)
-    return join_multi_args(qp, prefix)
+def normalize_param(p, prefix=None, multi=None):
+    p_list = param_str2list(p)
+    if multi is False:
+        if len(p_list) > 1:
+            tmpl = 'expected singular query parameter, not %r'
+            raise ValueError(tmpl % qp)
+    return param_list2str(p_list, prefix)
 
 
 class Param(object):
-    def __init__(self, default=None, prefix=None, required=False):
-        self.default = default
+    def __init__(self, default=None, prefix=None, **kw):
         self.prefix = prefix
-        self.required = required
+        self.required = kw.pop('required', False)
+        self.multi = kw.pop('multi', None)
+        if kw:
+            raise ValueError('unexpected keyword argument(s): %r' % kw)
+        if default is not None:
+            default = normalize_param(default, self.prefix, self.multi)
+        self.default = default
+        self._value = None
 
-    def __call__(self, new_val=None):
-        self._orig_value = new_val
-        if new_val is None:
-            if self.required:
-                raise ValueError('param is required')
-            new_val = self.default
-        self._value = normalize_param(new_val, self.multi, self.prefix)
+    @property
+    def value(self):
         return self._value
+
+    @property
+    def value_list(self):
+        return param_str2list(self._value)
+
+    def set_value(self, new_val=None):
+        self._orig_value = new_val
+        norm_val = normalize_param(new_val, self.prefix, self.multi)
+        self._value = norm_val or self.default
+        if not self._value:
+            raise ValueError('param is required')
+        return self._value
+
+    __call__ = set_value
 
 
 class SingleParam(object):
-    multi = False
+    def __init__(self, *a, **kw):
+        kw['multi'] = False
+        return super(SingleParam, self).__init__(*a, **kw)
 
 
 class MultiParam(object):
-    multi = True
+    def __init__(self, *a, **kw):
+        kw['multi'] = False
+        return super(SingleParam, self).__init__(*a, **kw)
 
 
 class NoMoreResults(Exception):
