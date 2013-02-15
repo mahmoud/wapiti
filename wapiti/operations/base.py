@@ -102,51 +102,75 @@ def normalize_param(p, prefix=None, multi=None):
     if multi is False:
         if len(p_list) > 1:
             tmpl = 'expected singular query parameter, not %r'
-            raise ValueError(tmpl % qp)
+            raise ValueError(tmpl % p)
     return param_list2str(p_list, prefix)
 
 
 class Param(object):
-    def __init__(self, default=None, prefix=None, **kw):
-        self.prefix = prefix
+    def __init__(self, key, default=None, val_prefix=None, **kw):
+        if not key:
+            raise ValueError('expected name, not %r' % key)
+        self._key = unicode(key)
+        self.val_prefix = val_prefix
+        self.key_prefix = kw.pop('key_prefix', True)  # True = filled in later
         self.required = kw.pop('required', False)
         self.multi = kw.pop('multi', None)
         if kw:
             raise ValueError('unexpected keyword argument(s): %r' % kw)
         if default is not None:
-            default = normalize_param(default, self.prefix, self.multi)
+            default = normalize_param(default, self.val_prefix, self.multi)
         self.default = default
         self._value = None
 
-    @property
-    def value(self):
-        return self._value
+    def get_key(self, key_prefix=None):
+        prefix = key_prefix
+        if isinstance(prefix, basestring):
+            prefix = unicode(prefix)
+        elif self.key_prefix:
+            prefix = '_'
+        else:
+            prefix = ''
+        return prefix + self._key
 
-    @property
-    def value_list(self):
-        return param_str2list(self._value)
-
-    def set_value(self, new_val=None):
-        self._orig_value = new_val
-        norm_val = normalize_param(new_val, self.prefix, self.multi)
-        self._value = norm_val or self.default
-        if not self._value:
+    def get_value(self, value, prefix=None):
+        if prefix is None:
+            prefix = self.prefix
+        norm_val = normalize_param(value, prefix, self.multi)
+        val = norm_val or self.default
+        if not val:
             raise ValueError('param is required')
-        return self._value
+        return val
 
-    __call__ = set_value
+    def get_value_list(self, value, prefix=None):
+        return param_str2list(self.get_value(value, prefix))
+
+    def get_tuple(self):
+        return (self.key, self.value)
+
+    __call__ = get_value
+
+
+class StaticParam(object):
+    def __init__(self, key, value):
+        super(StaticParam, self).__init__(key, value)
+
+    def get_key(self, *a, **kw):
+        return self._key
+
+    def get_value(self, *a, **kw):
+        return self.default
 
 
 class SingleParam(object):
     def __init__(self, *a, **kw):
         kw['multi'] = False
-        return super(SingleParam, self).__init__(*a, **kw)
+        super(SingleParam, self).__init__(*a, **kw)
 
 
 class MultiParam(object):
     def __init__(self, *a, **kw):
         kw['multi'] = False
-        return super(SingleParam, self).__init__(*a, **kw)
+        super(MultiParam, self).__init__(*a, **kw)
 
 
 class NoMoreResults(Exception):

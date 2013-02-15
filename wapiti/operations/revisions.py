@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation
+from base import QueryOperation, StaticParam, MultiParam, SingleParam
 from models import PageIdentifier, RevisionInfo, Revision
 
 DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|tags'
@@ -13,8 +13,9 @@ class GetRevisionInfos(QueryOperation):
     """
     param_prefix = 'rv'
     query_param_name = 'titles'
-    static_params = {'prop': 'revisions',
-                     'rvprop': DEFAULT_PROPS}
+    params = [StaticParam('prop', 'revisions'),
+              MultiParam('titles', key_prefix=False, required=True),
+              MultiParam('prop', DEFAULT_PROPS)]
     multiargument = False  # for now. it's not a big help in this case anyway.
     bijective = False
 
@@ -39,18 +40,16 @@ class GetRevisionInfos(QueryOperation):
 class GetCurrentContent(QueryOperation):
     param_prefix = 'rv'
     query_param_name = 'titles'
-    static_params = {'prop': 'revisions',
-                     'rvprop': DEFAULT_PROPS + '|content'}
+    params = [StaticParam('prop', 'revisions'),
+              MultiParam('titles', key_prefix=False, required=True),
+              MultiParam('prop', DEFAULT_PROPS + '|content'),
+              SingleParam('parse', False),
+              SingleParam('redirects', True, key_prefix=True)]
     multiargument = False
     bijective = True
 
     def prepare_params(self, *a, **kw):
         ret = super(GetCurrentContent, self).prepare_params(*a, **kw)
-        # TODO: better defaulting mechanism / dynamic argument handling
-        if self.kwargs.get('rvparse', False):
-            ret['rvparse'] = True
-        if self.kwargs.get('redirects', True):
-            ret['redirects'] = True
         return ret
 
     def extract_results(self, query_resp):
