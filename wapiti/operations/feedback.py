@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation
+from base import QueryOperation, SingleParam, StaticParam
 
 
 class GetFeedbackV4(QueryOperation):
     param_prefix = 'af'
-    query_param_name = param_prefix + 'pageid'
-    static_params = {'list': 'articlefeedback'}
+    query_param = SingleParam('pageid', required=True)
+    params = [StaticParam('list', 'articlefeedback')]
 
     def extract_results(self, query_resp):
         ret = query_resp['articlefeedback'][0].get('ratings', [])
@@ -22,8 +22,8 @@ class GetFeedbackV5(QueryOperation):
       post_process_response()
     """
     param_prefix = 'afvf'
-    query_param_name = param_prefix + 'pageid'
-    static_params = {'list': 'articlefeedbackv5-view-feedback'}
+    query_param = SingleParam('pageid', required=True)
+    params = [StaticParam('list', 'articlefeedbackv5-view-feedback')]
 
     def post_process_response(self, response):
         if not response.results:

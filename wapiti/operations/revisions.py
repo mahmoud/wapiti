@@ -12,9 +12,8 @@ class GetRevisionInfos(QueryOperation):
     todo: switch to new data model (using unified PageIdentifiers)
     """
     param_prefix = 'rv'
-    query_param_name = 'titles'
+    query_param = MultiParam('titles', key_prefix=False, required=True)
     params = [StaticParam('prop', 'revisions'),
-              MultiParam('titles', key_prefix=False, required=True),
               MultiParam('prop', DEFAULT_PROPS)]
     multiargument = False  # for now. it's not a big help in this case anyway.
     bijective = False
@@ -38,14 +37,12 @@ class GetRevisionInfos(QueryOperation):
 
 
 class GetCurrentContent(QueryOperation):
+    query_param = SingleParam('titles', key_prefix=False, required=True)
     param_prefix = 'rv'
-    query_param_name = 'titles'
     params = [StaticParam('prop', 'revisions'),
-              MultiParam('titles', key_prefix=False, required=True),
               MultiParam('prop', DEFAULT_PROPS + '|content'),
               SingleParam('parse', False),
               SingleParam('redirects', True, key_prefix=True)]
-    multiargument = False
     bijective = True
 
     def prepare_params(self, *a, **kw):
@@ -76,4 +73,4 @@ class GetCurrentContent(QueryOperation):
 
 
 class GetCurrentTalkContent(GetCurrentContent):
-    query_param_prefix = 'Talk:'
+    query_param = MultiParam('titles', 'Talk:', key_prefix=False, required=True)
