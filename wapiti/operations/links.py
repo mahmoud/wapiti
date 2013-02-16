@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation
+from base import QueryOperation, SingleParam, MultiParam, StaticParam
 from models import PageIdentifier, LanguageLink, InterwikiLink
 
 
 class GetBacklinks(QueryOperation):
     param_prefix = 'bl'
-    query_param_name = param_prefix + 'title'
-    static_params = {'list': 'backlinks'}
+    query_param = SingleParam('title', prefix_key=False, required=True)
+    params = [StaticParam('list', 'backlinks')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -23,9 +23,9 @@ class GetBacklinks(QueryOperation):
 
 class GetLanguageLinks(QueryOperation):
     param_prefix = 'll'
-    query_param_name = 'titles'
-    static_params = {'prop': 'langlinks',
-                     'llurl': 'true'}
+    query_param = MultiParam('titles', prefix_key=False, required=True)
+    params = [StaticParam('prop', 'langlinks'),
+              SingleParam('url', True)]
 
     def extract_results(self, query_resp):
         ret = []
@@ -44,9 +44,9 @@ class GetLanguageLinks(QueryOperation):
 
 class GetInterwikiLinks(QueryOperation):
     param_prefix = 'iw'
-    query_param_name = 'titles'
-    static_params = {'prop': 'iwlinks',
-                     'iwurl': 'true'}
+    query_param = MultiParam('titles', prefix_key=False, required=True)
+    params = [StaticParam('prop', 'iwlinks'),
+              SingleParam('url', True)}
 
     def extract_results(self, query_resp):
         ret = []

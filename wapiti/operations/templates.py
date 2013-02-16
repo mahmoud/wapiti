@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation
+from base import QueryOperation, SingleParam, MultiParam, StaticParam
 from models import PageIdentifier
 
 
 class GetTranscludes(QueryOperation):
     # todo: namespaces
     param_prefix = 'gei'
-    query_param_name = param_prefix + 'title'
-    query_param_prefix = 'Template:'
-    static_params = {'generator': 'embeddedin',
-                     'prop': 'info',
-                     'inprop': 'title|pageid|ns|protection'}
-    multiargument = False
+    query_param = SingleParam('title', 'Template:')
+    params = [StaticParam('generator', 'embeddedin'),
+              StaticParam('prop', 'info'),
+              StaticParam('inprop', 'title|pageid|ns|protection')]
     bijective = False
 
     def extract_results(self, query_resp):

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation
+from base import QueryOperation, SingleParam, MultiParam, StaticParam
 from models import ProtectionInfo
 
 
 class GetProtections(QueryOperation):
     param_prefix = 'in'
-    query_param_name = 'titles'
-    static_params = {'prop': 'info',
-                     'inprop': 'protection'}
+    query_param = MultiParam('titles', prefix_key=False, required=True)
+    params = [StaticParam('prop', 'langlinks'),
+              SingleParam('prop', 'protection')]
 
     def extract_results(self, query_resp):
         ret = []

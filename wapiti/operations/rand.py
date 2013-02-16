@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation, DEFAULT_RETRIES
+from base import QueryOperation, SingleParam, MultiParam, StaticParam
+from base import DEFAULT_RETRIES
 from models import PageIdentifier
 
 
 class GetRandom(QueryOperation):
     param_prefix = 'grn'
-    static_params = {'generator': 'random',
-                     'prop': 'info',
-                     'inprop': 'subjectid|protection'}
-    query_param_name = param_prefix + 'title'
+    params = [StaticParam('generator', 'random'),
+              StaticParam('prop', 'info'),
+              StaticParam('inprop', 'subjectid|protection')]
+    query_param = None  # hmm
 
     def __init__(self, limit, namespaces=None, retries=DEFAULT_RETRIES, **kw):
         # TODO: removed query arg parameter, random doesn't need it, but is
