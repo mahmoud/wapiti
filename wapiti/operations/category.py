@@ -15,9 +15,9 @@ from models import CategoryInfo, PageIdentifier
 
 
 class GetCategory(QueryOperation):
-    param_prefix = 'gcm'
-    query_param = SingleParam('title', 'Category:', required=True)
-    params = [StaticParam('generator', 'categorymembers'),
+    field_prefix = 'gcm'
+    query_field = SingleParam('title', val_prefix='Category:', required=True)
+    fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'title|pageid|ns|subjectid|protection')]
 
@@ -33,9 +33,9 @@ class GetCategory(QueryOperation):
 
 
 class GetSubcategoryInfos(QueryOperation):
-    param_prefix = 'gcm'
-    query_param = SingleParam('title', 'Category:', required=True)
-    params = [StaticParam('generator', 'categorymembers'),
+    field_prefix = 'gcm'
+    query_field = SingleParam('title', val_prefix='Category:', required=True)
+    fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'categoryinfo'),
               StaticParam('gcmtype', 'subcat')]
 

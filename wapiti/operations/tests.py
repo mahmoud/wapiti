@@ -165,4 +165,4 @@ if __name__ == '__main__':
     PDB_ERROR = True
     DO_PRINT = True
     from pprint import pprint
-    pprint(main())
+    pprint(_main())

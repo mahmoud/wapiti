@@ -11,9 +11,9 @@ class GetRevisionInfos(QueryOperation):
     """
     todo: switch to new data model (using unified PageIdentifiers)
     """
-    param_prefix = 'rv'
-    query_param = MultiParam('titles', key_prefix=False, required=True)
-    params = [StaticParam('prop', 'revisions'),
+    field_prefix = 'rv'
+    query_field = MultiParam('titles', key_prefix=False, required=True)
+    fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS)]
     multiargument = False  # for now. it's not a big help in this case anyway.
     bijective = False
@@ -37,9 +37,9 @@ class GetRevisionInfos(QueryOperation):
 
 
 class GetCurrentContent(QueryOperation):
-    query_param = SingleParam('titles', key_prefix=False, required=True)
-    param_prefix = 'rv'
-    params = [StaticParam('prop', 'revisions'),
+    query_field = SingleParam('titles', key_prefix=False, required=True)
+    field_prefix = 'rv'
+    fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS + '|content'),
               SingleParam('parse', False),
               SingleParam('redirects', True, key_prefix=True)]
@@ -73,4 +73,7 @@ class GetCurrentContent(QueryOperation):
 
 
 class GetCurrentTalkContent(GetCurrentContent):
-    query_param = MultiParam('titles', 'Talk:', key_prefix=False, required=True)
+    query_field = MultiParam('titles',
+                             val_prefix='Talk:',
+                             key_prefix=False,
+                             required=True)

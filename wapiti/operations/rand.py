@@ -7,11 +7,11 @@ from models import PageIdentifier
 
 
 class GetRandom(QueryOperation):
-    param_prefix = 'grn'
-    params = [StaticParam('generator', 'random'),
+    field_prefix = 'grn'
+    fields = [StaticParam('generator', 'random'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|protection')]
-    query_param = None  # hmm
+    query_field = None  # hmm
 
     def __init__(self, limit, namespaces=None, retries=DEFAULT_RETRIES, **kw):
         # TODO: removed query arg parameter, random doesn't need it, but is

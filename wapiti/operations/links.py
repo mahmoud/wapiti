@@ -6,9 +6,9 @@ from models import PageIdentifier, LanguageLink, InterwikiLink
 
 
 class GetBacklinks(QueryOperation):
-    param_prefix = 'bl'
-    query_param = SingleParam('title', prefix_key=False, required=True)
-    params = [StaticParam('list', 'backlinks')]
+    field_prefix = 'bl'
+    query_field = SingleParam('title', key_prefix=False, required=True)
+    fields = [StaticParam('list', 'backlinks')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -22,9 +22,9 @@ class GetBacklinks(QueryOperation):
 
 
 class GetLanguageLinks(QueryOperation):
-    param_prefix = 'll'
-    query_param = MultiParam('titles', prefix_key=False, required=True)
-    params = [StaticParam('prop', 'langlinks'),
+    field_prefix = 'll'
+    query_field = MultiParam('titles', key_prefix=False, required=True)
+    fields = [StaticParam('prop', 'langlinks'),
               SingleParam('url', True)]
 
     def extract_results(self, query_resp):
@@ -43,10 +43,10 @@ class GetLanguageLinks(QueryOperation):
 
 
 class GetInterwikiLinks(QueryOperation):
-    param_prefix = 'iw'
-    query_param = MultiParam('titles', prefix_key=False, required=True)
-    params = [StaticParam('prop', 'iwlinks'),
-              SingleParam('url', True)}
+    field_prefix = 'iw'
+    query_field = MultiParam('titles', key_prefix=False, required=True)
+    fields = [StaticParam('prop', 'iwlinks'),
+              SingleParam('url', True)]
 
     def extract_results(self, query_resp):
         ret = []

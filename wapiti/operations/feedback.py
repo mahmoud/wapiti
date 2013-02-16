@@ -5,9 +5,9 @@ from base import QueryOperation, SingleParam, StaticParam
 
 
 class GetFeedbackV4(QueryOperation):
-    param_prefix = 'af'
-    query_param = SingleParam('pageid', required=True)
-    params = [StaticParam('list', 'articlefeedback')]
+    field_prefix = 'af'
+    query_field = SingleParam('pageid', required=True)
+    fields = [StaticParam('list', 'articlefeedback')]
 
     def extract_results(self, query_resp):
         ret = query_resp['articlefeedback'][0].get('ratings', [])
@@ -21,9 +21,9 @@ class GetFeedbackV5(QueryOperation):
       * it doesn't put its results under 'query', requiring a custom
       post_process_response()
     """
-    param_prefix = 'afvf'
-    query_param = SingleParam('pageid', required=True)
-    params = [StaticParam('list', 'articlefeedbackv5-view-feedback')]
+    field_prefix = 'afvf'
+    query_field = SingleParam('pageid', required=True)
+    fields = [StaticParam('list', 'articlefeedbackv5-view-feedback')]
 
     def post_process_response(self, response):
         if not response.results:

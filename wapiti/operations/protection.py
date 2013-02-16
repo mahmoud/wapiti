@@ -6,9 +6,9 @@ from models import ProtectionInfo
 
 
 class GetProtections(QueryOperation):
-    param_prefix = 'in'
-    query_param = MultiParam('titles', prefix_key=False, required=True)
-    params = [StaticParam('prop', 'langlinks'),
+    field_prefix = 'in'
+    query_field = MultiParam('titles', key_prefix=False, required=True)
+    fields = [StaticParam('prop', 'langlinks'),
               SingleParam('prop', 'protection')]
 
     def extract_results(self, query_resp):

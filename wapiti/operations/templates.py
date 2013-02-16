@@ -6,10 +6,9 @@ from models import PageIdentifier
 
 
 class GetTranscludes(QueryOperation):
-    # todo: namespaces
-    param_prefix = 'gei'
-    query_param = SingleParam('title', 'Template:')
-    params = [StaticParam('generator', 'embeddedin'),
+    query_field = SingleParam('title', val_prefix='Template:')
+    field_prefix = 'gei'
+    fields = [StaticParam('generator', 'embeddedin'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'title|pageid|ns|protection')]
     bijective = False

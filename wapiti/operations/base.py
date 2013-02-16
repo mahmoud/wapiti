@@ -110,7 +110,7 @@ class Param(object):
     def __init__(self, key, default=None, val_prefix=None, **kw):
         if not key:
             raise ValueError('expected name, not %r' % key)
-        self._key = unicode(key)
+        self.key = unicode(key)
         self.val_prefix = val_prefix
         self.key_prefix = kw.pop('key_prefix', True)  # True = filled in later
         self.required = kw.pop('required', False)
@@ -120,25 +120,24 @@ class Param(object):
         if default is not None:
             default = normalize_param(default, self.val_prefix, self.multi)
         self.default = default
-        self._value = None
 
     def get_key(self, key_prefix=None):
         prefix = key_prefix
         if isinstance(prefix, basestring):
             prefix = unicode(prefix)
         elif self.key_prefix:
-            prefix = '_'
+            raise TypeError('expected valid string prefix')
         else:
             prefix = ''
-        return prefix + self._key
+        return prefix + self.key
 
     def get_value(self, value, prefix=None):
         if prefix is None:
-            prefix = self.prefix
+            prefix = self.val_prefix
         norm_val = normalize_param(value, prefix, self.multi)
         val = norm_val or self.default
         if not val:
-            raise ValueError('param is required')
+            raise ValueError('%r param is required' % self.key)
         return val
 
     def get_value_list(self, value, prefix=None):
@@ -147,29 +146,36 @@ class Param(object):
     def get_tuple(self):
         return (self.key, self.value)
 
+    def get_tuple_from_kwargs(self, **kwargs):
+        """
+        Picks up appropriate values from kwargs,
+        returns the defaults if nothing matches.
+        """
+        pass
+
     __call__ = get_value
 
 
-class StaticParam(object):
+class StaticParam(Param):
     def __init__(self, key, value):
         super(StaticParam, self).__init__(key, value)
 
     def get_key(self, *a, **kw):
-        return self._key
+        return self.key
 
     def get_value(self, *a, **kw):
         return self.default
 
 
-class SingleParam(object):
+class SingleParam(Param):
     def __init__(self, *a, **kw):
         kw['multi'] = False
         super(SingleParam, self).__init__(*a, **kw)
 
 
-class MultiParam(object):
+class MultiParam(Param):
     def __init__(self, *a, **kw):
-        kw['multi'] = False
+        kw['multi'] = True
         super(MultiParam, self).__init__(*a, **kw)
 
 
@@ -327,41 +333,41 @@ class BaseQueryOperation(Operation):
 
 class QueryOperation(BaseQueryOperation):
     api_action = 'query'
-    param_prefix = None        # e.g., 'gcm'
-    query_param_name = None    # e.g., 'title'
-    query_param_prefix = None  # e.g., 'Category:'
+    query_field = None
+    field_prefix = None        # e.g., 'gcm'
 
     def __init__(self, query_param, limit=None, *a, **kw):
         super(QueryOperation, self).__init__(query_param, limit, *a, **kw)
         self.cont_strs = []
         self.namespaces = kw.pop('namespaces', None)  # TODO: needs remapping/checking?
         self.kwargs = kw
+        self._set_params()
 
     def set_query_param(self, qp):
         self._orig_query_param = qp
-        if qp is None:
-            qp = ''
-        if is_scalar(qp):
-            qp = unicode(qp)
-        if isinstance(qp, basestring):
-            qp = qp.split('|')
-        if not self.is_multiargument() and len(qp) > 1:
-            cn = self.__class__.__name__
-            tmpl = '%s expected singular query parameter, not %r'
-            raise ValueError(tmpl % (cn, qp))
-        qp = join_multi_args(qp, self.query_param_prefix)
+        qp = self.query_field.get_value(qp)
         super(QueryOperation, self).set_query_param(qp)
+
+    def _set_params(self):
+        params = {}
+        for field in self.fields:
+            pref_key = field.get_key(self.field_prefix)
+            kw_val = self.kwargs.get(field.key)
+            params[pref_key] = field.get_value(kw_val)
+        if self.query_field:
+            qp_key_pref = self.query_field.get_key(self.field_prefix)
+            qp_val = self.query_field.get_value(self.query_param)
+            params[qp_key_pref] = qp_val
+        self.params = params
 
     def set_limit(self, limit):
         self._orig_limit = limit
         if limit is None and self.is_bijective():
-            query_param = self.query_param
-            if isinstance(query_param, basestring):
-                query_param = query_param.split('|')
-            if is_scalar(query_param):
+            p_list = param_str2list(self.query_param)
+            if is_scalar(p_list):
                 limit = 1
             else:
-                limit = len(query_param)
+                limit = len(p_list)
         super(QueryOperation, self).set_limit(limit)
 
     @property
@@ -378,29 +384,25 @@ class QueryOperation(BaseQueryOperation):
 
     @classmethod
     def is_multiargument(cls):
-        if hasattr(cls, 'multiargument'):
-            return cls.multiargument
-        static_params = cls.static_params
-        query_param_name = cls.query_param_name
-        if 'list' in static_params:
-            return False
-        if query_param_name.endswith('s'):
-            # default behavior:
-            # plural query parameter name assumed to mean multiargument.
-            # if that's a problem, be explicit by setting class.multiargument
-            return True
-        return False
+        return getattr(cls.query_field, 'multi', False)
 
     @classmethod
     def is_bijective(cls):
         if hasattr(cls, 'bijective'):
             return cls.bijective
-        if 'list' in cls.static_params:
+        if 'list' in cls.get_field_dict():
             return False
         return True
 
+    @classmethod
+    def get_field_dict(cls):
+        ret = dict([(f.get_key(cls.field_prefix), f) for f in cls.fields])
+        if cls.query_field:
+            ret[cls.query_field.get_key(cls.field_prefix)] = cls.query_field
+        return ret
+
     def get_cont_str(self, resp, params):
-        #todo? fuzzy walker thing to walk down to self.param_prefix+'continue'?
+        #todo? fuzzy walker thing to walk down to self.field_prefix+'continue'?
         qc_val = resp.results.get(self.api_action + '-continue')
         if qc_val is None:
             return None
@@ -410,16 +412,13 @@ class QueryOperation(BaseQueryOperation):
                 break
         else:
             raise KeyError("couldn't find contstr")
-        return qc_val[next_key][self.param_prefix + 'continue']
+        return qc_val[next_key][self.field_prefix + 'continue']
 
     def prepare_params(self, **kw):
-        params = dict(self.static_params)
-        prefix = self.param_prefix
-
-        params[self.query_param_name] = self.query_param
-        params[prefix + 'limit'] = self.current_limit
+        params = dict(self.params)
+        params[self.field_prefix + 'limit'] = self.current_limit
         if self.last_cont_str:
-            params[prefix + 'continue'] = self.last_cont_str
+            params[self.field_prefix + 'continue'] = self.last_cont_str
         return params
 
     def fetch(self):
