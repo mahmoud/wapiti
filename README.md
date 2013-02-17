@@ -1,4 +1,4 @@
 wapiti
 ======
 
-Wikipedia API wrapper for humans and  (en.wikipedia.org/w/api.php, get it?)
+Wikipedia API wrapper for humans and elk (en.wikipedia.org/w/api.php, get it?)
