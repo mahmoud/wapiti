@@ -2,7 +2,8 @@ import base
 from category import (GetCategory,
                       GetSubcategoryInfos,
                       GetFlattenedCategory,
-                      GetCategoryRecursive)
+                      GetCategoryRecursive,
+                      GetCategoryPagesRecursive)
 from rand import GetRandom
 from protection import GetProtections
 from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
@@ -165,10 +166,9 @@ def test_cat_mem_namespace():
 
 
 def test_cat_pages_recursive():
-    get_cat_pages_rec = GetCategoryRecursive('Africa',
-                                             600,
-                                             resolve_to_subject=True,
-                                             namespace=[0, 1])
+    get_cat_pages_rec = GetCategoryPagesRecursive('Africa',
+                                                  600,
+                                                  resolve_to_subject=True)
     pages = call_and_ret(get_cat_pages_rec)
     return len(pages) == 600
 
@@ -189,4 +189,4 @@ if __name__ == '__main__':
     PDB_ERROR = True
     DO_PRINT = True
     from pprint import pprint
-    pprint(_main())
+    pprint(main())

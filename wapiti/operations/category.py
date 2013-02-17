@@ -16,7 +16,7 @@ class GetCategory(SubjectResolvingQueryOperation):
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection'),
-              MultiParam('namespace')]
+              MultiParam('namespace', required=False)]
 
     def extract_results(self, query_resp):
         ret = []
@@ -27,6 +27,10 @@ class GetCategory(SubjectResolvingQueryOperation):
                 continue
             ret.append(page_ident)
         return ret
+
+
+class GetCategoryPages(GetCategory):
+    fields = GetCategory.fields + [StaticParam('gcmnamespace', '0|1')]
 
 
 class GetSubcategoryInfos(QueryOperation):
@@ -94,3 +98,7 @@ class GetCategoryRecursive(CompoundQueryOperation):
             self.seen_titles.add(title)
             self.results.append(page_ident)
         return results
+
+
+class GetCategoryPagesRecursive(GetCategoryRecursive):
+    suboperation_type = GetCategoryPages

@@ -141,7 +141,7 @@ class Param(object):
             prefix = self.val_prefix
         norm_val = normalize_param(value, prefix, self.multi)
         val = norm_val or self.default
-        if val is None:
+        if val is None and self.required:
             raise ValueError('%r param is required' % self.key)
         return val
 
