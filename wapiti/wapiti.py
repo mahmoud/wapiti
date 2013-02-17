@@ -11,12 +11,9 @@ but check back soon.
 # TODO
  * Create client class
  * Port more API calls
- * Support namespace filtering in a general fashion
  * Retry and timeout behaviors
  * Get my shit together and continue work on the HTTP client.
- * Automatically add 'g' to prefix if static_params has key 'generator'
  * Underscoring args
- * Support lists of static params (which are then joined automatically)
  * pause/resume
  * better differentiation between the following error groups:
    * Network/connectivity
@@ -31,8 +28,6 @@ Types of API calls:
    * TODO: establish return format convention for this
 
 Need generic support for:
- * Talk -> respective namespace mapping
  * APIs which support both pageid and title lookup
  * Redirect following
- * Namespace filtering
 '''
