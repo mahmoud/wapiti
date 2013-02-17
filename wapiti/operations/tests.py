@@ -125,6 +125,14 @@ def test_transclusions():
     return len(tr_list) == 20
 
 
+def test_resolve_subjects():
+    get_res_transcludes = GetTranscludes('Template:ArticleHistory',
+                                         100,
+                                         resolve_to_subject=True)
+    tr_list = call_and_ret(get_res_transcludes)
+    return len(tr_list) == 100 and all([t.is_subject_page for t in tr_list])
+
+
 def test_current_content():
     get_page = GetCurrentContent('Coffee')
     page = call_and_ret(get_page)
@@ -158,7 +166,8 @@ def main():
 
 
 def _main():
-    return call_and_ret(test_current_content_redirect)
+    test_transclusions()
+    test_resolve_subjects()
 
 if __name__ == '__main__':
     PDB_ALL = False

@@ -59,16 +59,88 @@ class _PageIdentMixin(object):
         return self.page_ident.source
 
 
+def title_talk2subject(title):
+    talk_pref, _, title_suf = title.partition(':')
+    subj_pref, _, _ = talk_pref.rpartition('talk')
+    subj_pref = subj_pref.strip()
+    new_title = subj_pref + ':' + title_suf
+    new_title = new_title.lstrip(':')
+    return new_title
+
+
+def title_subject2talk(title):
+    subj_pref, _, title_suf = title.partition(':')
+    subj_pref = subj_pref.strip()
+    if not subj_pref:
+        talk_pref = 'Talk'
+    elif subj_pref.endswith('talk'):
+        talk_pref = subj_pref
+    else:
+        talk_pref = subj_pref + ' talk'
+    new_title = talk_pref + ':' + title_suf
+    return new_title
+
+
 class PageIdentifier(_PageIdentMixin):
     # lolololol masking mixin properties
     title, req_title, page_id, ns, source = (None,) * 5
 
-    def __init__(self, title, page_id, ns, source, req_title=None):
+    def __init__(self, title, page_id, ns, source,
+                 req_title=None, subject_id=None, talk_id=None):
         self.title = title
-        self.req_title = req_title
         self.page_id = page_id
         self.ns = ns
+        self.req_title = req_title or title
         self.source = source
+
+        if self.is_subject_page:
+            self.subject_id = page_id
+            self.talk_id = talk_id
+        elif self.is_talk_page:
+            self.subject_id = subject_id
+            self.talk_id = page_id
+        else:
+            raise ValueError('special or nonexistent namespace: %r' % ns)
+
+    @property
+    def is_subject_page(self):
+        return (self.ns >= 0 and self.ns % 2 == 0)
+
+    @property
+    def is_talk_page(self):
+        return (self.ns >= 0 and self.ns % 2 == 1)
+
+    def get_subject_identifier(self):
+        if self.is_subject_page:
+            return self
+        if self.subject_id is None:
+            raise ValueError('subject_id not set')
+        subj_title = title_talk2subject(self.title)
+        subj_ns = self.ns - 1
+        ret = PageIdentifier(subj_title,
+                             self.subject_id,
+                             subj_ns,
+                             self.source,
+                             self.req_title,
+                             self.subject_id,
+                             self.talk_id)
+        return ret
+
+    def get_talk_identifier(self):
+        if self.is_talk_page:
+            return self
+        if self.talk_id is None:
+            raise ValueError('talk_id not set')
+        talk_title = title_subject2talk(self.title)
+        talk_ns = self.ns + 1
+        ret = PageIdentifier(talk_title,
+                             self.talk_id,
+                             talk_ns,
+                             self.source,
+                             self.req_title,
+                             self.subject_id,
+                             self.talk_id)
+        return ret
 
     @classmethod
     def from_query(cls, res_dict, source, req_title=None):
@@ -76,6 +148,8 @@ class PageIdentifier(_PageIdentMixin):
             title = res_dict['title']
             page_id = res_dict['pageid']
             ns = res_dict['ns']
+            subject_id = res_dict.get('subjectid')
+            talk_id = res_dict.get('talkid')
         except KeyError:
             if callable(getattr(res_dict, 'keys', None)):
                 disp = res_dict.keys()
@@ -86,7 +160,7 @@ class PageIdentifier(_PageIdentMixin):
             raise ValueError('page identifier expected title,'
                              ' page_id, and namespace. received: "%s"'
                              % disp)
-        return cls(title, page_id, ns, source, req_title)
+        return cls(title, page_id, ns, source, req_title, subject_id, talk_id)
 
 
 class RevisionInfo(_PageIdentMixin):

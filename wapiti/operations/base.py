@@ -283,25 +283,8 @@ class BaseQueryOperation(Operation):
         """
         return response
 
-    def extract_results(self, response):
-        return response
-
     def store_results(self, results):
         self.results.extend(results)
-
-    def fetch_and_store(self):
-        resp = self.fetch()
-        resp = self.post_process_response(resp)
-        if not resp:
-            print "that's an error: '%s'" % getattr(resp, 'url', '')
-            import pdb;pdb.set_trace()
-            return []
-        try:
-            new_results = self.extract_results(resp)
-        except Exception:
-            raise
-        self.store_results(new_results)
-        return new_results
 
     def get_current_task(self):
         if not self.remaining:
@@ -343,7 +326,6 @@ class QueryOperation(BaseQueryOperation):
     def __init__(self, query_param, limit=None, *a, **kw):
         super(QueryOperation, self).__init__(query_param, limit, *a, **kw)
         self.cont_strs = []
-        self.namespaces = kw.pop('namespaces', None)  # TODO: needs remapping/checking?
         self.kwargs = kw
         self._set_params()
 
@@ -441,6 +423,27 @@ class QueryOperation(BaseQueryOperation):
 
     def post_process_response(self, response):
         return response.results.get(self.api_action)
+
+    def fetch_and_store(self):
+        resp = self.fetch()
+        resp = self.post_process_response(resp)
+        if not resp:
+            print "that's an error: '%s'" % getattr(resp, 'url', '')
+            import pdb;pdb.set_trace()
+            return []
+        try:
+            new_results = self.extract_results(resp)
+        except Exception:
+            raise
+        self.store_results(new_results)
+        return new_results
+
+
+class SubjectResolvingQueryOperation(QueryOperation):
+    def store_results(self, pages):
+        if self.kwargs.get('resolve_to_subject'):
+            pages = [p.get_subject_identifier() for p in pages]
+        return super(SubjectResolvingQueryOperation, self).store_results(pages)
 
 
 def api_req(action, params=None, raise_exc=True, **kwargs):

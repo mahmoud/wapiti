@@ -19,7 +19,7 @@ class GetCategory(QueryOperation):
     query_field = SingleParam('title', val_prefix='Category:', required=True)
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'info'),
-              StaticParam('inprop', 'title|pageid|ns|subjectid|protection')]
+              StaticParam('inprop', 'title|pageid|ns|subjectid|talkid|protection')]
 
     def extract_results(self, query_resp):
         ret = []

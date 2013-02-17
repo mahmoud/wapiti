@@ -10,7 +10,7 @@ class GetRandom(QueryOperation):
     field_prefix = 'grn'
     fields = [StaticParam('generator', 'random'),
               StaticParam('prop', 'info'),
-              StaticParam('inprop', 'subjectid|protection')]
+              StaticParam('inprop', 'subjectid|talkid|protection')]
     query_field = None  # hmm
 
     def __init__(self, limit, namespaces=None, retries=DEFAULT_RETRIES, **kw):
