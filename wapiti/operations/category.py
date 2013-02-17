@@ -1,25 +1,20 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from collections import deque
-from base import (QueryOperation,
-                  BaseQueryOperation,
-                  CompoundQueryOperation,
-                  NoMoreResults,
-                  PriorityQueue,
-                  MAX_LIMIT,
-                  StaticParam,
-                  SingleParam,
-                  MultiParam)
 from models import CategoryInfo, PageIdentifier
+from base import (SubjectResolvingQueryOperation,
+                  QueryOperation,
+                  CompoundQueryOperation,
+                  StaticParam,
+                  SingleParam)
 
 
-class GetCategory(QueryOperation):
+class GetCategory(SubjectResolvingQueryOperation):
     field_prefix = 'gcm'
     query_field = SingleParam('title', val_prefix='Category:', required=True)
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'info'),
-              StaticParam('inprop', 'title|pageid|ns|subjectid|talkid|protection')]
+              StaticParam('inprop', 'subjectid|talkid|protection')]
 
     def extract_results(self, query_resp):
         ret = []

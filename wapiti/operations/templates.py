@@ -11,7 +11,7 @@ class GetTranscludes(SubjectResolvingQueryOperation):
     field_prefix = 'gei'
     fields = [StaticParam('generator', 'embeddedin'),
               StaticParam('prop', 'info'),
-              StaticParam('inprop', 'title|pageid|ns|subjectid|talkid|protection')]
+              StaticParam('inprop', 'subjectid|talkid|protection')]
     bijective = False
 
     def extract_results(self, query_resp):
