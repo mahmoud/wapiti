@@ -31,3 +31,50 @@ Need generic support for:
  * APIs which support both pageid and title lookup
  * Redirect following
 '''
+import re
+from functools import partial
+from operations import ALL_OPERATIONS
+
+
+_camel2under_re = re.compile('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
+
+
+def camel2under(string):
+    return _camel2under_re.sub(r'_\1', string).lower()
+
+
+def under2camel(string):
+    return ''.join(w.capitalize() or '_' for w in string.split('_'))
+
+
+class WapitiClient(object):
+    """
+    Provides logging, caching, settings, and a convenient interface
+    to most (all?) operations.
+    """
+    def __init__(self):
+        # set settings obj
+        # set up source (from api_url in settings)
+        # then you're ready to call ops
+        self.api_url = None
+        self.user_agent = None
+        self.timeout = 15
+        self.is_bot = False
+        self.per_call_limit = 500
+        self.retry_limit = 5
+
+        self.source = None
+
+        self._create_ops()
+
+    def call_operation(self, op_type, *a, **kw):
+        kw['client'] = self
+        operation = op_type(*a, **kw)
+        # TODO: add to queue or somesuch
+        return operation()
+
+    def _create_ops(self):
+        for op in ALL_OPERATIONS:  # TODO
+            func_name = camel2under(op.__name__)
+            call_op = partial(self.call_operation, op)
+            setattr(self, func_name, call_op)

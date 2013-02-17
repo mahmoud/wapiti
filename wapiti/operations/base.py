@@ -31,7 +31,7 @@ API_URL = SOURCES['enwp']  # TODO: hardcoded for nowskies
 IS_BOT = False
 DEFAULT_RETRIES = 0
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
-                                  'mahmoudrhashemi@gmail.com') }
+                                  ' mahmoudrhashemi@gmail.com') }
 MAX_LIMIT = sys.maxint
 MAX_ARTICLES_LIST = 50
 
