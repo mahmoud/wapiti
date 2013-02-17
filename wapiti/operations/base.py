@@ -122,11 +122,14 @@ class Param(object):
         self.default = default
 
     def get_key(self, key_prefix=None):
-        prefix = key_prefix
-        if isinstance(prefix, basestring):
-            prefix = unicode(prefix)
-        elif self.key_prefix:
-            raise TypeError('expected valid string prefix')
+        if self.key_prefix:
+            prefix = key_prefix
+            if prefix is None:
+                prefix = self.key_prefix
+            if isinstance(prefix, basestring):
+                prefix = unicode(prefix)
+            else:
+                raise TypeError('expected valid string prefix')
         else:
             prefix = ''
         return prefix + self.key
@@ -136,7 +139,7 @@ class Param(object):
             prefix = self.val_prefix
         norm_val = normalize_param(value, prefix, self.multi)
         val = norm_val or self.default
-        if not val:
+        if val is None:
             raise ValueError('%r param is required' % self.key)
         return val
 
@@ -291,6 +294,7 @@ class BaseQueryOperation(Operation):
         resp = self.post_process_response(resp)
         if not resp:
             print "that's an error: '%s'" % getattr(resp, 'url', '')
+            import pdb;pdb.set_trace()
             return []
         try:
             new_results = self.extract_results(resp)
@@ -345,7 +349,8 @@ class QueryOperation(BaseQueryOperation):
 
     def set_query_param(self, qp):
         self._orig_query_param = qp
-        qp = self.query_field.get_value(qp)
+        if self.query_field:
+            qp = self.query_field.get_value(qp)
         super(QueryOperation, self).set_query_param(qp)
 
     def _set_params(self):

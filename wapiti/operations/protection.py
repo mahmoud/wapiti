@@ -8,8 +8,8 @@ from models import ProtectionInfo
 class GetProtections(QueryOperation):
     field_prefix = 'in'
     query_field = MultiParam('titles', key_prefix=False, required=True)
-    fields = [StaticParam('prop', 'langlinks'),
-              SingleParam('prop', 'protection')]
+    fields = [StaticParam('prop', 'info'),
+              StaticParam('inprop', 'protection')]
 
     def extract_results(self, query_resp):
         ret = []

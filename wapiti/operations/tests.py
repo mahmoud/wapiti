@@ -158,11 +158,11 @@ def main():
 
 
 def _main():
-    return call_and_ret(test_flatten_category)
+    return call_and_ret(test_current_content_redirect)
 
 if __name__ == '__main__':
     PDB_ALL = False
     PDB_ERROR = True
     DO_PRINT = True
     from pprint import pprint
-    pprint(_main())
+    pprint(main())

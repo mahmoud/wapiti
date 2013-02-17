@@ -42,7 +42,7 @@ class GetCurrentContent(QueryOperation):
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS + '|content'),
               SingleParam('parse', False),
-              SingleParam('redirects', True, key_prefix=True)]
+              SingleParam('redirects', True, key_prefix=False)]
     bijective = True
 
     def prepare_params(self, *a, **kw):

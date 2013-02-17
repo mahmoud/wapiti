@@ -7,7 +7,7 @@ from models import PageIdentifier, LanguageLink, InterwikiLink
 
 class GetBacklinks(QueryOperation):
     field_prefix = 'bl'
-    query_field = SingleParam('title', key_prefix=False, required=True)
+    query_field = SingleParam('title', required=True)
     fields = [StaticParam('list', 'backlinks')]
 
     def extract_results(self, query_resp):
