@@ -81,8 +81,9 @@ def prefixed(arg, prefix=None):
 def param_list2str(p_list, prefix=None, keep_empty=False):
     if is_scalar(p_list):
         p_list = param_str2list(p_list, keep_empty)
-    ret = "|".join([prefixed(unicode(t), prefix)
-                    for t in p_list if (t or keep_empty)])
+    u_p_list = [unicode(p) for p in p_list]
+    ret = "|".join([prefixed(t, prefix)
+                    for t in u_p_list if (t or keep_empty)])
     return unicode(ret)
 
 
@@ -231,6 +232,7 @@ class BaseQueryOperation(Operation):
     def __init__(self, query_param, limit=None, *a, **kw):
         self.set_query_param(query_param)
         self.set_limit(limit)
+        self.kwargs = kw
 
         self.started = False
         self.results = []
@@ -327,7 +329,6 @@ class QueryOperation(BaseQueryOperation):
     def __init__(self, query_param, limit=None, *a, **kw):
         super(QueryOperation, self).__init__(query_param, limit, *a, **kw)
         self.cont_strs = []
-        self.kwargs = kw
         self._set_params()
 
     def set_query_param(self, qp):
@@ -427,13 +428,12 @@ class QueryOperation(BaseQueryOperation):
 
     def fetch_and_store(self):
         resp = self.fetch()
-        resp = self.post_process_response(resp)
-        if not resp:
-            print "that's an error: '%s'" % getattr(resp, 'url', '')
-            import pdb;pdb.set_trace()
+        processed_resp = self.post_process_response(resp)
+        if processed_resp is None:
+            print "may have an error: '%s'" % getattr(resp, 'url', '')
             return []
         try:
-            new_results = self.extract_results(resp)
+            new_results = self.extract_results(processed_resp)
         except Exception:
             raise
         self.store_results(new_results)
@@ -551,7 +551,7 @@ class CompoundQueryOperation(BaseQueryOperation):
         super(CompoundQueryOperation, self).__init__(*a, **kw)
 
         self.suboperations = PriorityQueue()
-        root_op_kwargs = dict(kw)
+        root_op_kwargs = dict(self.kwargs)
         root_op_kwargs['query_param'] = self.query_param
         root_op_kwargs['limit'] = self
         root_op = self.suboperation_type(**root_op_kwargs)
@@ -583,7 +583,7 @@ class CompoundQueryOperation(BaseQueryOperation):
         generated = self.generator.process()
         subop_kw_tmpl = getattr(self, 'suboperation_params', {})
         for g in generated:
-            subop_kw = {}
+            subop_kw = dict(self.kwargs)
             for k, v in subop_kw_tmpl.items():
                 if callable(v):
                     subop_kw[k] = v(g)

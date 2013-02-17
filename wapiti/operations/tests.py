@@ -164,6 +164,15 @@ def test_cat_mem_namespace():
     return len(portals) == 10
 
 
+def test_cat_pages_recursive():
+    get_cat_pages_rec = GetCategoryRecursive('Africa',
+                                             600,
+                                             resolve_to_subject=True,
+                                             namespace=[0, 1])
+    pages = call_and_ret(get_cat_pages_rec)
+    return len(pages) == 600
+
+
 def main():
     tests = dict([(k, v) for k, v in globals().items()
                   if callable(v) and k.startswith('test_')])
@@ -172,7 +181,7 @@ def main():
 
 
 def _main():
-    call_and_ret(test_cat_mem_namespace)
+    call_and_ret(test_cat_pages_recursive)
 
 
 if __name__ == '__main__':
@@ -180,4 +189,4 @@ if __name__ == '__main__':
     PDB_ERROR = True
     DO_PRINT = True
     from pprint import pprint
-    pprint(main())
+    pprint(_main())
