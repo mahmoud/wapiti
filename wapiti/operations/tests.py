@@ -158,6 +158,12 @@ def test_flatten_category():
     return len(cat_infos) == 2000
 
 
+def test_cat_mem_namespace():
+    get_star_portals = GetCategory('Astronomy_portals', 10, namespace=[100])
+    portals = call_and_ret(get_star_portals)
+    return len(portals) == 10
+
+
 def main():
     tests = dict([(k, v) for k, v in globals().items()
                   if callable(v) and k.startswith('test_')])
@@ -166,8 +172,8 @@ def main():
 
 
 def _main():
-    test_transclusions()
-    test_resolve_subjects()
+    call_and_ret(test_cat_mem_namespace)
+
 
 if __name__ == '__main__':
     PDB_ALL = False

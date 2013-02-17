@@ -6,7 +6,8 @@ from base import (SubjectResolvingQueryOperation,
                   QueryOperation,
                   CompoundQueryOperation,
                   StaticParam,
-                  SingleParam)
+                  SingleParam,
+                  MultiParam)
 
 
 class GetCategory(SubjectResolvingQueryOperation):
@@ -14,7 +15,8 @@ class GetCategory(SubjectResolvingQueryOperation):
     query_field = SingleParam('title', val_prefix='Category:', required=True)
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'info'),
-              StaticParam('inprop', 'subjectid|talkid|protection')]
+              StaticParam('inprop', 'subjectid|talkid|protection'),
+              MultiParam('namespace')]
 
     def extract_results(self, query_resp):
         ret = []

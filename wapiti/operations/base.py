@@ -81,7 +81,8 @@ def prefixed(arg, prefix=None):
 def param_list2str(p_list, prefix=None, keep_empty=False):
     if is_scalar(p_list):
         p_list = param_str2list(p_list, keep_empty)
-    ret = "|".join([prefixed(t, prefix) for t in p_list if (t or keep_empty)])
+    ret = "|".join([prefixed(unicode(t), prefix)
+                    for t in p_list if (t or keep_empty)])
     return unicode(ret)
 
 
