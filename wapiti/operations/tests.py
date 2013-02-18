@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 import base
 from category import (GetCategory,
                       GetSubcategoryInfos,
@@ -34,6 +37,12 @@ def call_and_ret(func):
             disp = ret
         print repr(disp)[:50] + '...'
     return ret
+
+
+def test_unicode_title():
+    get_beyonce = GetCurrentContent("Beyoncé Knowles")
+    beyonce = call_and_ret(get_beyonce)
+    return bool(beyonce)
 
 
 def test_category_basic():
@@ -181,7 +190,7 @@ def main():
 
 
 def _main():
-    call_and_ret(test_cat_pages_recursive)
+    return call_and_ret(test_unicode_title)
 
 
 if __name__ == '__main__':
