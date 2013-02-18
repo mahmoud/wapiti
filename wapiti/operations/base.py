@@ -426,9 +426,11 @@ class QueryOperation(BaseQueryOperation):
 
     def fetch_and_store(self):
         resp = self.fetch()
+        if resp.notices:
+            pass  # TODO: resolve some limit warnings
+            #print "may have an error: %r (%r)" % (resp.notices, resp.url)
         processed_resp = self.post_process_response(resp)
         if processed_resp is None:
-            print "may have an error: '%s'" % getattr(resp, 'url', '')
             return []
         try:
             new_results = self.extract_results(processed_resp)
@@ -473,6 +475,7 @@ class MediawikiCall(object):
         self.params.update(params)
         self.params['action'] = self.action
 
+        self.url = ''
         self.results = None
         self.servedby = None
         self.exception = None
@@ -481,6 +484,8 @@ class MediawikiCall(object):
         self.warnings = []
 
     def do_call(self):
+        # TODO: add URL to all exceptions
+        resp = None
         try:
             resp = self.client.get(self.api_url, self.params)
         except Exception as e:
@@ -489,6 +494,8 @@ class MediawikiCall(object):
             if self.raise_exc:
                 raise
             return self
+        finally:
+            self.url = getattr(resp, 'url', '')
 
         try:
             self.results = json.loads(resp.text)
@@ -514,6 +521,17 @@ class MediawikiCall(object):
         if self.warnings and self.raise_warn:
             raise WapitiException('warnings: %r' % self.warnings)
         return self
+
+    @property
+    def notices(self):
+        ret = []
+        if self.exception:
+            ret.append(self.exception)
+        if self.error:
+            ret.append(self.error)
+        if self.warnings:
+            ret.extend(self.warnings)
+        return ret
 
 
 from heapq import heappush, heappop
