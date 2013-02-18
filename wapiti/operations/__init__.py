@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from models import WikiException
-
+from base import WapitiException
 from models import PageIdentifier, CategoryInfo, RevisionInfo
 
 from rand import GetRandom
