@@ -15,6 +15,7 @@ class WikiException(Exception):
 
 LanguageLink = namedtuple('LanguageLink', 'url language origin_page')
 InterwikiLink = namedtuple('InterwikiLink', 'url prefix origin_page')
+ExternalLink = namedtuple('ExternalLink', 'url origin_page')
 
 
 class _PageIdentMixin(object):
