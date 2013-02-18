@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from base import QueryOperation, SingleParam, MultiParam, StaticParam
-from models import PageIdentifier, LanguageLink, InterwikiLink
+from models import PageIdentifier, LanguageLink, InterwikiLink, ExternalLink
 
 
 class GetBacklinks(QueryOperation):
@@ -19,6 +19,38 @@ class GetBacklinks(QueryOperation):
                 continue
             ret.append(page_ident)
         return ret
+
+
+class GetExternalLinks(QueryOperation):
+    field_prefix = 'el'
+    query_field = MultiParam('titles', key_prefix=False, required=True)
+    fields = [StaticParam('prop', 'extlinks')]
+
+    def extract_results(self, query_resp):
+        ret = []
+        for pid_dict in query_resp.get('pages', {}).values():
+            try:
+                page_ident = PageIdentifier.from_query(pid_dict, self.source)
+            except ValueError:
+                continue
+            for el in pid_dict.get('extlinks', []):
+                link = ExternalLink(el.get('*'),
+                                    page_ident)
+                ret.append(link)
+        return ret
+
+    def get_cont_str(self, resp, params):
+        #todo? fuzzy walker thing to walk down to self.field_prefix+'continue'?
+        qc_val = resp.results.get('query-continue')
+        if not qc_val:
+            return None
+        return qc_val['extlinks']['eloffset']
+
+    def prepare_params(self, **kw):
+        params = super(GetExternalLinks, self).prepare_params(**kw)
+        if params.get('elcontinue'):
+            params['eloffset'] = params.pop('elcontinue')
+        return params
 
 
 class GetLanguageLinks(QueryOperation):

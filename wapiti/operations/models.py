@@ -9,12 +9,9 @@ def parse_timestamp(timestamp):
     return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
 
 
-class WikiException(Exception):
-    pass
-
-
 LanguageLink = namedtuple('LanguageLink', 'url language origin_page')
 InterwikiLink = namedtuple('InterwikiLink', 'url prefix origin_page')
+ExternalLink = namedtuple('ExternalLink', 'url origin_page')
 
 
 class _PageIdentMixin(object):
