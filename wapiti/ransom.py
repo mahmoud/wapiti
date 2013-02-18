@@ -99,7 +99,6 @@ def encode_url_params(params, keep_blank=False):
                 else:
                     continue
             res.append((get_encoded(k), get_encoded(v)))
-            print res[-1]
     return urlencode(res, doseq=True)
 
 
