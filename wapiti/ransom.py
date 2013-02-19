@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
 """
 This is like a mini version of requests, which has simply
 grown too heavy and presented multiple compatibility issues
@@ -44,9 +46,9 @@ def is_scalar(obj):
 
 
 def get_encoded(val):
-    if isinstance(val, bytes):
-        val = val.encode('utf-8')
-    return val
+    if not isinstance(val, (unicode, bytes)):
+        val = unicode(val)
+    return val.encode('utf-8')
 
 
 def ordered_yield(mapping, keys):
@@ -114,16 +116,17 @@ def encode_url_params(params, keep_blank=False):
 
 def construct_url(url, params):
     parsed_url = parse_url(url)
+
     query = parsed_url.query
     encoded_params = encode_url_params(params)
     if encoded_params:
         if query:
-            query = query + u'&' + encoded_params
+            query = query + '&' + encoded_params
         else:
             query = encoded_params
-    new_url = parsed_url._replace(query=query)
-
-    return requote(urlunparse(new_url))
+    new_parsed_url = parsed_url._replace(query=query)
+    new_url = requote(urlunparse(new_parsed_url))
+    return new_url
 
 
 def gunzip(text):

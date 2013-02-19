@@ -11,8 +11,6 @@ import json
 
 from ransom import Client, Response
 
-from models import WikiException
-
 DEFAULT_TIMEOUT  = 15
 import socket
 socket.setdefaulttimeout(DEFAULT_TIMEOUT)  # TODO: better timeouts for reqs
@@ -35,7 +33,7 @@ DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
 MAX_LIMIT = sys.maxint
 MAX_ARTICLES_LIST = 50
 
-requests = Client({'headers': DEFAULT_HEADERS})
+DEFAULT_CLIENT = Client({'headers': DEFAULT_HEADERS})
 
 if IS_BOT:
     PER_CALL_LIMIT = 5000  # most of these globals will be set on client
@@ -412,12 +410,12 @@ class QueryOperation(BaseQueryOperation):
 
     def fetch(self):
         params = self.prepare_params(**self.kwargs)
-        resp = api_req(self.api_action, params)
+        mw_call = MediawikiCall(API_URL, self.api_action, params).do_call()
         # TODO: check resp for api errors/warnings
 
-        new_cont_str = self.get_cont_str(resp, params)
+        new_cont_str = self.get_cont_str(mw_call, params)
         self.cont_strs.append(new_cont_str)
-        return resp
+        return mw_call
 
     def extract_results(self, resp):
         raise NotImplementedError('inheriting classes should return'
@@ -428,9 +426,11 @@ class QueryOperation(BaseQueryOperation):
 
     def fetch_and_store(self):
         resp = self.fetch()
+        if resp.notices:
+            pass  # TODO: resolve some limit warnings
+            #print "may have an error: %r (%r)" % (resp.notices, resp.url)
         processed_resp = self.post_process_response(resp)
         if processed_resp is None:
-            print "may have an error: '%s'" % getattr(resp, 'url', '')
             return []
         try:
             new_results = self.extract_results(processed_resp)
@@ -446,57 +446,93 @@ class SubjectResolvingQueryOperation(QueryOperation):
             pages = [p.get_subject_identifier() for p in pages]
         return super(SubjectResolvingQueryOperation, self).store_results(pages)
 
+BASE_API_PARAMS = {'format': 'json',
+                   'servedby': 'true'}
 
-def api_req(action, params=None, raise_exc=True, **kwargs):
-    all_params = {'format': 'json',
-                  'servedby': 'true'}
-    all_params.update(kwargs)
-    all_params.update(params)
-    all_params['action'] = action
-    headers = {'accept-encoding': 'gzip'}
 
-    resp = Response()
-    resp.results = None
-    try:
-        if action == 'edit':
-            #TODO
-            resp = requests.post(API_URL, params=all_params, headers=headers, timeout=DEFAULT_TIMEOUT)
-        else:
-            resp = requests.get(API_URL, all_params)
-    except Exception as e:
-        if raise_exc:
-            raise
-        else:
-            resp.error = e
-            resp.results = None
-            return resp
+class WapitiException(Exception):
+    pass
 
-    try:
-        resp.results = json.loads(resp.text)
-        resp.servedby = resp.results.get('servedby')
-        # TODO: warnings?
-    except Exception as e:
-        if raise_exc:
-            raise
-        else:
-            resp.error = e
-            resp.results = None
-            resp.servedby = None
-            return resp
 
-    mw_error = resp.headers.getheader('MediaWiki-API-Error')
-    if mw_error:
-        error_str = mw_error
-        error_obj = resp.results.get('error')
-        if error_obj and error_obj.get('info'):
-            error_str += ' ' + error_obj.get('info')
-        if raise_exc:
-            raise WikiException(error_str)
-        else:
-            resp.error = error_str
-            return resp
+class MediawikiCall(object):
+    """
+    Sets up actual API HTTP request, makes the request, encapsulates
+    error handling, and stores results.
+    """
+    def __init__(self, api_url, action, params=None, **kw):
+        self.api_url = api_url
+        self.action = action
 
-    return resp
+        self.raise_exc = kw.pop('raise_exc', True)
+        self.raise_err = kw.pop('raise_err', True)
+        self.raise_warn = kw.pop('raise_warn', False)
+        self.client = kw.pop('client', DEFAULT_CLIENT)
+        if kw:
+            raise ValueError('got unexpected keyword arguments: %r'
+                             % kw.keys())
+        params = params or {}
+        self.params = dict(BASE_API_PARAMS)
+        self.params.update(params)
+        self.params['action'] = self.action
+
+        self.url = ''
+        self.results = None
+        self.servedby = None
+        self.exception = None
+        self.error = None
+        self.error_code = None
+        self.warnings = []
+
+    def do_call(self):
+        # TODO: add URL to all exceptions
+        resp = None
+        try:
+            resp = self.client.get(self.api_url, self.params)
+        except Exception as e:
+            # TODO: log
+            self.exception = e  # TODO: wrap
+            if self.raise_exc:
+                raise
+            return self
+        finally:
+            self.url = getattr(resp, 'url', '')
+
+        try:
+            self.results = json.loads(resp.text)
+        except Exception as e:
+            self.exception = e  # TODO: wrap
+            if self.raise_exc:
+                raise
+            return self
+        self.servedby = self.results.get('servedby')
+
+        error = self.results.get('error')
+        if error:
+            self.error = error.get('info')
+            self.error_code = error.get('code')
+
+        warnings = self.results.get('warnings', {})
+        for mod_name, warn_dict in warnings.items():
+            warn_str = '%s: %s' % (mod_name, warn_dict.get('*', warn_dict))
+            self.warnings.append(warn_str)
+
+        if self.error and self.raise_err:
+            raise WapitiException(self.error_code)
+        if self.warnings and self.raise_warn:
+            raise WapitiException('warnings: %r' % self.warnings)
+        return self
+
+    @property
+    def notices(self):
+        ret = []
+        if self.exception:
+            ret.append(self.exception)
+        if self.error:
+            ret.append(self.error)
+        if self.warnings:
+            ret.extend(self.warnings)
+        return ret
+
 
 from heapq import heappush, heappop
 import itertools
