@@ -7,21 +7,27 @@ from models import PageIdentifier, CategoryInfo, RevisionInfo
 from rand import GetRandom
 from templates import GetTranscludes
 from protection import GetProtections
-from category import (GetCategory,
+from category import (GetCategoryList,
+                      GetCategory,
                       GetCategoryPages,
                       GetSubcategoryInfos,
                       GetFlattenedCategory,
                       GetCategoryRecursive,
                       GetCategoryPagesRecursive)
-from links import GetBacklinks, GetLanguageLinks, GetInterwikiLinks
+from links import (GetBacklinks, 
+                   GetLanguageLinks, 
+                   GetInterwikiLinks,
+                   GetImages)
 from feedback import GetFeedbackV4, GetFeedbackV5
 from revisions import (GetRevisionInfos,
                        GetCurrentContent,
                        GetCurrentTalkContent)
+from misc import GetCoordinates, GeoSearch
 
 ALL_OPERATIONS = [GetRandom,
                   GetTranscludes,
                   GetProtections,
+                  GetCategoryList,
                   GetCategory,
                   GetCategoryPages,
                   GetSubcategoryInfos,
@@ -35,4 +41,7 @@ ALL_OPERATIONS = [GetRandom,
                   GetFeedbackV5,
                   GetRevisionInfos,
                   GetCurrentContent,
-                  GetCurrentTalkContent]
+                  GetCurrentTalkContent,
+                  GetImages,
+                  GetCoordinates,
+                  GeoSearch]

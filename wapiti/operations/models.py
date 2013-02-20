@@ -308,3 +308,20 @@ class ProtectionInfo(object):
 
     def __repr__(self):
         return u'ProtectionInfo(%r)' % self.protections
+
+
+class CoordinateIndentifier(object):
+    def __init__(self, coord, page_ident=None):
+        self.page_ident = page_ident
+        self.lat = coord.get('lat')
+        self.lon = coord.get('lon')
+        self.type = coord.get('type')
+        self.name = coord.get('name')
+        self.dim = coord.get('dim')
+        self.country = coord.get('country')
+        self.region = coord.get('region')
+        if coord.get('primary', False) != False:
+            self.primary = True
+        else:
+            self.primary = False
+        return

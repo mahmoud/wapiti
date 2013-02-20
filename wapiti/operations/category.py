@@ -10,6 +10,28 @@ from base import (SubjectResolvingQueryOperation,
                   MultiParam)
 
 
+class GetCategoryList(QueryOperation):
+    field_prefix = 'gcl'
+    query_field = MultiParam('titles', key_prefix=False, required=True)
+    fields = [StaticParam('generator', 'categories'),
+              StaticParam('prop', 'categoryinfo'),
+              SingleParam('gclshow', ''),  # hidden, !hidden
+              ]
+
+    def extract_results(self, query_resp):
+        ret = []
+        for k, pid_dict in query_resp['pages'].iteritems():
+            try:
+                cat_info = CategoryInfo.from_query(pid_dict, self.source)
+            except ValueError:
+                print ValueError
+                continue
+            if cat_info.page_id < 0:
+                continue
+            ret.append(cat_info)
+        return ret
+
+
 class GetCategory(SubjectResolvingQueryOperation):
     field_prefix = 'gcm'
     query_field = SingleParam('title', val_prefix='Category:', required=True)
