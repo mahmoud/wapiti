@@ -14,7 +14,7 @@ if is_py2:
     from Cookie import Morsel
     from StringIO import StringIO
 
-    unicode, str, bytes = unicode, str, str
+    unicode, str, bytes, basestring = unicode, str, str, basestring
 elif is_py3:
     from urllib.parse import (urlparse, urlunparse, urljoin, urlsplit,
                               urlencode, quote, unquote, quote_plus,
@@ -24,9 +24,10 @@ elif is_py3:
     from http.cookies import Morsel
     from io import StringIO
 
-    unicode, str, bytes = str, bytes, bytes
+    unicode, str, bytes, basestring = str, bytes, bytes, str
 else:
-    raise NotImplemented  # 'welcome to the future, I guess'
+    raise NotImplementedError('welcome to the future, I guess. (report this)')
+
 
 # The unreserved URI characters (RFC 3986)
 UNRESERVED_SET = frozenset(
