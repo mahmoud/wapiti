@@ -72,7 +72,7 @@ A `RevisionInfo` describes the standard information for a revision.
 * **Size** : the length of the article at this revision
 * **Timestamp** : timestamp in UTC when this revision was submitted
 * **SHA1** : the SHA-1 hash of revision text in base-36.
-* **Edit summary** : the [edit summaryy](http://meta.wikimedia.org/wiki/Help:Edit_summary) (or 'comment') for a contribution. In some cases, it may have been deleted (or 'oversighted') and unavailable through the API.
+* **Edit summary** : the [edit summary](http://meta.wikimedia.org/wiki/Help:Edit_summary) (or 'comment') for a contribution. In some cases, it may have been deleted (or 'oversighted') and unavailable through the API.
 * **Tags** : brief messages that MediaWiki (or an extension) may automatically place next to certain edits. [Tags](http://en.wikipedia.org/wiki/Wikipedia:Tags) are not common, usually placed by Edit Filter or VisualEditor extensions.
 * **Parsed** : whether the page is parsed (html) or not (wikitext)
 
@@ -81,9 +81,24 @@ A `Revision` includes the same data as `RevisionInfo`, plus full text content.
 
 todo
 ----
-- [x] Basic docs
-- [x] Client, operations, and models
-- [ ] Logging
-- [ ] Client settings
-- [ ] Get current revision from main site
-- [ ] Full docs
+- Logging
+- Client settings
+- Port more API calls
+- Retry and timeout behaviors
+- Get my shit together and continue work on the HTTP client.
+- Underscoring args
+- Pause/resume
+- Better differentiation between the following error groups:
+   * Network/connectivity
+   * Logic
+   * Actual Mediawiki API errors ('no such category', etc.)
+- Relatedly: Save MediaWiki API warnings
+- Types of API calls:
+   * single argument -> multiple results (get category)
+   * many arguments -> up to one result per argument (get protections)
+   * multiple arguments -> multiple results per argument (get language links)
+   * TODO: establish return format convention for this
+- Need generic support for:
+   * APIs which support both pageid and title lookup
+   * Redirect following
+- Full docs
