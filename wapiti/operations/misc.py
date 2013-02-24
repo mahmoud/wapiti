@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from base import QueryOperation, SingleParam, MultiParam, StaticParam
 from models import PageIdentifier, CoordinateIndentifier
 
+
 class GetCoordinates(QueryOperation):
     field_prefix = ''
     query_field = MultiParam('titles', required=True)

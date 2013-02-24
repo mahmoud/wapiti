@@ -1,23 +1,31 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation, SingleParam, StaticParam
+from base import QueryOperation, MultiParam, StaticParam
 from models import NamespaceDescriptor, InterwikiDescriptor
+
+
+DEFAULT_PROPS = ('general',
+                 'namespaces',
+                 'namespacealiases',
+                 'statistics',
+                 'interwikimap')
 
 
 class GetMeta(QueryOperation):
     '''
-    http://en.wikipedia.org/w/api.php?action=query
-    &meta=&siprop=&format=jsonfm
+    http://en.wikipedia.org/w/api.php?action=query&meta=&siprop=&format=jsonfm
     http://en.wikipedia.org/w/api.php?action=query&meta=siteinfo&siprop=general|namespaces|namespacealiases|statistics|interwikimap&format=jsonfm
     '''
     field_prefix = 'si'
-    query_field = False  # hmm
+    query_field = None
     fields = [StaticParam('meta', 'siteinfo'),
-              StaticParam('siprop', 'general|namespaces|namespacealiases|statistics|interwikimap')]
+              MultiParam('prop', DEFAULT_PROPS)]
 
     def __init__(self, **kw):
-        super(GetMeta, self).__init__('Test', **kw)
+        query_param = kw.pop('query_param', None)
+        limit = kw.pop('limit', None)
+        super(GetMeta, self).__init__(query_param, limit, **kw)
 
     def extract_results(self, query_resp):
         ret = query_resp['general']
@@ -35,5 +43,4 @@ class GetMeta(QueryOperation):
                                               iw.get('language')))
         ret['namespace_map'] = ns_map
         ret['interwiki_map'] = iw_map
-        import pdb; pdb.set_trace()
         return ret

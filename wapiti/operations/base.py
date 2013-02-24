@@ -248,7 +248,7 @@ class BaseQueryOperation(Operation):
 
     def set_limit(self, limit):
         self.dynamic_limit = True
-        if hasattr(limit, 'remaining'):  # replaces 'owner' functionality
+        if hasattr(limit, 'remaining'):
             self._get_limit = lambda: limit.remaining
         elif callable(limit):
             self._get_limit = limit
@@ -390,7 +390,6 @@ class QueryOperation(BaseQueryOperation):
         return ret
 
     def get_cont_str(self, resp, params):
-        #todo? fuzzy walker thing to walk down to self.field_prefix+'continue'?
         qc_val = resp.results.get(self.api_action + '-continue')
         if qc_val is None:
             return None
