@@ -5,21 +5,16 @@ wapiti
 
 A MediaWiki API wrapper in Python for humans and elk. 
 
-Wapiti makes it simple for python scripts to retrieve data from [Wikipedia](https://en.wikipedia.org/w/api.php). No more worries about query limits, continue strings, or formatting. Just ask for  data and get structured results.
+Wapiti makes it simple for python scripts to retrieve data from the [Wikipedia API](https://en.wikipedia.org/w/api.php). No more worries about query limits, continue strings, or formatting. Just ask for  data and get structured results.
 
 Example
 -------
-Let's say you wanted to get the members of Wikipedia's [Category:Lists of superlatives](http://en.wikipedia.org/wiki/Category:Lists_of_superlatives). First, initialize a `WapitiClient` and change any settings. Next, run the operation `get_category_pages` on the category `'Lists of superlatives'`, with a limit of `10`:
+Let's get the members of Wikipedia's [Category:Lists of superlatives](http://en.wikipedia.org/wiki/Category:Lists_of_superlatives). First, initialize a `WapitiClient` and change any settings. Next, run the operation `get_category_pages` on the category `'Lists of superlatives'`, with a limit of `10`:
 
 ```python
-import wapiti
-client = wapiti.WapitiClient()
-superlative_category_pages = client.get_category_pages_recursive('Lists of superlatives', 10)
-```
-
-This returns a list of `PageIdentifiers` for the category members:
-
-```python
+>>> import wapiti
+>>> client = wapiti.WapitiClient()
+>>> client.get_category_pages_recursive('Lists of superlatives', 10)
 [PageIdentifier(u'Ranked lists of Chilean regions', 25042332, 0, u'enwp'),
  PageIdentifier(u'List of the heaviest people', 3626619, 0, u'enwp'),
  PageIdentifier(u'List of heaviest bells', 25636339, 0, u'enwp'),
@@ -31,6 +26,8 @@ This returns a list of `PageIdentifiers` for the category members:
  PageIdentifier(u'Angus Maddison statistics of the ten largest economies by GDP (PPP)', 38385899, 0, u'enwp'),
  PageIdentifier(u'List of fastest production motorcycles by acceleration', 34443631, 0, u'enwp')]
 ```
+
+This returns a list of `PageIdentifiers` for the category's members.
 
 Operations
 ----------
