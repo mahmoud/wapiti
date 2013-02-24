@@ -5,6 +5,25 @@ from base import QueryOperation, SingleParam, MultiParam, StaticParam
 from models import PageIdentifier, LanguageLink, InterwikiLink, ExternalLink
 
 
+class GetImages(QueryOperation):
+    field_prefix = 'gim'
+    query_field = MultiParam('titles', key_prefix=False, required=True)
+    fields = [StaticParam('generator', 'images'),
+              StaticParam('prop', 'info')]
+
+    def extract_results(self, query_resp):
+        ret = []
+        for k, pid_dict in query_resp['pages'].iteritems():
+            try:
+                page_ident = PageIdentifier.from_query(pid_dict, self.source)
+            except ValueError:
+                continue
+            if page_ident.page_id < 0:
+                continue
+            ret.append(page_ident)
+        return ret
+
+
 class GetBacklinks(QueryOperation):
     field_prefix = 'bl'
     query_field = SingleParam('title', required=True)
@@ -13,6 +32,24 @@ class GetBacklinks(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for pid_dict in query_resp.get('backlinks', []):
+            try:
+                page_ident = PageIdentifier.from_query(pid_dict, self.source)
+            except ValueError:
+                continue
+            ret.append(page_ident)
+        return ret
+
+
+class GetLinks(QueryOperation):
+    field_prefix = 'gpl'
+    query_field = SingleParam('titles', key_prefix=False, required=True)
+    fields = [StaticParam('generator', 'links'),
+              StaticParam('prop', 'info'),
+              MultiParam('namespace', required=False)]
+
+    def extract_results(self, query_resp):
+        ret = []
+        for k, pid_dict in query_resp['pages'].iteritems():
             try:
                 page_ident = PageIdentifier.from_query(pid_dict, self.source)
             except ValueError:

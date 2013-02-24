@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import base
 from category import (GetCategory,
+                      GetCategoryList,
                       GetSubcategoryInfos,
                       GetFlattenedCategory,
                       GetCategoryRecursive,
@@ -12,12 +13,15 @@ from protection import GetProtections
 from links import (GetBacklinks,
                    GetLanguageLinks,
                    GetInterwikiLinks,
-                   GetExternalLinks)
+                   GetExternalLinks,
+                   GetImages,
+                   GetLinks)
 from feedback import GetFeedbackV4, GetFeedbackV5
 from revisions import (GetRevisionInfos,
                        GetCurrentContent,
                        GetCurrentTalkContent)
 from templates import GetTranscludes
+from misc import GetCoordinates, GeoSearch
 
 PDB_ALL = False
 PDB_ERROR = False
@@ -239,6 +243,33 @@ def test_cat_pages_recursive():
     return len(pages) == 600
 
 
+def test_cat_list():
+    get_cat_list = GetCategoryList('Physics', 11)
+    pages = call_and_ret(get_cat_list)
+    return len(pages) == 11
+
+
+def test_get_images():
+    get_imgs = GetImages('Coffee', 4)
+    imgs = call_and_ret(get_imgs)
+    return len(imgs) == 4
+
+def test_get_links():
+    get_links = GetLinks('Coffee', 17)
+    links = call_and_ret(get_links)
+    return len(links) == 17
+
+def test_coordinates():
+    get_coordinates = GetCoordinates(['White House', 'Golden Gate Bridge', 'Mount Everest'])
+    coords = call_and_ret(get_coordinates)
+    return len(coords) == 3
+
+def test_geosearch():
+    geosearch = GeoSearch(('37.8197', '-122.479'))
+    geo = call_and_ret(geosearch)
+    return len(geo) > 1
+
+
 def main():
     tests = dict([(k, v) for k, v in globals().items()
                   if callable(v) and k.startswith('test_')])
@@ -247,7 +278,7 @@ def main():
 
 
 def _main():
-    return call_and_ret(test_unicode_title)
+    return call_and_ret(test_geosearch)
 
 
 if __name__ == '__main__':
