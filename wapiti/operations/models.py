@@ -140,7 +140,7 @@ class PageIdentifier(_PageIdentMixin):
         return ret
 
     @classmethod
-    def from_query(cls, res_dict, source, req_title=None):
+    def from_query(cls, res_dict, input_source, req_title=None):
         try:
             title = res_dict['title']
             page_id = res_dict['pageid']
@@ -157,6 +157,10 @@ class PageIdentifier(_PageIdentMixin):
             raise ValueError('page identifier expected title,'
                              ' page_id, and namespace. received: "%s"'
                              % disp)
+        try:
+            source = input_source
+        except ValueError:
+            raise ValueError('please specify source')
         return cls(title, page_id, ns, source, req_title, subject_id, talk_id)
 
 
@@ -185,12 +189,12 @@ class RevisionInfo(_PageIdentMixin):
         rev = res_dict
         return cls(page_ident=page_ident,
                    rev_id=rev['revid'],
-                   parent_rev_id=rev['parentid'],
+                   parent_rev_id=rev.get('parentid'),
                    user_text=rev.get('user', '!userhidden'),
                    user_id=rev.get('userid', -1),
-                   size=rev['size'],
+                   size=rev.get('size'),
                    timestamp=parse_timestamp(rev['timestamp']),
-                   sha1=rev['sha1'],
+                   sha1=rev.get('sha1'),
                    comment=rev.get('comment', ''),
                    tags=rev['tags'],
                    text=rev.get('*'),

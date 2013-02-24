@@ -2,14 +2,16 @@
 from __future__ import unicode_literals
 
 from base import QueryOperation, SingleParam, StaticParam
-from models import NamespaceDescriptor, InterwikiDescriptor
+from collections import namedtuple
+
+
+NamespaceDescriptor = namedtuple('NamespaceDescriptor', 'id title canonical')
+InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'prefix url language')
 
 
 class GetMeta(QueryOperation):
     '''
-    http://en.wikipedia.org/w/api.php?action=query
-    &meta=&siprop=&format=jsonfm
-    http://en.wikipedia.org/w/api.php?action=query&meta=siteinfo&siprop=general|namespaces|namespacealiases|statistics|interwikimap&format=jsonfm
+
     '''
     field_prefix = 'si'
     query_field = False  # hmm
@@ -17,7 +19,7 @@ class GetMeta(QueryOperation):
               StaticParam('siprop', 'general|namespaces|namespacealiases|statistics|interwikimap')]
 
     def __init__(self, **kw):
-        super(GetMeta, self).__init__('Test', **kw)
+        super(GetMeta, self).__init__('', **kw)
 
     def extract_results(self, query_resp):
         ret = query_resp['general']
@@ -35,5 +37,4 @@ class GetMeta(QueryOperation):
                                               iw.get('language')))
         ret['namespace_map'] = ns_map
         ret['interwiki_map'] = iw_map
-        import pdb; pdb.set_trace()
-        return ret
+        return [ret]

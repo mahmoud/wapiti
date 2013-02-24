@@ -22,6 +22,8 @@ from revisions import (GetRevisionInfos,
                        GetCurrentTalkContent)
 from templates import GetTranscludes
 from misc import GetCoordinates, GeoSearch
+from user import GetUserContribs
+from meta import GetMeta
 
 PDB_ALL = False
 PDB_ERROR = False
@@ -254,20 +256,35 @@ def test_get_images():
     imgs = call_and_ret(get_imgs)
     return len(imgs) == 4
 
+
 def test_get_links():
     get_links = GetLinks('Coffee', 17)
     links = call_and_ret(get_links)
     return len(links) == 17
+
 
 def test_coordinates():
     get_coordinates = GetCoordinates(['White House', 'Golden Gate Bridge', 'Mount Everest'])
     coords = call_and_ret(get_coordinates)
     return len(coords) == 3
 
+
 def test_geosearch():
     geosearch = GeoSearch(('37.8197', '-122.479'))
     geo = call_and_ret(geosearch)
     return len(geo) > 1
+
+
+def test_get_user_contribs():
+    get_contribs = GetUserContribs('Jimbo Wales', 1000)
+    contribs = call_and_ret(get_contribs)
+    return len(contribs) == 1000
+
+
+def test_get_meta():
+    get_meta = GetMeta()
+    metas = call_and_ret(get_meta)[0]
+    return len(metas['namespace_map']) > 20 and len(metas['interwiki_map']) > 100
 
 
 def main():
@@ -278,7 +295,7 @@ def main():
 
 
 def _main():
-    return call_and_ret(test_geosearch)
+    return call_and_ret(test_get_user_contribs)
 
 
 if __name__ == '__main__':
@@ -286,4 +303,4 @@ if __name__ == '__main__':
     PDB_ERROR = True
     DO_PRINT = True
     from pprint import pprint
-    pprint(main())
+    pprint(_main())
