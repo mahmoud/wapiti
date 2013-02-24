@@ -28,7 +28,7 @@ class GetCoordinates(QueryOperation):
 
 class GeoSearch(QueryOperation):
     field_prefix = 'gs'
-    query_field = MultiParam('gscoord', key_prefix=False, required=True)
+    query_field = MultiParam('coord', required=True)
     fields = [StaticParam('list', 'geosearch'),
               SingleParam('radius', 10000),  # must be within 10 and 10000
               #SingleParam('maxdim', 1000),  # does not work?
