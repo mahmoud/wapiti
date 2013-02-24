@@ -323,6 +323,7 @@ class QueryOperation(BaseQueryOperation):
     api_action = 'query'
     query_field = None
     field_prefix = None        # e.g., 'gcm'
+    cont_str_key = None
 
     def __init__(self, query_param, limit=None, *a, **kw):
         super(QueryOperation, self).__init__(query_param, limit, *a, **kw)
@@ -399,13 +400,15 @@ class QueryOperation(BaseQueryOperation):
                 break
         else:
             raise KeyError("couldn't find contstr")
-        return qc_val[next_key][self.field_prefix + 'continue']
+        if not self.cont_str_key:
+            self.cont_str_key = qc_val[next_key].keys()[0]
+        return qc_val[next_key][self.cont_str_key]
 
     def prepare_params(self, **kw):
         params = dict(self.params)
         params[self.field_prefix + 'limit'] = self.current_limit
         if self.last_cont_str:
-            params[self.field_prefix + 'continue'] = self.last_cont_str
+            params[self.cont_str_key] = self.last_cont_str
         return params
 
     def fetch(self):
@@ -445,6 +448,7 @@ class SubjectResolvingQueryOperation(QueryOperation):
         if self.kwargs.get('resolve_to_subject'):
             pages = [p.get_subject_identifier() for p in pages]
         return super(SubjectResolvingQueryOperation, self).store_results(pages)
+
 
 BASE_API_PARAMS = {'format': 'json',
                    'servedby': 'true'}
