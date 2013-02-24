@@ -39,13 +39,6 @@ class GetExternalLinks(QueryOperation):
                 ret.append(link)
         return ret
 
-    def get_cont_str(self, resp, params):
-        #todo? fuzzy walker thing to walk down to self.field_prefix+'continue'?
-        qc_val = resp.results.get('query-continue')
-        if not qc_val:
-            return None
-        return qc_val['extlinks']['eloffset']
-
     def prepare_params(self, **kw):
         params = super(GetExternalLinks, self).prepare_params(**kw)
         if params.get('elcontinue'):
