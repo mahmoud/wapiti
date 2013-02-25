@@ -283,7 +283,7 @@ class BaseQueryOperation(Operation):
         return response
 
     def store_results(self, results):
-        self.results.extend(results)
+        self.results.extend(results[:self.remaining])
 
     def get_current_task(self):
         if not self.remaining:
@@ -387,13 +387,13 @@ class QueryOperation(BaseQueryOperation):
             ret[cls.query_field.get_key(cls.field_prefix)] = cls.query_field
         return ret
 
-    def get_cont_str(self, resp, params):
+    def get_cont_str(self, resp):
         qc_val = resp.results.get(self.api_action + '-continue')
         if qc_val is None:
             return None
         for key in ('generator', 'prop', 'list'):
-            if key in params:
-                next_key = params[key]
+            if key in self.params:
+                next_key = self.params[key]
                 break
         else:
             raise KeyError("couldn't find contstr")
@@ -403,6 +403,7 @@ class QueryOperation(BaseQueryOperation):
 
     def prepare_params(self, **kw):
         params = dict(self.params)
+        # TODO: should not include limit for bijective operations
         params[self.field_prefix + 'limit'] = self.current_limit
         if self.last_cont_str:
             params[self.cont_str_key] = self.last_cont_str
@@ -412,9 +413,6 @@ class QueryOperation(BaseQueryOperation):
         params = self.prepare_params(**self.kwargs)
         mw_call = MediawikiCall(self.api_url, self.api_action, params).do_call()
         # TODO: check resp for api errors/warnings
-
-        new_cont_str = self.get_cont_str(mw_call, params)
-        self.cont_strs.append(new_cont_str)
         return mw_call
 
     def extract_results(self, resp):
@@ -437,6 +435,8 @@ class QueryOperation(BaseQueryOperation):
         except Exception:
             raise
         self.store_results(new_results)
+        new_cont_str = self.get_cont_str(resp)
+        self.cont_strs.append(new_cont_str)
         return new_results
 
 
@@ -605,8 +605,9 @@ class CompoundQueryOperation(BaseQueryOperation):
             self.generator = None
             return
         gen_kw_tmpl = getattr(self, 'generator_params', {})
-        gen_kw = {'query_param': self.query_param,
-                  'limit': MAX_LIMIT}
+        gen_kw = {'query_param': self.query_param }
+        if not generator_type.is_bijective():
+            gen_kw['limit'] = MAX_LIMIT
         for k, v in gen_kw_tmpl.items():
             if callable(v):
                 gen_kw[k] = v(self)

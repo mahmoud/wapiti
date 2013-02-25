@@ -174,6 +174,7 @@ class PageInfo(PageIdentifier):
             raise ValueError('talk_id not set')
         talk_title = title_subject2talk(self.title)
         talk_ns = self.ns + 1
+<<<<<<< HEAD
         kwargs = dict(self.__dict__)
         kwargs['title'] = talk_title
         kwargs['ns'] = talk_ns
@@ -212,6 +213,77 @@ class RevisionInfo(PageIdentifier):
     def __init__(self, *a, **kw):
         super(RevisionInfo, self).__init__(*a, **kw)
         self.timestamp = parse_timestamp(self.timestamp)
+=======
+        ret = PageIdentifier(talk_title,
+                             self.talk_id,
+                             talk_ns,
+                             self.source,
+                             self.req_title,
+                             self.subject_id,
+                             self.talk_id)
+        return ret
+
+    @classmethod
+    def from_query(cls, res_dict, input_source, req_title=None):
+        try:
+            title = res_dict['title']
+            page_id = res_dict['pageid']
+            ns = res_dict['ns']
+            subject_id = res_dict.get('subjectid')
+            talk_id = res_dict.get('talkid')
+        except KeyError:
+            if callable(getattr(res_dict, 'keys', None)):
+                disp = res_dict.keys()
+            else:
+                disp = repr(res_dict)
+                if len(disp) > 30:
+                    disp = disp[:30] + '...'
+            raise ValueError('page identifier expected title,'
+                             ' page_id, and namespace. received: "%s"'
+                             % disp)
+        try:
+            source = input_source
+        except ValueError:
+            raise ValueError('please specify source')
+        return cls(title, page_id, ns, source, req_title, subject_id, talk_id)
+
+
+class RevisionInfo(_PageIdentMixin):
+    def __init__(self, page_ident, rev_id, parent_rev_id, user_text,
+                 user_id, size, timestamp, sha1, comment, tags,
+                 text=None, is_parsed=None):
+        self.page_ident = page_ident
+        self.rev_id = rev_id,
+        self.parent_rev_id = parent_rev_id
+        self.user_text = user_text
+        self.user_id = user_id
+        self.size = size
+        self.timestamp = timestamp
+        self.sha1 = sha1
+        self.comment = comment
+        self.tags = tags
+        self.text = text or ''
+        self.is_parsed = is_parsed
+
+    @classmethod
+    def from_query(cls, page_ident, res_dict, source, is_parsed=None):
+        # note that certain revisions may have hidden the fields
+        # user_id, user_text, and comment for administrative reasons,
+        # aka "oversighting"
+        rev = res_dict
+        return cls(page_ident=page_ident,
+                   rev_id=rev['revid'],
+                   parent_rev_id=rev.get('parentid'),
+                   user_text=rev.get('user', '!userhidden'),
+                   user_id=rev.get('userid', -1),
+                   size=rev.get('size'),
+                   timestamp=parse_timestamp(rev['timestamp']),
+                   sha1=rev.get('sha1'),
+                   comment=rev.get('comment', ''),
+                   tags=rev['tags'],
+                   text=rev.get('*'),
+                   is_parsed=is_parsed)
+>>>>>>> 2fdfcd687d903d72d75698eb72225bf4935c8c05
 
 
 class Revision(RevisionInfo):
