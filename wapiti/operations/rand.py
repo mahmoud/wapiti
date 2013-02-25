@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 
 from base import SubjectResolvingQueryOperation, StaticParam
-from base import DEFAULT_RETRIES
 from models import PageIdentifier
 
 

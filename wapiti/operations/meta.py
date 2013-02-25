@@ -43,4 +43,4 @@ class GetMeta(QueryOperation):
                                               iw.get('language')))
         ret['namespace_map'] = ns_map
         ret['interwiki_map'] = iw_map
-        return ret
+        return ret.items()

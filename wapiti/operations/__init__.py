@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import WapitiException
+from base import WapitiException, DEFAULT_API_URL
 from models import PageIdentifier, CategoryInfo, RevisionInfo
 
 from rand import GetRandom
@@ -14,8 +14,8 @@ from category import (GetCategoryList,
                       GetFlattenedCategory,
                       GetCategoryRecursive,
                       GetCategoryPagesRecursive)
-from links import (GetBacklinks, 
-                   GetLanguageLinks, 
+from links import (GetBacklinks,
+                   GetLanguageLinks,
                    GetInterwikiLinks,
                    GetImages)
 from feedback import GetFeedbackV4, GetFeedbackV5
@@ -23,6 +23,7 @@ from revisions import (GetRevisionInfos,
                        GetCurrentContent,
                        GetCurrentTalkContent)
 from misc import GetCoordinates, GeoSearch
+from meta import GetMeta
 
 ALL_OPERATIONS = [GetRandom,
                   GetTranscludes,
@@ -44,4 +45,5 @@ ALL_OPERATIONS = [GetRandom,
                   GetCurrentTalkContent,
                   GetImages,
                   GetCoordinates,
-                  GeoSearch]
+                  GeoSearch,
+                  GetMeta]
