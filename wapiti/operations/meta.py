@@ -13,10 +13,6 @@ DEFAULT_PROPS = ('general',
 
 
 class GetMeta(QueryOperation):
-    '''
-    http://en.wikipedia.org/w/api.php?action=query&meta=&siprop=&format=jsonfm
-    http://en.wikipedia.org/w/api.php?action=query&meta=siteinfo&siprop=general|namespaces|namespacealiases|statistics|interwikimap&format=jsonfm
-    '''
     field_prefix = 'si'
     query_field = None
     fields = [StaticParam('meta', 'siteinfo'),

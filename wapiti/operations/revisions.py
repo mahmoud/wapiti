@@ -6,8 +6,7 @@ from models import PageIdentifier, RevisionInfo, Revision
 
 DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|tags'
 
-
-class GetRevisionInfos(QueryOperation):
+class GetPageRevisionInfos(QueryOperation):
     """
     todo: switch to new data model (using unified PageIdentifiers)
     """
@@ -33,6 +32,16 @@ class GetRevisionInfos(QueryOperation):
             for rev in pid_dict.get('revisions', []):
                 rev_info = RevisionInfo.from_query(pid, rev, self.source)
                 ret.append(rev_info)
+        return ret
+
+
+class GetRevisionInfos(GetPageRevisionInfos):
+    query_field = MultiParam('revids', key_prefix=False, required=True)
+    bijective = True
+
+    def prepare_params(self, *a, **kw):
+        ret = super(GetRevisionInfos, self).prepare_params()
+        ret.pop(self.field_prefix + 'limit', None)
         return ret
 
 

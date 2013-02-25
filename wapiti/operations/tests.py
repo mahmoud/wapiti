@@ -17,11 +17,14 @@ from links import (GetBacklinks,
                    GetImages,
                    GetLinks)
 from feedback import GetFeedbackV4, GetFeedbackV5
-from revisions import (GetRevisionInfos,
+from revisions import (GetPageRevisionInfos,
+                       GetRevisionInfos,
                        GetCurrentContent,
                        GetCurrentTalkContent)
 from templates import GetTranscludes
 from misc import GetCoordinates, GeoSearch
+from user import GetUserContribs, GetUserContribRevisionInfos
+from meta import GetMeta
 
 PDB_ALL = False
 PDB_ERROR = False
@@ -179,7 +182,7 @@ def test_revisions():
 
 
 def test_missing_revisions():
-    get_revs = GetRevisionInfos('Coffee_lololololol')
+    get_revs = GetPageRevisionInfos('Coffee_lololololol')
     rev_list = call_and_ret(get_revs)
     '''
     Should return 'missing' and negative pageid
@@ -223,10 +226,10 @@ def test_current_talk_content():
 
 
 def test_flatten_category():
-    get_flat_cat = GetFlattenedCategory('Africa', 2000)
+    get_flat_cat = GetFlattenedCategory('Africa', 200)
     cat_infos = call_and_ret(get_flat_cat)
     assert len(set([ci.title for ci in cat_infos])) == len(cat_infos)
-    return len(cat_infos) == 2000
+    return len(cat_infos) == 200
 
 
 def test_cat_mem_namespace():
@@ -237,10 +240,10 @@ def test_cat_mem_namespace():
 
 def test_cat_pages_recursive():
     get_cat_pages_rec = GetCategoryPagesRecursive('Africa',
-                                                  600,
+                                                  100,
                                                   resolve_to_subject=True)
     pages = call_and_ret(get_cat_pages_rec)
-    return len(pages) == 600
+    return len(pages) == 100
 
 
 def test_cat_list():
@@ -254,15 +257,18 @@ def test_get_images():
     imgs = call_and_ret(get_imgs)
     return len(imgs) == 4
 
+
 def test_get_links():
     get_links = GetLinks('Coffee', 17)
     links = call_and_ret(get_links)
     return len(links) == 17
 
+
 def test_coordinates():
     get_coordinates = GetCoordinates(['White House', 'Golden Gate Bridge', 'Mount Everest'])
     coords = call_and_ret(get_coordinates)
     return len(coords) == 3
+
 
 def test_geosearch():
     geosearch = GeoSearch(('37.8197', '-122.479'))
@@ -270,15 +276,42 @@ def test_geosearch():
     return len(geo) > 1
 
 
+def test_get_user_contribs():
+    get_contribs = GetUserContribs('Jimbo Wales', 1000)
+    contribs = call_and_ret(get_contribs)
+    return len(contribs) == 1000
+
+'''
+def test_get_meta():
+    get_meta = GetMeta()
+    metas = call_and_ret(get_meta)[0]
+    return len(metas['namespace_map']) > 20 and len(metas['interwiki_map']) > 100
+'''
+
+def test_get_revision_infos():
+    get_revisions = GetRevisionInfos(['538903663', '539916351', '531458383'])
+    rev_infos = call_and_ret(get_revisions)
+    return len(rev_infos) == 3
+
+
+def test_get_contrib_rev_infos():
+    get_contrib_rev_infos = GetUserContribRevisionInfos('Jimbo Wales', 420)
+    contrib_rev_infos = call_and_ret(get_contrib_rev_infos)
+    return len(contrib_rev_infos) == 420
+
+
 def main():
     tests = dict([(k, v) for k, v in globals().items()
                   if callable(v) and k.startswith('test_')])
-    results = dict([(k, v()) for k, v in tests.items()])
+    results = {}
+    for k, v in tests.items():
+        results[k] = v()
+        print k, results[k]
     return results
 
 
 def _main():
-    return call_and_ret(test_geosearch)
+    return call_and_ret(test_get_contrib_rev_infos)
 
 
 if __name__ == '__main__':
