@@ -278,12 +278,12 @@ def main():
 
 
 def _main():
-    return call_and_ret(test_geosearch)
+    return call_and_ret(test_random)
 
 
 if __name__ == '__main__':
-    PDB_ALL = False
+    PDB_ALL = True
     PDB_ERROR = True
     DO_PRINT = True
     from pprint import pprint
-    pprint(main())
+    pprint(_main())
