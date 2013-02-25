@@ -139,6 +139,7 @@ class PageInfo(PageIdentifier):
                   'talk_id': 'talkid'}
     defaults = {'subject_id': None,
                 'talk_id': None}
+
     def __init__(self, **kw):
         req_title = kw.pop('req_title', None)
         super(PageInfo, self).__init__(**kw)
@@ -149,7 +150,7 @@ class PageInfo(PageIdentifier):
         elif self.is_talk_page:
             self.talk_id = self.page_id
         else:
-            raise ValueError('special or nonexistent namespace: %r' % ns)
+            raise ValueError('special or nonexistent namespace: %r' % self.ns)
 
     def get_subject_info(self):
         if self.is_subject_page:
