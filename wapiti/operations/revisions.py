@@ -43,7 +43,7 @@ class GetCurrentContent(QueryOperation):
 
     def extract_results(self, query_resp):
         ret = []
-        #redirect_list = query_resp.get('redirects', [])
+        #redirect_list = query_resp.get('redirects', [])  # TODO
         #redirects = dict([(r['from'], r['to']) for r in redirect_list])
         requested_title = self.query_param
         is_parsed = self.kwargs.get('rvparse', False)
