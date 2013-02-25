@@ -22,7 +22,8 @@ class GetCategoryList(QueryOperation):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
-                cat_info = CategoryInfo.from_query(pid_dict, self.source)
+                cat_info = CategoryInfo.from_query(pid_dict,
+                                                   source=self.source)
             except ValueError:
                 print ValueError
                 continue
@@ -44,7 +45,8 @@ class GetCategory(SubjectResolvingQueryOperation):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
-                page_ident = PageIdentifier.from_query(pid_dict, self.source)
+                page_ident = PageIdentifier.from_query(pid_dict,
+                                                       source=self.source)
             except ValueError:
                 continue
             ret.append(page_ident)
@@ -66,7 +68,8 @@ class GetSubcategoryInfos(QueryOperation):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
-                cat_info = CategoryInfo.from_query(pid_dict, self.source)
+                cat_info = CategoryInfo.from_query(pid_dict,
+                                                   source=self.source)
             except ValueError:
                 continue
             if cat_info.page_id < 0:

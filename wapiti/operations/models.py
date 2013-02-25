@@ -16,6 +16,8 @@ ExternalLink = namedtuple('ExternalLink', 'url origin_page')
 NamespaceDescriptor = namedtuple('NamespaceDescriptor', 'id title canonical')
 InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
 
+WapitiModelAttr = namedtuple('WapitiModelAttr', 'name qd_key default display')
+
 
 def title_talk2subject(title):
     talk_pref, _, title_suf = title.partition(':')
@@ -84,7 +86,8 @@ class WapitiModelBase(object):
     @classmethod
     def from_query(cls, q_dict, **kw):
         kwargs = {}
-        all_q_dict = kw.update(q_dict)
+        all_q_dict = dict(kw)
+        all_q_dict.update(q_dict)
         for m_attr_name, q_dict_key in cls.attributes.items():
             if q_dict_key is None:
                 continue

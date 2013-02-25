@@ -278,12 +278,12 @@ def main():
 
 
 def _main():
-    return call_and_ret(test_random)
+    return call_and_ret(test_revisions)
 
 
 if __name__ == '__main__':
-    PDB_ALL = True
+    PDB_ALL = False
     PDB_ERROR = True
     DO_PRINT = True
     from pprint import pprint
-    pprint(_main())
+    pprint(main())

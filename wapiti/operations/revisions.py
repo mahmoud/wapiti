@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from base import QueryOperation, StaticParam, MultiParam, SingleParam
 from models import PageIdentifier, RevisionInfo, Revision
 
-DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|tags'
+DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|parsedcomment|tags'
 
 
 class GetRevisionInfos(QueryOperation):
@@ -23,15 +23,11 @@ class GetRevisionInfos(QueryOperation):
         pages = [p for p in query_resp.get('pages', {}).values()
                  if 'missing' not in p]
         for pid_dict in pages:
-            try:
-                pid = PageIdentifier.from_query(pid_dict, self.source)
-            except ValueError:
-                continue
-            if pid.page_id < 0:
-                continue
-
             for rev in pid_dict.get('revisions', []):
-                rev_info = RevisionInfo.from_query(pid, rev, self.source)
+                rev_dict = dict(pid_dict)
+                rev_dict.update(rev)
+                rev_info = RevisionInfo.from_query(rev_dict,
+                                                   source=self.source)
                 ret.append(rev_info)
         return ret
 
@@ -45,10 +41,6 @@ class GetCurrentContent(QueryOperation):
               SingleParam('redirects', True, key_prefix=False)]
     bijective = True
 
-    def prepare_params(self, *a, **kw):
-        ret = super(GetCurrentContent, self).prepare_params(*a, **kw)
-        return ret
-
     def extract_results(self, query_resp):
         ret = []
         #redirect_list = query_resp.get('redirects', [])
@@ -57,17 +49,15 @@ class GetCurrentContent(QueryOperation):
         is_parsed = self.kwargs.get('rvparse', False)
 
         pages = query_resp.get('pages', {})
-        for pid_dict in pages.values():
-            try:
-                pid = PageIdentifier.from_query(pid_dict,
-                                                self.source,
-                                                requested_title)
-            except ValueError:
+        for page_id, pid_dict in pages.iteritems():
+            if page_id < 0:
                 continue
-            if pid.page_id < 0:
-                continue
-            rev = pid_dict['revisions'][0]
-            revision = Revision.from_query(pid, rev, self.source, is_parsed)
+            rev_dict = dict(pid_dict)
+            rev_dict.update(pid_dict['revisions'][0])
+            revision = Revision.from_query(rev_dict,
+                                           source=self.source,
+                                           is_parsed=is_parsed)
+            revision.req_title = requested_title
             ret.append(revision)
         return ret
 

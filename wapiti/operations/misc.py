@@ -17,7 +17,8 @@ class GetCoordinates(QueryOperation):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
-                page_ident = PageIdentifier.from_query(pid_dict, self.source)
+                page_ident = PageIdentifier.from_query(pid_dict,
+                                                       source=self.source)
                 for coord in pid_dict['coordinates']:
                     coord_ident = CoordinateIndentifier(coord, page_ident)
             except ValueError:
@@ -41,7 +42,8 @@ class GeoSearch(QueryOperation):
         ret = []
         for pid_dict in query_resp['geosearch']:
             try:
-                page_ident = PageIdentifier.from_query(pid_dict, self.source)
+                page_ident = PageIdentifier.from_query(pid_dict,
+                                                       source=self.source)
                 coord_ident = CoordinateIndentifier(pid_dict, page_ident)
             except ValueError:
                 continue
