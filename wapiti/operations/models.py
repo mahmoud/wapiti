@@ -13,6 +13,9 @@ LanguageLink = namedtuple('LanguageLink', 'url language origin_page')
 InterwikiLink = namedtuple('InterwikiLink', 'url prefix origin_page')
 ExternalLink = namedtuple('ExternalLink', 'url origin_page')
 
+NamespaceDescriptor = namedtuple('NamespaceDescriptor', 'id title canonical')
+InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
+
 
 class _PageIdentMixin(object):
     # this is just temporary so I can see what I'm doing a little better

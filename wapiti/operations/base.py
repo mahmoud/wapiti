@@ -11,11 +11,7 @@ import json
 
 from ransom import Client, Response
 
-DEFAULT_TIMEOUT  = 15
-import socket
-socket.setdefaulttimeout(DEFAULT_TIMEOUT)  # TODO: better timeouts for reqs
-
-
+DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 IS_BOT = False
 if IS_BOT:
     PER_CALL_LIMIT = 5000
@@ -24,14 +20,9 @@ else:
 
 DEFAULT_LIMIT = 500  # TODO
 
-SOURCES = {'enwp': 'http://en.wikipedia.org/w/api.php'}
-API_URL = SOURCES['enwp']  # TODO: hardcoded for nowskies
-IS_BOT = False
-DEFAULT_RETRIES = 0
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
 MAX_LIMIT = sys.maxint
-MAX_ARTICLES_LIST = 50
 
 DEFAULT_CLIENT = Client({'headers': DEFAULT_HEADERS})
 
@@ -188,17 +179,14 @@ class NoMoreResults(Exception):
 
 class Operation(object):
     """
-    Mostly an abstract class representing an operation that can
-    be performed by the Mediawiki API. Connotes some semblance
+    A mostly abstract class connoting some semblance
     of statefulness and introspection (e.g., progress monitoring).
     """
-    api_action = None
-    source = 'enwp'  # TODO: hardcode for the moment
 
     def __init__(self):
         pass
 
-    def parse_params(self, *a, **kw):  # arguments?
+    def parse_params(self, *a, **kw):
         pass
 
     def get_progress(self):
@@ -223,11 +211,17 @@ is an example of a bijective query. Bijective queries do not require an
 explicit limit on the number of results to be set by the user.
 """
 class BaseQueryOperation(Operation):
+    source = None
     per_call_limit = PER_CALL_LIMIT
     default_limit = DEFAULT_LIMIT
     dynamic_limit = False
 
     def __init__(self, query_param, limit=None, *a, **kw):
+        self.client = kw.pop('client', None)
+        if self.client:
+            self.api_url = self.client.api_url
+        else:
+            self.api_url = kw.pop('api_url', DEFAULT_API_URL)
         self.set_query_param(query_param)
         self.set_limit(limit)
         self.kwargs = kw
@@ -243,12 +237,16 @@ class BaseQueryOperation(Operation):
     def limit(self):
         return self._get_limit()
 
+    @property
+    def source(self):
+        return self.api_url
+
     def set_query_param(self, qp):
         self._query_param = qp
 
     def set_limit(self, limit):
         self.dynamic_limit = True
-        if hasattr(limit, 'remaining'):  # replaces 'owner' functionality
+        if hasattr(limit, 'remaining'):
             self._get_limit = lambda: limit.remaining
         elif callable(limit):
             self._get_limit = limit
@@ -390,7 +388,6 @@ class QueryOperation(BaseQueryOperation):
         return ret
 
     def get_cont_str(self, resp):
-        #todo? fuzzy walker thing to walk down to self.field_prefix+'continue'?
         qc_val = resp.results.get(self.api_action + '-continue')
         if qc_val is None:
             return None
@@ -414,7 +411,7 @@ class QueryOperation(BaseQueryOperation):
 
     def fetch(self):
         params = self.prepare_params(**self.kwargs)
-        mw_call = MediawikiCall(API_URL, self.api_action, params).do_call()
+        mw_call = MediawikiCall(self.api_url, self.api_action, params).do_call()
         # TODO: check resp for api errors/warnings
         return mw_call
 

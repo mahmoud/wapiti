@@ -33,7 +33,12 @@ Need generic support for:
 '''
 import re
 from functools import partial
-from operations import ALL_OPERATIONS
+from operations import ALL_OPERATIONS, DEFAULT_API_URL
+
+
+DEFAULT_TIMEOUT  = 15
+import socket
+socket.setdefaulttimeout(DEFAULT_TIMEOUT)  # TODO: better timeouts for reqs
 
 
 _camel2under_re = re.compile('((?<=[a-z0-9])[A-Z]|(?!^)[A-Z](?=[a-z]))')
@@ -52,20 +57,24 @@ class WapitiClient(object):
     Provides logging, caching, settings, and a convenient interface
     to most (all?) operations.
     """
-    def __init__(self):
+    def __init__(self,
+                 user_email,
+                 api_url=None,
+                 is_bot=False,
+                 init_source=True):
         # set settings obj
         # set up source (from api_url in settings)
         # then you're ready to call ops
-        self.api_url = None
-        self.user_agent = None
-        self.timeout = 15
-        self.is_bot = False
-        self.per_call_limit = 500
-        self.retry_limit = 5
-
-        self.source = None
+        self.user_email = user_email
+        self.api_url = api_url or DEFAULT_API_URL
+        self.is_bot = is_bot
 
         self._create_ops()
+        if init_source:
+            self._init_source()
+
+    def _init_source(self):
+        self.source_meta = self.get_meta()
 
     def call_operation(self, op_type, *a, **kw):
         kw['client'] = self

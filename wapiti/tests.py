@@ -6,7 +6,7 @@ from operations.tests import call_and_ret
 
 
 def test_client_basic():
-    client = WapitiClient()
+    client = WapitiClient('mahmoudrhashemi@gmail.com')
     cat_pages = client.get_category_recursive('Africa', 1000)
     return len(cat_pages) == 1000
 
