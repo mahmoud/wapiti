@@ -79,6 +79,15 @@ class GetSubcategoryInfos(QueryOperation):
         return ret
 
 
+class GetAllCategoryInfos(GetSubcategoryInfos):
+    field_prefix = 'gac'
+    query_field = None
+    fields = [StaticParam('generator', 'allcategories'),
+              StaticParam('prop', 'categoryinfo')]
+
+    def __init__(self, limit=10, **kw):
+        super(GetAllCategoryInfos, self).__init__(None, limit, **kw)
+
 class GetFlattenedCategory(CompoundQueryOperation):
     bijective = False
     multiargument = False

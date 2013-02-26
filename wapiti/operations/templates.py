@@ -24,3 +24,15 @@ class GetTranscludes(SubjectResolvingQueryOperation):
                 continue
             ret.append(page_ident)
         return ret
+
+
+class GetAllTranscludes(GetTranscludes):
+    field_prefix = 'gat'
+    query_field = None
+    fields = []
+    fields = [StaticParam('generator', 'alltransclusions'),
+              StaticParam('prop', 'imageinfo'),
+              StaticParam('inprop', 'subjectid|talkid|protection')]
+
+    def __init__(self, limit=10, **kw):
+        super(GetAllTranscludes, self).__init__(None, limit, **kw)

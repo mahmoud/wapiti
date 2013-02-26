@@ -413,6 +413,7 @@ class QueryOperation(BaseQueryOperation):
         params = self.prepare_params(**self.kwargs)
         mw_call = MediawikiCall(self.api_url, self.api_action, params).do_call()
         # TODO: check resp for api errors/warnings
+        # TODO: check for unrecognized paramater values
         return mw_call
 
     def extract_results(self, resp):
