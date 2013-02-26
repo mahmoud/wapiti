@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from base import SubjectResolvingQueryOperation
 from base import SingleParam, StaticParam
-from models import PageIdentifier
+from models import PageInfo
 
 
 class GetTranscludes(SubjectResolvingQueryOperation):
@@ -18,7 +18,7 @@ class GetTranscludes(SubjectResolvingQueryOperation):
         ret = []
         for k, pid_dict in query_resp.get('pages', {}).items():
             try:
-                page_ident = PageIdentifier.from_query(pid_dict,
+                page_ident = PageInfo.from_query(pid_dict,
                                                        source=self.source)
             except ValueError:
                 continue

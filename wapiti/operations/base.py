@@ -443,7 +443,7 @@ class QueryOperation(BaseQueryOperation):
 class SubjectResolvingQueryOperation(QueryOperation):
     def store_results(self, pages):
         if self.kwargs.get('resolve_to_subject'):
-            pages = [p.get_subject_identifier() for p in pages]
+            pages = [p.get_subject_info() for p in pages]
         return super(SubjectResolvingQueryOperation, self).store_results(pages)
 
 

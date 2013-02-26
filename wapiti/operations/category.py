@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from models import CategoryInfo, PageIdentifier
+from models import CategoryInfo, PageIdentifier, PageInfo
 from base import (SubjectResolvingQueryOperation,
                   QueryOperation,
                   CompoundQueryOperation,
@@ -45,7 +45,7 @@ class GetCategory(SubjectResolvingQueryOperation):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
-                page_ident = PageIdentifier.from_query(pid_dict,
+                page_ident = PageInfo.from_query(pid_dict,
                                                        source=self.source)
             except ValueError:
                 continue
@@ -68,6 +68,7 @@ class GetSubcategoryInfos(QueryOperation):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
+                pid_dict.update(pid_dict.get('categoryinfo', {}))
                 cat_info = CategoryInfo.from_query(pid_dict,
                                                    source=self.source)
             except ValueError:
