@@ -413,6 +413,7 @@ class QueryOperation(BaseQueryOperation):
         params = self.prepare_params(**self.kwargs)
         mw_call = MediawikiCall(self.api_url, self.api_action, params).do_call()
         # TODO: check resp for api errors/warnings
+        # TODO: check for unrecognized paramater values
         return mw_call
 
     def extract_results(self, resp):
@@ -443,7 +444,7 @@ class QueryOperation(BaseQueryOperation):
 class SubjectResolvingQueryOperation(QueryOperation):
     def store_results(self, pages):
         if self.kwargs.get('resolve_to_subject'):
-            pages = [p.get_subject_identifier() for p in pages]
+            pages = [p.get_subject_info() for p in pages]
         return super(SubjectResolvingQueryOperation, self).store_results(pages)
 
 

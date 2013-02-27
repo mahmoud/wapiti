@@ -20,7 +20,7 @@ class GetUserContribs(QueryOperation):
         ret = []
         for rev_dict in query_resp.get('usercontribs', []):
             try:
-                page_ident = PageIdentifier.from_query(rev_dict, self.source)
+                page_ident = PageIdentifier.from_query(rev_dict, source=self.source)
                 user_contrib = UserContrib(page_ident,
                                            rev_dict['user'],
                                            rev_dict['userid'],

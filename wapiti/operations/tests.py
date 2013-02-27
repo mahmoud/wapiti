@@ -7,7 +7,8 @@ from category import (GetCategory,
                       GetSubcategoryInfos,
                       GetFlattenedCategory,
                       GetCategoryRecursive,
-                      GetCategoryPagesRecursive)
+                      GetCategoryPagesRecursive,
+                      GetAllCategoryInfos)
 from rand import GetRandom
 from protection import GetProtections
 from links import (GetBacklinks,
@@ -21,9 +22,16 @@ from revisions import (GetPageRevisionInfos,
                        GetRevisionInfos,
                        GetCurrentContent,
                        GetCurrentTalkContent)
-from templates import GetTranscludes
-from misc import GetCoordinates, GeoSearch
-from user import GetUserContribs, GetUserContribRevisionInfos
+from templates import GetTranscludes, GetAllTranscludes
+from misc import (GetCoordinates,
+                  GeoSearch,
+                  GetImageInfos,
+                  GetTemplates,
+                  GetQueryPage,
+                  GetRecentChanges,
+                  GetAllImageInfos)
+from user import (GetUserContribs,
+                  GetUserContribRevisionInfos)
 from meta import GetMeta
 
 PDB_ALL = False
@@ -76,6 +84,11 @@ def test_subcategory_infos():
     get_subcats = GetSubcategoryInfos('FA-Class_articles', 100)
     subcats = call_and_ret(get_subcats)
     return len(subcats) == 100
+
+def test_all_category_infos():
+    get_all_cats = GetAllCategoryInfos(501)
+    all_cats = call_and_ret(get_all_cats)
+    return len(all_cats) == 501
 
 
 def test_category_recursive():
@@ -176,7 +189,7 @@ def test_feedback_v5():
 
 
 def test_revisions():
-    get_revs = GetRevisionInfos('Coffee', 10)
+    get_revs = GetPageRevisionInfos('Coffee', 10)
     rev_list = call_and_ret(get_revs)
     return len(rev_list) == 10
 
@@ -197,6 +210,11 @@ def test_transclusions():
     Nonexistent title returns []
     '''
     return len(tr_list) == 20
+
+def test_all_transcludes():
+    get_all_transcludes = GetAllTranscludes(501)
+    tr_list = call_and_ret(get_all_transcludes)
+    return len(tr_list) == 501
 
 
 def test_resolve_subjects():
@@ -226,7 +244,7 @@ def test_current_talk_content():
 
 
 def test_flatten_category():
-    get_flat_cat = GetFlattenedCategory('Africa', 200)
+    get_flat_cat = GetFlattenedCategory('History', 200)
     cat_infos = call_and_ret(get_flat_cat)
     assert len(set([ci.title for ci in cat_infos])) == len(cat_infos)
     return len(cat_infos) == 200
@@ -299,6 +317,39 @@ def test_get_contrib_rev_infos():
     contrib_rev_infos = call_and_ret(get_contrib_rev_infos)
     return len(contrib_rev_infos) == 420
 
+def test_get_image_info():
+    get_image_info = GetImageInfos('File:Logo.gif')
+    image_info = call_and_ret(get_image_info)
+    return image_info[0].url == 'http://upload.wikimedia.org/wikipedia/en/e/ea/Logo.gif'
+
+def test_get_all_image_infos():
+    get_all_img = GetAllImageInfos(501)
+    all_imgs = call_and_ret(get_all_img)
+    return len(all_imgs) == 501
+
+def test_get_templates():
+    get_templates = GetTemplates('Coffee', 10)
+    tmpl = call_and_ret(get_templates)
+    return len(tmpl) == 10
+
+def test_query_pages():
+    query_page_types = ['Ancientpages', 'BrokenRedirects', 'Deadendpages', 'Disambiguations', 'DoubleRedirects', 'Listredirects',
+                        'Lonelypages', 'Longpages', 'Mostcategories', 'Mostimages', 'Mostinterwikis', 'Mostlinkedcategories',
+                        'Mostlinkedtemplates', 'Mostlinked', 'Mostrevisions', 'Fewestrevisions', 'Shortpages',
+                        'Uncategorizedcategories', 'Uncategorizedpages', 'Uncategorizedimages', 'Uncategorizedtemplates',
+                        'Unusedcategories', 'Unusedimages', 'Wantedcategories', 'Wantedfiles', 'Wantedpages', 'Wantedtemplates',
+                        'Unusedtemplates', 'Withoutinterwiki']
+    ret =[]
+    for qpt in query_page_types:
+        get_pages = GetQueryPage(qpt, 10)
+        ret.extend(call_and_ret(get_pages))
+    return len(ret) == 290
+
+def test_recent_changes():
+    get_recent_changes = GetRecentChanges(550)
+    recent_changes = call_and_ret(get_recent_changes)
+    return len(recent_changes) == 550
+
 
 def main():
     tests = dict([(k, v) for k, v in globals().items()
@@ -311,7 +362,7 @@ def main():
 
 
 def _main():
-    return call_and_ret(test_revisions)
+    return call_and_ret(test_all_transcludes)
 
 
 if __name__ == '__main__':
