@@ -36,7 +36,7 @@ from functools import partial
 from operations import ALL_OPERATIONS, DEFAULT_API_URL
 
 
-DEFAULT_TIMEOUT  = 15
+DEFAULT_TIMEOUT = 15
 import socket
 socket.setdefaulttimeout(DEFAULT_TIMEOUT)  # TODO: better timeouts for reqs
 

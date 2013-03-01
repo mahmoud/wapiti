@@ -209,7 +209,20 @@ one argument at a time, like GetCategory.
 "Bijective" only return at most one result per argument. GetProtections
 is an example of a bijective query. Bijective queries do not require an
 explicit limit on the number of results to be set by the user.
+
+
+Going forward, these attributes can be determined as follows:
+
+ - Multiargument: determined by looking at an operation's
+ `query_field`. If it is a SingleParam, then multiargument is false,
+ if it's a MultiParam, then multiargument is true.
+
+ - Bijective: determined by looking at an operation's `return_type`,
+   which more accurately describes the *per-parameter* return type. If
+   it is a list, then bijective is true, if it's a bare type, then
+   bijective is false.
 """
+
 class BaseQueryOperation(Operation):
     source = None
     per_call_limit = PER_CALL_LIMIT
@@ -269,6 +282,8 @@ class BaseQueryOperation(Operation):
 
     @classmethod
     def is_bijective(cls):
+        if type(getattr(cls, 'return_type', None)) is list:
+            return False
         return getattr(cls, 'bijective', True)
 
     def fetch(self):
@@ -550,7 +565,6 @@ class PriorityQueue(object):
 
     def add(self, task, priority=None):
         # larger numbers = higher priority
-        # todo: more complex logics
         priority = -int(priority or 0)
         if task in self._entry_map:
             self.remove_task(task)
@@ -606,7 +620,7 @@ class CompoundQueryOperation(BaseQueryOperation):
             self.generator = None
             return
         gen_kw_tmpl = getattr(self, 'generator_params', {})
-        gen_kw = {'query_param': self.query_param }
+        gen_kw = {'query_param': self.query_param}
         if not generator_type.is_bijective():
             gen_kw['limit'] = MAX_LIMIT
         for k, v in gen_kw_tmpl.items():

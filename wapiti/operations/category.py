@@ -17,6 +17,7 @@ class GetCategoryList(QueryOperation):
               StaticParam('prop', 'categoryinfo'),
               SingleParam('gclshow', ''),  # hidden, !hidden
               ]
+    return_type = [CategoryInfo]
 
     def extract_results(self, query_resp):
         ret = []
@@ -40,13 +41,14 @@ class GetCategory(SubjectResolvingQueryOperation):
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection'),
               MultiParam('namespace', required=False)]
+    return_type = [PageInfo]
 
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
                 page_ident = PageInfo.from_query(pid_dict,
-                                                       source=self.source)
+                                                 source=self.source)
             except ValueError:
                 continue
             ret.append(page_ident)
@@ -63,6 +65,7 @@ class GetSubcategoryInfos(QueryOperation):
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'categoryinfo'),
               StaticParam('gcmtype', 'subcat')]
+    return_type = [CategoryInfo]
 
     def extract_results(self, query_resp):
         ret = []
@@ -87,6 +90,7 @@ class GetAllCategoryInfos(GetSubcategoryInfos):
 
     def __init__(self, limit=10, **kw):
         super(GetAllCategoryInfos, self).__init__(None, limit, **kw)
+
 
 class GetFlattenedCategory(CompoundQueryOperation):
     bijective = False
