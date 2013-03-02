@@ -7,6 +7,7 @@ from collections import namedtuple
 
 # TODO: These operations should be moved to the proper file
 
+
 class GetCoordinates(QueryOperation):
     field_prefix = ''
     query_field = MultiParam('titles', required=True)
@@ -57,7 +58,7 @@ DEFAULT_IMAGE_PROPS = 'timestamp|user|userid|comment|parsedcomment|url|size|dime
 class ImageInfo(PageIdentifier):
     attributes = {'image_repository': 'imagerepository',
                   'missing': 'missing',
-                  'url': 'url', 
+                  'url': 'url',
                   'dimensions': 'dimensions',
                    'mime': 'mime',
                    'thumbmime': 'thumbmime',
@@ -164,39 +165,43 @@ QueryPageInfo = namedtuple('QueryPageInfo', 'title ns value querypage cache')
 class GetQueryPage(QueryOperation):
     field_prefix = 'qp'
     query_field = SingleParam('page', required=True)
-    '''
-    Acceptable page =  ['Ancientpages', 
-                        'BrokenRedirects', 
-                        'Deadendpages', 
-                        'Disambiguations', 
-                        'DoubleRedirects', 
-                        'Listredirects',
-                        'Lonelypages', 
-                        'Longpages', 
-                        'Mostcategories', 
-                        'Mostimages', 
-                        'Mostinterwikis', 
-                        'Mostlinkedcategories',
-                        'Mostlinkedtemplates', 
-                        'Mostlinked', 
-                        'Mostrevisions', 
-                        'Fewestrevisions', 
-                        'Shortpages',
-                        'Uncategorizedcategories', 
-                        'Uncategorizedpages', 
-                        'Uncategorizedimages', 
-                        'Uncategorizedtemplates',
-                        'Unusedcategories', 
-                        'Unusedimages', 
-                        'Wantedcategories', 
-                        'Wantedfiles', 
-                        'Wantedpages', 
-                        'Wantedtemplates',
-                        'Unwatchedpages', # requires logging in
-                        'Unusedtemplates', 
-                        'Withoutinterwiki']
-    '''
     fields = [StaticParam('list', 'querypage')]
+    acceptable_qps = ['Ancientpages',
+                      'BrokenRedirects',
+                      'Deadendpages',
+                      'Disambiguations',
+                      'DoubleRedirects',
+                      'Listredirects',
+                      'Lonelypages',
+                      'Longpages',
+                      'Mostcategories',
+                      'Mostimages',
+                      'Mostinterwikis',
+                      'Mostlinkedcategories',
+                      'Mostlinkedtemplates',
+                      'Mostlinked',
+                      'Mostrevisions',
+                      'Fewestrevisions',
+                      'Shortpages',
+                      'Uncategorizedcategories',
+                      'Uncategorizedpages',
+                      'Uncategorizedimages',
+                      'Uncategorizedtemplates',
+                      'Unusedcategories',
+                      'Unusedimages',
+                      'Wantedcategories',
+                      'Wantedfiles',
+                      'Wantedpages',
+                      'Wantedtemplates',
+                      'Unwatchedpages',  # requires logging in
+                      'Unusedtemplates',
+                      'Withoutinterwiki']
+
+    def __init__(self, qp, *a, **kw):
+        if qp not in self.acceptable_qps:
+          raise ValueError('Unrecognized query page: %r' % qp)
+        return super(GetQueryPage, self).__init__(qp, *a, **kw)
+
 
     def extract_results(self, query_resp):
         ret = []
