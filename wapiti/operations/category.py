@@ -1,7 +1,16 @@
 # -*- coding: utf-8 -*-
+"""
+    wapiti.operations.category
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    A module of query operations related to categories. MediaWiki categories
+    create an automatic index based on category tags in the page text.
+"""
 from __future__ import unicode_literals
 
-from models import CategoryInfo, PageIdentifier, PageInfo
+from models import (CategoryInfo,
+                    PageIdentifier,
+                    PageInfo)
 from base import (SubjectResolvingQueryOperation,
                   QueryOperation,
                   CompoundQueryOperation,
@@ -11,6 +20,9 @@ from base import (SubjectResolvingQueryOperation,
 
 
 class GetCategoryList(QueryOperation):
+    """
+    Lists the categories for a page.
+    """
     field_prefix = 'gcl'
     query_field = MultiParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('generator', 'categories'),
@@ -35,6 +47,9 @@ class GetCategoryList(QueryOperation):
 
 
 class GetCategory(SubjectResolvingQueryOperation):
+    """
+    Lists the members in a category.
+    """
     field_prefix = 'gcm'
     query_field = SingleParam('title', val_prefix='Category:', required=True)
     fields = [StaticParam('generator', 'categorymembers'),
@@ -56,10 +71,17 @@ class GetCategory(SubjectResolvingQueryOperation):
 
 
 class GetCategoryPages(GetCategory):
+    """
+    Lists the pages (namespace 0 or 1) in a category.
+    """
     fields = GetCategory.fields + [StaticParam('gcmnamespace', '0|1')]
 
 
 class GetSubcategoryInfos(QueryOperation):
+    """
+    The `CategoryInfo` for a category, which is useful to check the the number
+    of members or sub-categories.
+    """
     field_prefix = 'gcm'
     query_field = SingleParam('title', val_prefix='Category:', required=True)
     fields = [StaticParam('generator', 'categorymembers'),
@@ -83,6 +105,9 @@ class GetSubcategoryInfos(QueryOperation):
 
 
 class GetAllCategoryInfos(GetSubcategoryInfos):
+    """
+    Lists all the categories on the wiki.
+    """
     field_prefix = 'gac'
     query_field = None
     fields = [StaticParam('generator', 'allcategories'),
@@ -93,6 +118,9 @@ class GetAllCategoryInfos(GetSubcategoryInfos):
 
 
 class GetFlattenedCategory(CompoundQueryOperation):
+    """
+    Lists all of a category's sub-categories.
+    """
     bijective = False
     multiargument = False
 
@@ -117,6 +145,11 @@ class GetFlattenedCategory(CompoundQueryOperation):
 
 
 class GetCategoryRecursive(CompoundQueryOperation):
+    """
+    Lists all the members of a category and its sub-categories. A Wikipedia
+    category tree can have a large number of shallow categories, so this
+    operation will prioritize the larger categories by default.
+    """
     bijective = False
     multiargument = False
 
@@ -140,4 +173,8 @@ class GetCategoryRecursive(CompoundQueryOperation):
 
 
 class GetCategoryPagesRecursive(GetCategoryRecursive):
+    """
+    Lists all the pages (namespace 0 and 1) in a category and its sub-
+    categories.
+    """
     suboperation_type = GetCategoryPages
