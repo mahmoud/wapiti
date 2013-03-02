@@ -1,4 +1,19 @@
 # -*- coding: utf-8 -*-
+"""
+    wapiti.operations.models
+    ~~~~~~~~~~~~~~~~~~~~~~~~
+
+    This module provides structures and abstractions for creating
+    consistent Operation interfaces, regardless of underlying
+    Mediawiki API response types.
+
+    For example the ``prop=revisions`` and ``list=usercontribs`` APIs
+    both return lists of revision information, however not all of the
+    attributes afforded by ``prop=revisions`` are available from
+    ``list=usercontribs``. Wapiti models and operations strive to
+    resolve and abstract this fact away from the user as sanely as
+    possible.
+"""
 from __future__ import unicode_literals
 
 from datetime import datetime
@@ -16,7 +31,7 @@ ExternalLink = namedtuple('ExternalLink', 'url origin_page')
 NamespaceDescriptor = namedtuple('NamespaceDescriptor', 'id title canonical')
 InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
 
-WapitiModelAttr = namedtuple('WapitiModelAttr', 'name qd_key default display')
+WapitiModelAttr = namedtuple('WapitiModelAttr', 'name mw_name default display')
 
 
 def title_talk2subject(title):
@@ -42,6 +57,22 @@ def title_subject2talk(title):
 
 
 class WapitiModelMeta(type):
+    """
+    The foundation of Wapiti's data models, which attempt to add
+    consistency and order to the wide variety of return types used
+    across different Mediawiki APIs. This metaclass enables certain
+    inheritance-like usage patterns in models. See WapitiModelBase's
+    docstring for more information.
+
+    The `attributes` dictionary is a mapping of Python class attribute
+    names to Mediawiki API result keys (e.g., `pageid` becomes
+    `page_id` on the Python object).
+
+    The `defaults` dictionary is a mapping of Python attribute name to
+    default value, if allowed. If an attribute does not have a default
+    value, and is missing upon instantiation of a model, an exception
+    will be raised.
+    """
     attributes = {}
     defaults = {}
 
@@ -60,6 +91,17 @@ class WapitiModelMeta(type):
 
 
 class WapitiModelBase(object):
+    """
+    The more-concrete counterpart of WapitiModelMeta, which primarily
+    provides initialization logic.
+
+    There are two methods for instantiation, the standard
+    ``__init__()`` (e.g., ``CategoryInfo()``), which takes attributes
+    as keyword arguments, and ``from_query()``, which usually takes a
+    dictionary deserialized from JSON, as returned by Mediawiki
+    API. For information on `attributes` and `defaults`, see
+    WapitiModelMeta.
+    """
 
     __metaclass__ = WapitiModelMeta
     attributes = {}

@@ -9,7 +9,7 @@ sys.path.append(dirname(dirname((__file__))))
 from functools import partial
 import json
 
-from ransom import Client, Response
+from ransom import Client
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 IS_BOT = False
@@ -230,11 +230,11 @@ class BaseQueryOperation(Operation):
     dynamic_limit = False
 
     def __init__(self, query_param, limit=None, *a, **kw):
-        self.client = kw.pop('client', None)
+        self.client = kw.get('client', None)
         if self.client:
             self.api_url = self.client.api_url
         else:
-            self.api_url = kw.pop('api_url', DEFAULT_API_URL)
+            self.api_url = kw.get('api_url', DEFAULT_API_URL)
         self.set_query_param(query_param)
         self.set_limit(limit)
         self.kwargs = kw
