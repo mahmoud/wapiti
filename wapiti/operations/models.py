@@ -124,7 +124,7 @@ class WapitiModelMeta(type):
 class WapitiModelBase(object):
     """
     The more-concrete counterpart of WapitiModelMeta, which primarily
-    provides initialization logic.
+    provides generic initialization and display logic.
 
     There are two methods for instantiation, the standard
     ``__init__()`` (e.g., ``CategoryInfo()``), which takes attributes
@@ -132,6 +132,9 @@ class WapitiModelBase(object):
     dictionary deserialized from JSON, as returned by Mediawiki
     API. For information on `attributes` and `defaults`, see
     WapitiModelMeta.
+
+    ``__repr__()`` and ``__str__()`` are powered by
+    ``get_display_str()``.
     """
 
     __metaclass__ = WapitiModelMeta
