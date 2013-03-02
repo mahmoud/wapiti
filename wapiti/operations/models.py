@@ -169,6 +169,30 @@ class WapitiModelBase(object):
                 pass
         return cls(**kwargs)
 
+    def get_display_str(self, raise_exc=True):
+        attr_list = []
+        try:
+            for (name, _, _, do_disp) in self.attributes:
+                if not do_disp:
+                    continue
+                # TODO: don't display values if equal to default?
+                val = getattr(self, name)
+                attr_list.append('%s=%r' % (name, val))
+        except:
+            if raise_exc:
+                raise
+            return super(WapitiModelBase, self).__str__()
+        attr_str = ', '.join(attr_list)
+        return ''.join([self.__class__.__name__, '(', attr_str, ')'])
+
+    __str__ = get_display_str
+
+    def __repr__(self):
+        try:
+            return self.get_display_str()
+        except:
+            return super(PageIdentifier, self).__repr__()
+
 
 class PageIdentifier(WapitiModelBase):
     attributes = [WMA('title', display=True),
@@ -183,29 +207,6 @@ class PageIdentifier(WapitiModelBase):
     @property
     def is_talk_page(self):
         return (self.ns >= 0 and self.ns % 2 == 1)
-
-    def _to_string(self, raise_exc=False):
-        try:
-            class_name = self.__class__.__name__
-            return (u'%s(%r, %r, %r, %r)'
-                    % (class_name,
-                       self.title,
-                       self.page_id,
-                       self.ns,
-                       self.source))
-        except AttributeError:
-            if raise_exc:
-                raise
-            return super(PageIdentifier, self).__str__()
-
-    def __str__(self):
-        return self._to_string()
-
-    def __repr__(self):
-        try:
-            return self._to_string(raise_exc=True)
-        except:
-            return super(PageIdentifier, self).__repr__()
 
 
 class PageInfo(PageIdentifier):

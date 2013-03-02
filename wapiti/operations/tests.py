@@ -64,7 +64,7 @@ def test_unicode_title():
 
 
 def test_category_basic():
-    get_2k_featured = GetCategory('Featured_articles', 200-)
+    get_2k_featured = GetCategory('Featured_articles', 200)
     pages = call_and_ret(get_2k_featured)
     return len(pages) == 2000
 
