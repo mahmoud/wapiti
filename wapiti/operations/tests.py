@@ -34,7 +34,7 @@ from user import (GetUserContribs,
                   GetUserContribRevisionInfos)
 from meta import GetMeta
 
-PDB_ALL = False
+PDB_ALL = True
 PDB_ERROR = False
 DO_PRINT = False
 
@@ -64,7 +64,7 @@ def test_unicode_title():
 
 
 def test_category_basic():
-    get_2k_featured = GetCategory('Featured_articles', 2000)
+    get_2k_featured = GetCategory('Featured_articles', 200-)
     pages = call_and_ret(get_2k_featured)
     return len(pages) == 2000
 
@@ -92,7 +92,7 @@ def test_all_category_infos():
 
 
 def test_category_recursive():
-    get_2k_recursive = GetCategoryRecursive('Africa', 2000)
+    get_2k_recursive = GetCategoryRecursive('Africa', 200)
     pages = call_and_ret(get_2k_recursive)
     return len(pages) == 2000
 
@@ -362,7 +362,7 @@ def main():
 
 
 def _main():
-    return call_and_ret(test_all_transcludes)
+    return call_and_ret(test_get_images)
 
 
 if __name__ == '__main__':

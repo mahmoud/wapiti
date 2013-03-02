@@ -17,7 +17,7 @@
 from __future__ import unicode_literals
 
 from datetime import datetime
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 
 def parse_timestamp(timestamp):
@@ -31,7 +31,39 @@ ExternalLink = namedtuple('ExternalLink', 'url origin_page')
 NamespaceDescriptor = namedtuple('NamespaceDescriptor', 'id title canonical')
 InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
 
-WapitiModelAttr = namedtuple('WapitiModelAttr', 'name mw_name default display')
+
+_MISSING = object()
+
+
+class WapitiModelAttr(object):
+    def __init__(self, name, **kw):
+        self.name = name
+        self.mw_name = kw.pop('mw_name', name)
+        self.display = kw.pop('display', False)
+        try:
+            self.default = kw.pop('default')
+        except KeyError:
+            self.default = _MISSING
+        if kw:
+            raise ValueError('got unexpected keyword arguments: %r'
+                             % kw.keys())
+
+    def __repr__(self):
+        ret = [self.__class__.__name__, '(', repr(self.name)]
+        if self.mw_name != self.name:
+            ret.extend([', mw_name=', repr(self.mw_name)])
+        if self.default is not _MISSING:
+            ret.extend([', default=', repr(self.default)])
+        if self.display:
+            ret.extend([', display=', repr(self.display)])
+        ret.append(')')
+        return ''.join(ret)
+
+    def __iter__(self):
+        return iter((self.name, self.mw_name, self.default, self.display))
+
+
+WMA = WapitiModelAttr  # Windows Media Audio
 
 
 def title_talk2subject(title):
@@ -73,19 +105,18 @@ class WapitiModelMeta(type):
     value, and is missing upon instantiation of a model, an exception
     will be raised.
     """
-    attributes = {}
-    defaults = {}
+    attributes = []
 
     def __new__(cls, name, bases, attrs):
-        all_attributes = {}
-        all_defaults = {}
+        all_attributes = OrderedDict()
         for base in bases:
-            all_attributes.update(getattr(base, 'attributes', {}))
-            all_defaults.update(getattr(base, 'defaults', {}))
-        all_attributes.update(attrs.get('attributes', {}))
-        all_defaults.update(attrs.get('defaults', {}))
-        attrs['attributes'] = all_attributes
-        attrs['defaults'] = all_defaults
+            base_attr_list = getattr(base, 'attributes', [])
+            base_attr_dict = OrderedDict([(a.name, a) for a in base_attr_list])
+            all_attributes.update(base_attr_dict)
+        attr_dict = OrderedDict([(a.name, a) for a
+                                 in attrs.get('attributes', [])])
+        all_attributes.update(attr_dict)
+        attrs['attributes'] = all_attributes.values()
         ret = super(WapitiModelMeta, cls).__new__(cls, name, bases, attrs)
         return ret
 
@@ -104,22 +135,21 @@ class WapitiModelBase(object):
     """
 
     __metaclass__ = WapitiModelMeta
-    attributes = {}
-    defaults = {}
+    attributes = []
 
     def __init__(self, **kw):
         missing = []
-        for m_attr_name in self.attributes:
+        for attr in self.attributes:
             try:
-                val = kw.pop(m_attr_name)
+                val = kw.pop(attr.name)
             except KeyError:
-                try:
-                    val = self.defaults[m_attr_name]
-                except KeyError:
-                    missing.append(m_attr_name)
+                if attr.default is _MISSING:
+                    missing.append(attr.name)
                     continue
-            setattr(self, m_attr_name, val)
+                val = attr.default
+            setattr(self, attr.name, val)
         if missing:
+            import pdb;pdb.set_trace()
             raise ValueError('missing expected keyword arguments: %r'
                              % missing)
         # TODO: raise on unexpected keyword arguments?
@@ -130,22 +160,21 @@ class WapitiModelBase(object):
         kwargs = {}
         all_q_dict = dict(kw)
         all_q_dict.update(q_dict)
-        for m_attr_name, q_dict_key in cls.attributes.items():
-            if q_dict_key is None:
+        for name, mw_name, _, _ in cls.attributes:
+            if mw_name is None:
                 continue
             try:
-                kwargs[m_attr_name] = all_q_dict[q_dict_key]
+                kwargs[name] = all_q_dict[mw_name]
             except KeyError:
                 pass
         return cls(**kwargs)
 
 
 class PageIdentifier(WapitiModelBase):
-    attributes = {'title': 'title',
-                  'page_id': 'pageid',
-                  'ns': 'ns',
-                  'source': 'source'}
-    defaults = {}
+    attributes = [WMA('title', display=True),
+                  WMA('page_id', mw_name='pageid', display=True),
+                  WMA('ns', display=True),
+                  WMA('source')]
 
     @property
     def is_subject_page(self):
@@ -180,10 +209,8 @@ class PageIdentifier(WapitiModelBase):
 
 
 class PageInfo(PageIdentifier):
-    attributes = {'subject_id': 'subjectid',
-                  'talk_id': 'talkid'}
-    defaults = {'subject_id': None,
-                'talk_id': None}
+    attributes = [WMA('subject_id', mw_name='subjectid', default=None),
+                  WMA('talk_id', mw_name='talkid', default=None)]
 
     def __init__(self, **kw):
         req_title = kw.pop('req_title', None)
@@ -223,46 +250,49 @@ class PageInfo(PageIdentifier):
 
 
 class CategoryInfo(PageInfo):
-    attributes = {'total_count': 'size',
-                  'page_count': 'pages',
-                  'file_count': 'files',
-                  'subcat_count': 'subcats'}
-    defaults = {'total_count': 0,
-                'page_count': 0,
-                'file_count': 0,
-                'subcat_count': 0}
+    attributes = [WMA('total_count', mw_name='size', default=0, display=True),
+                  WMA('page_count', mw_name='pages', default=0),
+                  WMA('file_count', mw_name='files', default=0),
+                  WMA('subcat_count', mw_name='subcats', default=0, display=True)]
 
 
 class RevisionInfo(PageInfo):
-    attributes = {'rev_id': 'revid',
-                  'size': 'size',
-                  'user_text': 'user',
-                  'user_id': 'userid',
-                  'timestamp': 'timestamp',
-                  'comment': 'comment',
-                  'parsed_comment': 'parsedcomment',
-                  'tags': 'tags'}
+    attributes = [WMA('rev_id', mw_name='revid', display=True),
+                  WMA('size'),
+                  WMA('user_text', mw_name='user', default='!userhidden'),
+                  WMA('user_id', mw_name='userid', default=-1),
+                  WMA('timestamp', display=True),
+                  WMA('comment', default=''),
+                  WMA('parsed_comment', mw_name='parsedcomment', default=''),
+                  WMA('tags')]
 
     # note that certain revisions may have hidden the fields
     # user_id, user_text, and comment for administrative reasons,
     # aka "oversighting"
     # TODO: is oversighting better handled in operation?
-    defaults = {'user_text': '!userhidden',
-                'userid': -1,
-                'comment': '',
-                'parsed_comment': ''}
 
     def __init__(self, *a, **kw):
         super(RevisionInfo, self).__init__(*a, **kw)
         self.timestamp = parse_timestamp(self.timestamp)
 
 
-
 class Revision(RevisionInfo):
-    attributes = {'parent_rev_id': 'parentid',
-                  'content': '*',
-                  'is_parsed': 'is_parsed'}
-    defaults = {'content': ''}  # necessary?
+    attributes = [WMA('parent_rev_id', mw_name='parentid', display=True),
+                  WMA('content', mw_name='*', default=''),  # default=''?
+                  WMA('is_parsed')]
+
+
+class ImageInfo(PageIdentifier):
+    attributes = [WMA('image_repo', mw_name='imagerepository'),
+                  WMA('missing', default=False),
+                  WMA('url', default=''),  # will only exist if non-local repo
+                  WMA('dimensions', default=''),
+                  WMA('mime', default=''),
+                  WMA('thumbmime', default=''),
+                  WMA('media_type', mw_name='mediatype', default=''),
+                  WMA('metadata', default=''),
+                  WMA('archive_name', mw_name='archivename', default=''),
+                  WMA('bitdepth', default='')]
 
 
 #
