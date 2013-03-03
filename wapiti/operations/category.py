@@ -128,7 +128,7 @@ class GetFlattenedCategory(CompoundQueryOperation):
 
     def __init__(self, query_param, *a, **kw):
         super(GetFlattenedCategory, self).__init__(query_param, *a, **kw)
-        self.seen_cat_names = set([query_param])
+        self.seen_cat_names = set()
 
     def store_results(self, results):
         for cat_info in results:
@@ -160,7 +160,7 @@ class GetCategoryRecursive(CompoundQueryOperation):
 
     def __init__(self, query_param, *a, **kw):
         super(GetCategoryRecursive, self).__init__(query_param, *a, **kw)
-        self.seen_titles = set([query_param])
+        self.seen_titles = set()
 
     def store_results(self, results):
         for page_ident in results:

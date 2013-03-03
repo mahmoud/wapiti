@@ -37,7 +37,7 @@ from user import (GetUserContribs,
                   GetUserContribRevisionInfos)
 from meta import GetMeta
 
-PDB_ALL = False
+PDB_ALL = True
 PDB_ERROR = False
 DO_PRINT = False
 
@@ -410,8 +410,8 @@ def test_query_pages(limit):
 
 
 def test_nonexistent_query_page(limit):
-    non_existent_qp = GetQueryPage('FakeQueryPage')
     try:
+        non_existent_qp = GetQueryPage('FakeQueryPage')
         call_and_ret(non_existent_qp)
     except ValueError:
         return True
@@ -461,7 +461,6 @@ def main():
         results[k] = v(args.magnitude)
         print k, results[k]
     return results
-
 
 if __name__ == '__main__':
     from pprint import pprint

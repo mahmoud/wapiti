@@ -13,13 +13,13 @@ class GetImages(QueryOperation):
 
     def extract_results(self, query_resp):
         ret = []
-        for k, pid_dict in query_resp['pages'].iteritems():
+        for pid, pid_dict in query_resp['pages'].iteritems():
+            if pid.startswith('-'):
+                pid_dict['pageid'] = None  # TODO: breaks consistency :/
             try:
                 page_ident = PageIdentifier.from_query(pid_dict,
                                                        source=self.source)
             except ValueError:
-                continue
-            if page_ident.page_id < 0:
                 continue
             ret.append(page_ident)
         return ret

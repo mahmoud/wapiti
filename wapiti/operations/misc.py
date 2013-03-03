@@ -2,19 +2,18 @@
 from __future__ import unicode_literals
 
 from base import QueryOperation, SingleParam, MultiParam, StaticParam
-from models import PageIdentifier, CoordinateIndentifier, PageInfo
+from models import PageIdentifier, CoordinateIndentifier, PageInfo, ImageInfo
 from collections import namedtuple
 
 # TODO: These operations should be moved to the proper file
 
 
 class GetCoordinates(QueryOperation):
-    field_prefix = ''
+    field_prefix = 'co'
     query_field = MultiParam('titles', required=True)
     fields = [StaticParam('prop', 'coordinates'),
-              SingleParam('coprimary', 'all'),  # primary, secondary, all
-              MultiParam('coprop', 'type|name|dim|country|region')
-              ]
+              SingleParam('primary', 'all'),  # primary, secondary, all
+              MultiParam('prop', 'type|name|dim|country|region')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -54,29 +53,6 @@ class GeoSearch(QueryOperation):
         return ret
 
 DEFAULT_IMAGE_PROPS = 'timestamp|user|userid|comment|parsedcomment|url|size|dimensions|sha1|mime|thumbmime|mediatype|metadata|archivename|bitdepth'
-
-class ImageInfo(PageIdentifier):
-    attributes = {'image_repository': 'imagerepository',
-                  'missing': 'missing',
-                  'url': 'url',
-                  'dimensions': 'dimensions',
-                   'mime': 'mime',
-                   'thumbmime': 'thumbmime',
-                   'mediatype': 'mediatype',
-                   'metadata': 'metadata',
-                   'archivename': 'archivename',
-                   'bitdepth': 'bitdepth'
-                  }
-    defaults = {'tags': '',
-                'dimensions': '',
-                'mime': '',
-                'thumbmime': '',
-                'mediatype': '',
-                'metadata': '',
-                'archivename': '',
-                'bitdepth': '',
-                'url': '',  # will only exist if imagerepository is not local
-                'missing': False}
 
 class GetImageInfos(QueryOperation):
     field_prefix = 'ii'
