@@ -11,6 +11,11 @@ import json
 
 from ransom import Client
 
+# TODO: if query_field is None, maybe don't require subclasses to
+# override __init__ somehow?
+# TODO: use an OrderedSet for results for automatic deduplication
+# TODO: use cont_str key for preparing parameters (already extracting correctly)
+
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 IS_BOT = False
 if IS_BOT:
