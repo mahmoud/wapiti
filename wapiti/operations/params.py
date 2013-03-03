@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-
+from collections import Sequence, Set
 from utils import is_scalar, prefixed
 
 
@@ -38,9 +38,22 @@ def normalize_param(p, prefix=None, multi=None):
 class Param(object):
     def __init__(self, key, default=None, val_prefix=None, **kw):
         if not key:
-            raise ValueError('expected name, not %r' % key)
+            raise ValueError('expected key, not %r' % key)
         self.key = unicode(key)
         self.val_prefix = val_prefix
+        param_attr = kw.pop('attr', None)
+        coerce_func = kw.pop('coerce', None)
+        if coerce_func is None:
+            if isinstance(param_attr, basestring):
+                coerce_func = lambda x: getattr(x, param_attr)
+            elif param_attr is None:
+                coerce_func = lambda x: x
+            else:
+                raise TypeError("'attr' expected string")
+        elif not callable(coerce_func):
+            raise TypeError("'coerce' expected callable")
+        self.coerce_func = coerce_func
+        self.accept_str = kw.pop('accept_str', True)
         self.key_prefix = kw.pop('key_prefix', True)  # True = filled in later
         self.required = kw.pop('required', False)
         self.multi = kw.pop('multi', None)
@@ -63,9 +76,25 @@ class Param(object):
             prefix = ''
         return prefix + self.key
 
+    def _coerce_value(self, value):
+        # TODO: it's real late and this is a bit of a sty
+        if not value or isinstance(value, basestring):
+            return value
+        if isinstance(value, (Sequence, Set)):
+            coerced = []
+            for v in value:
+                if isinstance(v, basestring):
+                    coerced.append(v)
+                else:
+                    coerced.append(self.coerce_func(v))
+        else:
+            coerced = self.coerce_func(v)
+        return coerced
+
     def get_value(self, value, prefix=None):
         if prefix is None:
             prefix = self.val_prefix
+        value = self._coerce_value(value)
         norm_val = normalize_param(value, prefix, self.multi)
         val = norm_val or self.default
         if val is None and self.required:
