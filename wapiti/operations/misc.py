@@ -54,7 +54,6 @@ class GeoSearch(QueryOperation):
 
 DEFAULT_IMAGE_PROPS = 'timestamp|user|userid|comment|parsedcomment|url|size|dimensions|sha1|mime|thumbmime|mediatype|metadata|archivename|bitdepth'
 
-
 class GetImageInfos(QueryOperation):
     field_prefix = 'ii'
     query_field = MultiParam('titles', key_prefix=False, required=True)
@@ -142,39 +141,43 @@ QueryPageInfo = namedtuple('QueryPageInfo', 'title ns value querypage cache')
 class GetQueryPage(QueryOperation):
     field_prefix = 'qp'
     query_field = SingleParam('page', required=True)
-    '''
-    Acceptable page =  ['Ancientpages',
-                        'BrokenRedirects',
-                        'Deadendpages',
-                        'Disambiguations',
-                        'DoubleRedirects',
-                        'Listredirects',
-                        'Lonelypages',
-                        'Longpages',
-                        'Mostcategories',
-                        'Mostimages',
-                        'Mostinterwikis',
-                        'Mostlinkedcategories',
-                        'Mostlinkedtemplates',
-                        'Mostlinked',
-                        'Mostrevisions',
-                        'Fewestrevisions',
-                        'Shortpages',
-                        'Uncategorizedcategories',
-                        'Uncategorizedpages',
-                        'Uncategorizedimages',
-                        'Uncategorizedtemplates',
-                        'Unusedcategories',
-                        'Unusedimages',
-                        'Wantedcategories',
-                        'Wantedfiles',
-                        'Wantedpages',
-                        'Wantedtemplates',
-                        'Unwatchedpages', # requires logging in
-                        'Unusedtemplates',
-                        'Withoutinterwiki']
-    '''
     fields = [StaticParam('list', 'querypage')]
+    acceptable_qps = ['Ancientpages',
+                      'BrokenRedirects',
+                      'Deadendpages',
+                      'Disambiguations',
+                      'DoubleRedirects',
+                      'Listredirects',
+                      'Lonelypages',
+                      'Longpages',
+                      'Mostcategories',
+                      'Mostimages',
+                      'Mostinterwikis',
+                      'Mostlinkedcategories',
+                      'Mostlinkedtemplates',
+                      'Mostlinked',
+                      'Mostrevisions',
+                      'Fewestrevisions',
+                      'Shortpages',
+                      'Uncategorizedcategories',
+                      'Uncategorizedpages',
+                      'Uncategorizedimages',
+                      'Uncategorizedtemplates',
+                      'Unusedcategories',
+                      'Unusedimages',
+                      'Wantedcategories',
+                      'Wantedfiles',
+                      'Wantedpages',
+                      'Wantedtemplates',
+                      'Unwatchedpages',  # requires logging in
+                      'Unusedtemplates',
+                      'Withoutinterwiki']
+
+    def __init__(self, qp, *a, **kw):
+        if qp not in self.acceptable_qps:
+          raise ValueError('Unrecognized query page: %r' % qp)
+        return super(GetQueryPage, self).__init__(qp, *a, **kw)
+
 
     def extract_results(self, query_resp):
         ret = []

@@ -3,9 +3,9 @@
     wapiti.operations.models
     ~~~~~~~~~~~~~~~~~~~~~~~~
 
-    This module provides structures and abstractions for creating
-    consistent Operation interfaces, regardless of underlying
-    Mediawiki API response types.
+    This module provides structures and abstractions for creating consistent
+    Operation interfaces, regardless of underlying Mediawiki API response
+    types.
 
     For example the ``prop=revisions`` and ``list=usercontribs`` APIs
     both return lists of revision information, however not all of the

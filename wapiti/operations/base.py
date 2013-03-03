@@ -258,6 +258,7 @@ class BaseQueryOperation(Operation):
         self._query_param = qp
 
     def set_limit(self, limit):
+        self._orig_limit = limit
         self.dynamic_limit = True
         if hasattr(limit, 'remaining'):
             self._get_limit = lambda: limit.remaining

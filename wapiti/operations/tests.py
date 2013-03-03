@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from argparse import ArgumentParser
+from functools import wraps
+
 import base
 from category import (GetCategory,
                       GetCategoryList,
@@ -38,6 +41,13 @@ PDB_ALL = True
 PDB_ERROR = False
 DO_PRINT = False
 
+DEFAULT_MAGNITUDE = 'norm'
+
+# magnitude levels: norm (fetch a small number)
+#                   big (fetch a enough to hit the continue string)
+#                   huge (fetch a huge amount)
+#   Note: pages may not contain enough items to pass big/huge tests
+
 
 def call_and_ret(func):
     try:
@@ -57,19 +67,44 @@ def call_and_ret(func):
     return ret
 
 
-def test_unicode_title():
+def magnitude(norm, big=None, huge=None):
+    if big is None:
+        big = norm
+    if huge is None:
+        huge = big
+
+    def mag_dec(func):
+
+        @wraps(func)
+        def wrapped(limit_or_mag=None):
+            if limit_or_mag is None:
+                limit_or_mag = wrapped.norm
+            try:
+                limit = int(limit_or_mag)
+            except ValueError:
+                limit = int(wrapped.__dict__[limit_or_mag])
+            return func(limit)
+        wrapped.norm = norm
+        wrapped.big = big
+        wrapped.huge = huge
+        return wrapped
+    return mag_dec
+
+
+def test_unicode_title(limit):
     get_beyonce = GetCurrentContent("Beyoncé Knowles")
     beyonce = call_and_ret(get_beyonce)
     return bool(beyonce)
 
 
-def test_category_basic():
-    get_2k_featured = GetCategory('Featured_articles', 200)
+@magnitude(norm=20, big=550, huge=2000)
+def test_category_basic(limit):
+    get_2k_featured = GetCategory('Featured_articles', limit)
     pages = call_and_ret(get_2k_featured)
-    return len(pages) == 2000
+    return len(pages) == limit
 
 
-def test_nonexistent_cat_error():
+def test_nonexistent_cat_error(limit):
     '''
     Should return invalidcategory error
     {"servedby":"mw1204","error":{"code":"gcminvalidcategory","info":"The category name you entered is not valid"}}
@@ -80,42 +115,45 @@ def test_nonexistent_cat_error():
     pass
 
 
-def test_subcategory_infos():
-    get_subcats = GetSubcategoryInfos('FA-Class_articles', 100)
+@magnitude(norm=20, big=550, huge=2000)
+def test_subcategory_infos(limit):
+    get_subcats = GetSubcategoryInfos('FA-Class_articles', limit)
     subcats = call_and_ret(get_subcats)
-    return len(subcats) == 100
+    return len(subcats) == limit
 
-def test_all_category_infos():
+
+def test_all_category_infos(limit):
     get_all_cats = GetAllCategoryInfos(501)
     all_cats = call_and_ret(get_all_cats)
     return len(all_cats) == 501
 
 
-def test_category_recursive():
-    get_2k_recursive = GetCategoryRecursive('Africa', 200)
-    pages = call_and_ret(get_2k_recursive)
-    return len(pages) == 2000
+@magnitude(norm=10, big=1000, huge=True)
+def test_category_recursive(limit):
+    get_limit_recursive = GetCategoryRecursive('Africa', limit)
+    pages = call_and_ret(get_limit_recursive)
+    return len(pages) == limit
 
 
-def test_single_prot():
+def test_single_prot(limit):
     get_coffee_prot = GetProtections('Coffee')
     prots = call_and_ret(get_coffee_prot)
     return len(prots) == 1
 
 
-def test_multi_prots_list():
+def test_multi_prots_list(limit):
     get_prots = GetProtections(['Coffee', 'House'])
     prots = call_and_ret(get_prots)
     return len(prots) == 2
 
 
-def test_multi_prots_str():
+def test_multi_prots_str(limit):
     get_prots = GetProtections('Coffee|House')
     prots = call_and_ret(get_prots)
     return len(prots) == 2
 
 
-def test_nonexistent_prot():
+def test_nonexistent_prot(limit):
     '''
     returns 'missing' and negative id
     get_nonexistent_prot = GetProtections('DoesNotExist')
@@ -124,28 +162,31 @@ def test_nonexistent_prot():
     pass
 
 
-def test_backlinks():
-    get_bls = GetBacklinks('Coffee', 10)
+@magnitude(norm=20, big=550, huge=2000)
+def test_backlinks(limit):
+    get_bls = GetBacklinks('Coffee', limit)
     bls = call_and_ret(get_bls)
     '''
     Nonexistent title returns []
     '''
-    return len(bls) == 10
+    return len(bls) == limit
 
 
-def test_random():
-    get_fifty_random = GetRandom(50)
+@magnitude(norm=20, big=550, huge=2000)
+def test_random(limit):
+    get_fifty_random = GetRandom(limit)
     pages = call_and_ret(get_fifty_random)
-    return len(pages) == 50
+    return len(pages) == limit
 
 
-def test_lang_links():
-    get_coffee_langs = GetLanguageLinks('Coffee', 5)
+@magnitude(norm=5, big=550, huge=2000)
+def test_lang_links(limit):
+    get_coffee_langs = GetLanguageLinks('Coffee', limit)
     lang_list = call_and_ret(get_coffee_langs)
-    return len(lang_list) == 5
+    return len(lang_list) == limit
 
 
-def test_nonexistent_lang_links():
+def test_nonexistent_lang_links(limit):
     '''
     returns 'missing' and negative id
     get_nonexistent_ll = GetLanguageLinks('DoesNotExist')
@@ -154,13 +195,14 @@ def test_nonexistent_lang_links():
     pass
 
 
-def test_interwiki_links():
-    get_coffee_iwlinks = GetInterwikiLinks('Coffee', 5)
+@magnitude(norm=5, big=550, huge=2000)
+def test_interwiki_links(limit):
+    get_coffee_iwlinks = GetInterwikiLinks('Coffee', limit)
     iw_list = call_and_ret(get_coffee_iwlinks)
-    return len(iw_list) == 5
+    return len(iw_list) == limit
 
 
-def test_nonexistent_iw_links():
+def test_nonexistent_iw_links(limit):
     '''
     returns 'missing' and negative id
     get_nonexistent_iwl = GetInterwikiLinks('DoesNotExist')
@@ -169,32 +211,34 @@ def test_nonexistent_iw_links():
     pass
 
 
-def test_external_links():
-    get_coffee_elinks = GetExternalLinks('Croatian War of Independence', 300)
+@magnitude(norm=20, big=550, huge=2000)
+def test_external_links(limit):
+    get_coffee_elinks = GetExternalLinks('Croatian War of Independence', limit)
     el_list = call_and_ret(get_coffee_elinks)
     assert len(set(el_list)) == len(el_list)
-    return len(el_list) == 300
+    return len(el_list) == limit
 
 
-def test_feedback_v4():
+def test_feedback_v4(limit):
     get_v4 = GetFeedbackV4(604727)
     v4_list = call_and_ret(get_v4)
     return len(v4_list) > 1
 
 
-def test_feedback_v5():
+def test_feedback_v5(limit):
     get_v5 = GetFeedbackV5(604727)
     v5_list = call_and_ret(get_v5)
     return isinstance(v5_list, list)
 
 
-def test_revisions():
+@magnitude(norm=10, big=550, huge=2000)
+def test_revisions(limit):
     get_revs = GetPageRevisionInfos('Coffee', 10)
     rev_list = call_and_ret(get_revs)
     return len(rev_list) == 10
 
 
-def test_missing_revisions():
+def test_missing_revisions(limit):
     get_revs = GetPageRevisionInfos('Coffee_lololololol')
     rev_list = call_and_ret(get_revs)
     '''
@@ -203,136 +247,155 @@ def test_missing_revisions():
     return len(rev_list) == 0
 
 
-def test_transclusions():
-    get_transcludes = GetTranscludes('Template:ArticleHistory', 20)
+@magnitude(norm=20, big=550, huge=2000)
+def test_transclusions(limit):
+    get_transcludes = GetTranscludes('Template:ArticleHistory', limit)
     tr_list = call_and_ret(get_transcludes)
     '''
     Nonexistent title returns []
     '''
-    return len(tr_list) == 20
+    return len(tr_list) == limit
 
-def test_all_transcludes():
-    get_all_transcludes = GetAllTranscludes(501)
+
+@magnitude(norm=20, big=550, huge=2000)
+def test_all_transcludes(limit):
+    get_all_transcludes = GetAllTranscludes(limit)
     tr_list = call_and_ret(get_all_transcludes)
-    return len(tr_list) == 501
+    return len(tr_list) == limit
 
 
-def test_resolve_subjects():
+@magnitude(norm=20, big=550, huge=2000)
+def test_resolve_subjects(limit):
     get_res_transcludes = GetTranscludes('Template:ArticleHistory',
-                                         100,
+                                         limit,
                                          resolve_to_subject=True)
     tr_list = call_and_ret(get_res_transcludes)
-    return len(tr_list) == 100 and all([t.is_subject_page for t in tr_list])
+    return len(tr_list) == limit and all([t.is_subject_page for t in tr_list])
 
 
-def test_current_content():
+def test_current_content(limit):
     get_page = GetCurrentContent('Coffee')
     page = call_and_ret(get_page)
     return page[0].title == 'Coffee'
 
 
-def test_current_content_redirect():
+def test_current_content_redirect(limit):
     get_page = GetCurrentContent('Obama')
     page = call_and_ret(get_page)
     return page[0].title == 'Barack Obama'
 
 
-def test_current_talk_content():
+def test_current_talk_content(limit):
     get_talk_page = GetCurrentTalkContent('Obama')
     page = call_and_ret(get_talk_page)
     return page[0].title == 'Talk:Barack Obama'
 
 
-def test_flatten_category():
-    get_flat_cat = GetFlattenedCategory('History', 200)
+@magnitude(norm=20, big=550, huge=2000)
+def test_flatten_category(limit):
+    get_flat_cat = GetFlattenedCategory('History', limit)
     cat_infos = call_and_ret(get_flat_cat)
     assert len(set([ci.title for ci in cat_infos])) == len(cat_infos)
-    return len(cat_infos) == 200
+    return len(cat_infos) == limit
 
 
-def test_cat_mem_namespace():
-    get_star_portals = GetCategory('Astronomy_portals', 10, namespace=[100])
+@magnitude(norm=10, big=550, huge=2000)
+def test_cat_mem_namespace(limit):
+    get_star_portals = GetCategory('Astronomy_portals', limit, namespace=[100])
     portals = call_and_ret(get_star_portals)
-    return len(portals) == 10
+    return len(portals) == limit
 
 
-def test_cat_pages_recursive():
+@magnitude(norm=20, big=550, huge=2000)
+def test_cat_pages_recursive(limit):
     get_cat_pages_rec = GetCategoryPagesRecursive('Africa',
-                                                  100,
+                                                  limit,
                                                   resolve_to_subject=True)
     pages = call_and_ret(get_cat_pages_rec)
-    return len(pages) == 100
+    return len(pages) == limit
 
 
-def test_cat_list():
-    get_cat_list = GetCategoryList('Physics', 11)
+@magnitude(norm=11, big=550, huge=2000)
+def test_cat_list(limit):
+    get_cat_list = GetCategoryList('Physics', limit)
     pages = call_and_ret(get_cat_list)
-    return len(pages) == 11
+    return len(pages) == limit
 
 
-def test_get_images():
-    get_imgs = GetImages('Coffee', 4)
+@magnitude(norm=4, big=550, huge=2000)
+def test_get_images(limit):
+    get_imgs = GetImages('Coffee', limit)
     imgs = call_and_ret(get_imgs)
-    return len(imgs) == 4
+    return len(imgs) == limit
 
 
-def test_get_links():
-    get_links = GetLinks('Coffee', 17)
+@magnitude(norm=5, big=550, huge=2000)
+def test_get_links(limit):
+    get_links = GetLinks('Coffee', limit)
     links = call_and_ret(get_links)
-    return len(links) == 17
+    return len(links) == limit
 
 
-def test_coordinates():
+def test_coordinates(limit):
     get_coordinates = GetCoordinates(['White House', 'Golden Gate Bridge', 'Mount Everest'])
     coords = call_and_ret(get_coordinates)
     return len(coords) == 3
 
 
-def test_geosearch():
+def test_geosearch(limit):
     geosearch = GeoSearch(('37.8197', '-122.479'))
     geo = call_and_ret(geosearch)
     return len(geo) > 1
 
 
-def test_get_user_contribs():
-    get_contribs = GetUserContribs('Jimbo Wales', 1000)
+@magnitude(norm=20, big=550, huge=2000)
+def test_get_user_contribs(limit):
+    get_contribs = GetUserContribs('Jimbo Wales', limit)
     contribs = call_and_ret(get_contribs)
-    return len(contribs) == 1000
+    return len(contribs) == limit
 
 '''
-def test_get_meta():
+def test_get_meta(limit):
     get_meta = GetMeta()
     metas = call_and_ret(get_meta)[0]
     return len(metas['namespace_map']) > 20 and len(metas['interwiki_map']) > 100
 '''
 
-def test_get_revision_infos():
+
+def test_get_revision_infos(limit):
     get_revisions = GetRevisionInfos(['538903663', '539916351', '531458383'])
     rev_infos = call_and_ret(get_revisions)
     return len(rev_infos) == 3
 
 
-def test_get_contrib_rev_infos():
-    get_contrib_rev_infos = GetUserContribRevisionInfos('Jimbo Wales', 420)
+@magnitude(norm=20, big=550, huge=2000)
+def test_get_contrib_rev_infos(limit):
+    get_contrib_rev_infos = GetUserContribRevisionInfos('Jimbo Wales', limit)
     contrib_rev_infos = call_and_ret(get_contrib_rev_infos)
-    return len(contrib_rev_infos) == 420
+    return len(contrib_rev_infos) == limit
 
-def test_get_image_info():
+def test_get_image_info(limit):
     get_image_info = GetImageInfos('File:Logo.gif')
     image_info = call_and_ret(get_image_info)
     return image_info[0].url == 'http://upload.wikimedia.org/wikipedia/en/e/ea/Logo.gif'
 
-def test_get_all_image_infos():
-    get_all_img = GetAllImageInfos(501)
+
+@magnitude(norm=20, big=550, huge=2000)
+def test_get_all_image_infos(limit):
+    get_all_img = GetAllImageInfos(limit)
     all_imgs = call_and_ret(get_all_img)
-    return len(all_imgs) == 501
+    return len(all_imgs) == limit
 
-def test_get_templates():
-    get_templates = GetTemplates('Coffee', 10)
+
+@magnitude(norm=20, big=550, huge=2000)
+def test_get_templates(limit):
+    get_templates = GetTemplates('Coffee', limit)
     tmpl = call_and_ret(get_templates)
-    return len(tmpl) == 10
+    return len(tmpl) == limit
 
-def test_query_pages():
+
+@magnitude(norm=1, big=5, huge=600)
+def test_query_pages(limit):
     query_page_types = ['Ancientpages', 'BrokenRedirects', 'Deadendpages', 'Disambiguations', 'DoubleRedirects', 'Listredirects',
                         'Lonelypages', 'Longpages', 'Mostcategories', 'Mostimages', 'Mostinterwikis', 'Mostlinkedcategories',
                         'Mostlinkedtemplates', 'Mostlinked', 'Mostrevisions', 'Fewestrevisions', 'Shortpages',
@@ -341,33 +404,64 @@ def test_query_pages():
                         'Unusedtemplates', 'Withoutinterwiki']
     ret =[]
     for qpt in query_page_types:
-        get_pages = GetQueryPage(qpt, 10)
+        get_pages = GetQueryPage(qpt, limit)
         ret.extend(call_and_ret(get_pages))
-    return len(ret) == 290
+    return len(ret) == limit * len(query_page_types)
 
-def test_recent_changes():
-    get_recent_changes = GetRecentChanges(550)
+
+def test_nonexistent_query_page(limit):
+    try:
+        non_existent_qp = GetQueryPage('FakeQueryPage')
+        call_and_ret(non_existent_qp)
+    except ValueError:
+        return True
+
+
+@magnitude(norm=20, big=550, huge=2000)
+def test_recent_changes(limit):
+    get_recent_changes = GetRecentChanges(limit)
     recent_changes = call_and_ret(get_recent_changes)
-    return len(recent_changes) == 550
+    return len(recent_changes) == limit
+
+
+def create_parser():
+    parser = ArgumentParser(description='Test operations')
+    parser.add_argument('functions', nargs='*')
+    parser.add_argument('--pdb_all', '-a',
+                        default=False)
+    parser.add_argument('--pdb_error', '-e',
+                        default=True)
+    parser.add_argument('--do_print', '-p',
+                        default=True)
+    parser.add_argument('--magnitude', '-m',
+                        default=DEFAULT_MAGNITUDE)
+    return parser
 
 
 def main():
-    tests = dict([(k, v) for k, v in globals().items()
-                  if callable(v) and k.startswith('test_')])
+    global PDB_ALL, PDB_ERROR, DO_PRINT
+    parser = create_parser()
+    args = parser.parse_args()
+    PDB_ALL = args.pdb_all
+    PDB_ERROR = args.pdb_error
+    DO_PRINT = args.do_print
+    if args.functions:
+        tests = {}
+        for func in args.functions:
+            try:
+                tests[func] = globals()[func]
+            except KeyError:
+                print func, 'is not a valid test function'
+                continue
+    else:
+        tests = dict([(k, v) for k, v in globals().items()
+                      if callable(v) and k.startswith('test_')])
     results = {}
     for k, v in tests.items():
-        results[k] = v()
+        results[k] = v(args.magnitude)
         print k, results[k]
     return results
 
-
-def _main():
-    return call_and_ret(test_get_images)
-
-
 if __name__ == '__main__':
-    PDB_ALL = False
-    PDB_ERROR = True
-    DO_PRINT = True
     from pprint import pprint
     pprint(main())
