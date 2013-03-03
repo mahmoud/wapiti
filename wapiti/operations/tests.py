@@ -354,12 +354,11 @@ def test_get_user_contribs(limit):
     contribs = call_and_ret(get_contribs)
     return len(contribs) == limit
 
-'''
+
 def test_get_meta(limit):
     get_meta = GetMeta()
-    metas = call_and_ret(get_meta)[0]
-    return len(metas['namespace_map']) > 20 and len(metas['interwiki_map']) > 100
-'''
+    metas = call_and_ret(get_meta)
+    return len(metas) > 20
 
 
 def test_get_revision_infos(limit):
@@ -422,12 +421,9 @@ def test_recent_changes(limit):
 def create_parser():
     parser = ArgumentParser(description='Test operations')
     parser.add_argument('functions', nargs='*')
-    parser.add_argument('--pdb_all', '-a',
-                        default=False)
-    parser.add_argument('--pdb_error', '-e',
-                        default=True)
-    parser.add_argument('--do_print', '-p',
-                        default=True)
+    parser.add_argument('--pdb_all', '-a', action='store_true')
+    parser.add_argument('--pdb_error', '-e', action='store_true')
+    parser.add_argument('--do_print', '-p', action='store_true')
     parser.add_argument('--magnitude', '-m',
                         default=DEFAULT_MAGNITUDE)
     return parser
