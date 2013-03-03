@@ -20,6 +20,9 @@ from utils import PriorityQueue, is_scalar
 # TODO: use cont_str_key better for preparing parameters?
 # TODO: QueryParam that str()s to bar-separated string,
 # but is actually an list/tuple/iterable
+# TODO: parameter "coercion"
+# TODO: per_call_limit mess
+
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 IS_BOT = False
