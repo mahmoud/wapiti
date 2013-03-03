@@ -78,6 +78,8 @@ class Param(object):
 
     def _coerce_value(self, value):
         # TODO: it's real late and this is a bit of a sty
+        # also, in some cases the bar-split normalization
+        # should not occur (e.g., on a URL)
         if not value or isinstance(value, basestring):
             return value
         if isinstance(value, (Sequence, Set)):
