@@ -88,17 +88,6 @@ class Param(object):
     __call__ = get_value
 
 
-class StaticParam(Param):
-    def __init__(self, key, value):
-        super(StaticParam, self).__init__(key, value)
-
-    def get_key(self, *a, **kw):
-        return self.key
-
-    def get_value(self, *a, **kw):
-        return self.default
-
-
 class SingleParam(Param):
     def __init__(self, *a, **kw):
         kw['multi'] = False
@@ -109,3 +98,14 @@ class MultiParam(Param):
     def __init__(self, *a, **kw):
         kw['multi'] = True
         super(MultiParam, self).__init__(*a, **kw)
+
+
+class StaticParam(Param):
+    def __init__(self, key, value):
+        super(StaticParam, self).__init__(key, value)
+
+    def get_key(self, *a, **kw):
+        return self.key
+
+    def get_value(self, *a, **kw):
+        return self.default

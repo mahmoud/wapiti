@@ -323,7 +323,7 @@ class QueryOperation(BaseQueryOperation):
     def fetch(self):
         params = self.prepare_params(**self.kwargs)
         mw_call = MediawikiCall(self.api_url, self.api_action, params)
-        mw_call.do_call()
+        mw_call.process()
         # TODO: check resp for api errors/warnings
         # TODO: check for unrecognized paramater values
         return mw_call
@@ -393,7 +393,7 @@ class MediawikiCall(object):
         self.error_code = None
         self.warnings = []
 
-    def do_call(self):
+    def process(self):
         # TODO: add URL to all exceptions
         resp = None
         try:
@@ -508,7 +508,7 @@ class CompoundQueryOperation(BaseQueryOperation):
             if not self.generator or not self.generator.remaining:
                 break
             else:
-                self.produce_suboperations()
+                return self.produce_suboperations
         return None
 
     def fetch_and_store(self, op):
@@ -523,5 +523,31 @@ GetCategoryPagesRecursive
 (FlattenCategory -> GetCategoryPages -> Wikipedia API call -> URL fetch     )
 (PageInfos       <- PageInfos        <- MediaWikiCall      <- RansomResponse)
 
+operation's query_field = explicit or first field of chain
+
+
+def process(op):
+   res = op.process()
+   return self.store_results(res)
+
+what about producing subops?
+
+def process():
+   task = self.get_current_task()
+   res = task.process()
+   if res and isinstance(res[0], Operation):
+      self.store_subops(res)
+      return  # return subops?
+   return self.store_results(res)  # returns *new* results
+
+GetCategoryPagesRecursive
+(FlattenCategory --(CatInfos)->
+        GetCategoryPages --("APIParamStructs")->
+               MediawikiCall [--(url)-> URL fetch])
+
+An APIParamStruct is really just something with the API url and param
+dictionary, so QueryOperations themselves could be viewed as
+APIParamStructs. In other words, hopefully no new model type needed
+just for that.
 
 """
