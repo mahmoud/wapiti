@@ -63,7 +63,7 @@ def call_and_ret(func):
             disp = ret[0]
         except TypeError:
             disp = ret
-        print repr(disp)[:50] + '...'
+        print repr(disp)[:74] + '...'
     return ret
 
 
@@ -128,7 +128,7 @@ def test_all_category_infos(limit):
     return len(all_cats) == 501
 
 
-@magnitude(norm=10, big=1000, huge=True)
+@magnitude(norm=10, big=1000, huge=10000)
 def test_category_recursive(limit):
     get_limit_recursive = GetCategoryRecursive('Africa', limit)
     pages = call_and_ret(get_limit_recursive)
@@ -395,17 +395,12 @@ def test_get_templates(limit):
 
 @magnitude(norm=1, big=5, huge=600)
 def test_query_pages(limit):
-    query_page_types = ['Ancientpages', 'BrokenRedirects', 'Deadendpages', 'Disambiguations', 'DoubleRedirects', 'Listredirects',
-                        'Lonelypages', 'Longpages', 'Mostcategories', 'Mostimages', 'Mostinterwikis', 'Mostlinkedcategories',
-                        'Mostlinkedtemplates', 'Mostlinked', 'Mostrevisions', 'Fewestrevisions', 'Shortpages',
-                        'Uncategorizedcategories', 'Uncategorizedpages', 'Uncategorizedimages', 'Uncategorizedtemplates',
-                        'Unusedcategories', 'Unusedimages', 'Wantedcategories', 'Wantedfiles', 'Wantedpages', 'Wantedtemplates',
-                        'Unusedtemplates', 'Withoutinterwiki']
-    ret =[]
-    for qpt in query_page_types:
+    qp_types = GetQueryPage.known_qps
+    ret = []
+    for qpt in qp_types:
         get_pages = GetQueryPage(qpt, limit)
         ret.extend(call_and_ret(get_pages))
-    return len(ret) == limit * len(query_page_types)
+    return len(ret) == limit * len(qp_types)
 
 
 def test_nonexistent_query_page(limit):

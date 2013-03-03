@@ -7,6 +7,9 @@ from collections import namedtuple
 
 # TODO: These operations should be moved to the proper file
 
+# TODO: convert to real model(s)
+QueryPageInfo = namedtuple('QueryPageInfo', 'title ns value querypage cache')
+
 
 class GetCoordinates(QueryOperation):
     field_prefix = 'co'
@@ -101,7 +104,7 @@ class GetTemplates(QueryOperation):
         for k, pid_dict in query_resp['pages'].iteritems():
             try:
                 page_ident = PageInfo.from_query(pid_dict,
-                                                       source=self.source)
+                                                 source=self.source)
             except ValueError:
                 continue
             ret.append(page_ident)
@@ -115,12 +118,14 @@ class GetRecentChanges(QueryOperation):
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection')]
 
-    def __init__(self, limit=500, **kw):
-        super(GetRecentChanges, self).__init__(None, limit, **kw)
+    def __init__(self, *a, **kw):
+        super(GetRecentChanges, self).__init__(None, *a, **kw)
 
     def extract_results(self, query_resp):
         ret = []
-        for k, pid_dict in query_resp['pages'].iteritems():
+        for pid, pid_dict in query_resp['pages'].iteritems():
+            if pid.startswith('-'):
+                continue
             try:
                 page_ident = PageInfo.from_query(pid_dict,
                                                  source=self.source)
@@ -135,49 +140,46 @@ class GetRecentChanges(QueryOperation):
             params['grcstart'] = params.pop('grccontinue')
         return params
 
-QueryPageInfo = namedtuple('QueryPageInfo', 'title ns value querypage cache')
-
 
 class GetQueryPage(QueryOperation):
     field_prefix = 'qp'
     query_field = SingleParam('page', required=True)
     fields = [StaticParam('list', 'querypage')]
-    acceptable_qps = ['Ancientpages',
-                      'BrokenRedirects',
-                      'Deadendpages',
-                      'Disambiguations',
-                      'DoubleRedirects',
-                      'Listredirects',
-                      'Lonelypages',
-                      'Longpages',
-                      'Mostcategories',
-                      'Mostimages',
-                      'Mostinterwikis',
-                      'Mostlinkedcategories',
-                      'Mostlinkedtemplates',
-                      'Mostlinked',
-                      'Mostrevisions',
-                      'Fewestrevisions',
-                      'Shortpages',
-                      'Uncategorizedcategories',
-                      'Uncategorizedpages',
-                      'Uncategorizedimages',
-                      'Uncategorizedtemplates',
-                      'Unusedcategories',
-                      'Unusedimages',
-                      'Wantedcategories',
-                      'Wantedfiles',
-                      'Wantedpages',
-                      'Wantedtemplates',
-                      'Unwatchedpages',  # requires logging in
-                      'Unusedtemplates',
-                      'Withoutinterwiki']
+    known_qps = ['Ancientpages',
+                 'BrokenRedirects',
+                 'Deadendpages',
+                 'Disambiguations',
+                 'DoubleRedirects',
+                 'Listredirects',
+                 'Lonelypages',
+                 'Longpages',
+                 'Mostcategories',
+                 'Mostimages',
+                 'Mostinterwikis',
+                 'Mostlinkedcategories',
+                 'Mostlinkedtemplates',
+                 'Mostlinked',
+                 'Mostrevisions',
+                 'Fewestrevisions',
+                 'Shortpages',
+                 'Uncategorizedcategories',
+                 'Uncategorizedpages',
+                 'Uncategorizedimages',
+                 'Uncategorizedtemplates',
+                 'Unusedcategories',
+                 'Unusedimages',
+                 'Wantedcategories',
+                 'Wantedfiles',
+                 'Wantedpages',
+                 'Wantedtemplates',
+                 # 'Unwatchedpages',  # requires logging in
+                 'Unusedtemplates',
+                 'Withoutinterwiki']
 
     def __init__(self, qp, *a, **kw):
-        if qp not in self.acceptable_qps:
-          raise ValueError('Unrecognized query page: %r' % qp)
+        if qp not in self.known_qps:
+            raise ValueError('Unrecognized query page: %r' % qp)
         return super(GetQueryPage, self).__init__(qp, *a, **kw)
-
 
     def extract_results(self, query_resp):
         ret = []
