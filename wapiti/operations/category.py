@@ -113,21 +113,20 @@ class GetAllCategoryInfos(GetSubcategoryInfos):
     fields = [StaticParam('generator', 'allcategories'),
               StaticParam('prop', 'categoryinfo')]
 
-    def __init__(self, limit=10, **kw):
-        super(GetAllCategoryInfos, self).__init__(None, limit, **kw)
+    def __init__(self, *a, **kw):
+        super(GetAllCategoryInfos, self).__init__(None, *a, **kw)
 
 
 class GetFlattenedCategory(CompoundQueryOperation):
     """
     Lists all of a category's sub-categories.
     """
-    bijective = False
-    multiargument = False
-
     suboperation_type = GetSubcategoryInfos
 
-    def __init__(self, query_param, *a, **kw):
-        super(GetFlattenedCategory, self).__init__(query_param, *a, **kw)
+    subop_chain = (GetSubcategoryInfos, GetSubcategoryInfos)
+
+    def __init__(self, *a, **kw):
+        super(GetFlattenedCategory, self).__init__(*a, **kw)
         self.seen_cat_names = set()
 
     def store_results(self, results):

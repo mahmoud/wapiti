@@ -175,15 +175,6 @@ class BaseQueryOperation(Operation):
     def current_limit(self):
         return min(self.remaining, self.per_call_limit)
 
-    @classmethod
-    def is_multiargument(cls):
-        return getattr(cls, 'multiargument', False)
-
-    @classmethod
-    def is_bijective(cls):
-        if type(getattr(cls, 'return_type', None)) is list:
-            return False
-        return getattr(cls, 'bijective', True)
 
     def fetch(self):
         raise NotImplementedError('inheriting classes should return'
@@ -283,18 +274,6 @@ class QueryOperation(BaseQueryOperation):
         return self.cont_strs[-1]
 
     @classmethod
-    def is_multiargument(cls):
-        return getattr(cls.query_field, 'multi', False)
-
-    @classmethod
-    def is_bijective(cls):
-        if hasattr(cls, 'bijective'):
-            return cls.bijective
-        if 'list' in cls.get_field_dict():
-            return False
-        return True
-
-    @classmethod
     def get_field_dict(cls):
         ret = dict([(f.get_key(cls.field_prefix), f) for f in cls.fields])
         if cls.query_field:
@@ -321,11 +300,12 @@ class QueryOperation(BaseQueryOperation):
         params[self.field_prefix + 'limit'] = self.current_limit
         if self.last_cont_str:
             params[self.cont_str_key] = self.last_cont_str
+        params['action'] = self.api_action
         return params
 
     def fetch(self):
         params = self.prepare_params(**self.kwargs)
-        mw_call = MediawikiCall(self.api_url, self.api_action, params)
+        mw_call = MediawikiCall(self.api_url, params)
         mw_call.process()
         # TODO: check resp for api errors/warnings
         # TODO: check for unrecognized paramater values
@@ -372,10 +352,10 @@ class MediawikiCall(object):
     Sets up actual API HTTP request, makes the request, encapsulates
     error handling, and stores results.
     """
-    def __init__(self, api_url, action, params=None, **kw):
+    def __init__(self, api_url, params, **kw):
         self.api_url = api_url
-        self.action = action
 
+        # These settings will all go on the WapitiClient
         self.raise_exc = kw.pop('raise_exc', True)
         self.raise_err = kw.pop('raise_err', True)
         self.raise_warn = kw.pop('raise_warn', False)
@@ -386,7 +366,7 @@ class MediawikiCall(object):
         params = params or {}
         self.params = dict(BASE_API_PARAMS)
         self.params.update(params)
-        self.params['action'] = self.action
+        self.action = params['action']
 
         self.url = ''
         self.results = None
@@ -528,7 +508,6 @@ GetCategoryPagesRecursive
 
 operation's query_field = explicit or first field of chain
 
-
 def process(op):
    res = op.process()
    return self.store_results(res)
@@ -548,9 +527,59 @@ GetCategoryPagesRecursive
         GetCategoryPages --("APIParamStructs")->
                MediawikiCall [--(url)-> URL fetch])
 
-An APIParamStruct is really just something with the API url and param
+An "APIParamStruct" is really just something with the API url and param
 dictionary, so QueryOperations themselves could be viewed as
 APIParamStructs. In other words, hopefully no new model type needed
 just for that.
 
+At its most basic level, an Operation is something which:
+
+  - Has a type-declared input field, and a declared return type
+  - Has a process() function that returns results (of the output type)
+    or raises NoMoreResults
+  - Most likely takes a WapitiClient as a 'client' keyword
+    argument in its __init__()
+  - Provides a uniform way of checking progress
+
+Some notes on Operation design/usage:
+  - An Operation typically keeps a copy of its results internally,
+  most likely a unique list of some sort, and should return only
+  new results.
+  - Calling an Operation directly calls process() repeatedly until the
+  operation is complete, then returns the internally tracked results.
+
 """
+
+
+class OperationMeta(type):
+    def __new__(cls, name, bases, attrs):
+        ret = super(OperationMeta, cls).__new__(cls, name, bases, attrs)
+        subop_chain = getattr(ret, 'subop_chain', [])
+        query_field = getattr(ret, 'query_field', None)
+        try:
+            query_field = ret.query_field
+        except AttributeError:
+            query_field = subop_chain[0].query_field
+            ret.query_field = query_field
+        if query_field is None:
+            # TODO: better support for random(), etc. (has no query field)
+            pass
+        # TODO: run through subop_chain, checking the outputs match up
+        try:
+            return_type = ret.return_type
+        except AttributeError:
+            return_type = subop_chain[-1].return_type
+            ret.return_type = return_type
+
+        try:
+            ret.singular_return_type = ret.return_type[0]
+        except (TypeError, IndexError):
+            ret.singular_return_type = ret.return_type
+
+        # TODO: support manual overrides for the following?
+        ret.is_multiargument = getattr(query_field, 'multi', False)
+        ret.is_bijective = True
+        if type(return_type) is list and return_type:
+            ret.is_bijective = False
+
+        return ret

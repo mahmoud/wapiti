@@ -83,6 +83,7 @@ class Param(object):
         if not value or isinstance(value, basestring):
             return value
         if isinstance(value, (Sequence, Set)):
+            # some models are iterable, but none are sequences/sets (yet)
             coerced = []
             for v in value:
                 if isinstance(v, basestring):

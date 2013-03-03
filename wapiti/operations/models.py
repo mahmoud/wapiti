@@ -152,7 +152,6 @@ class WapitiModelBase(object):
                 val = attr.default
             setattr(self, attr.name, val)
         if missing:
-            import pdb;pdb.set_trace()
             raise ValueError('missing expected keyword arguments: %r'
                              % missing)
         # TODO: raise on unexpected keyword arguments?
