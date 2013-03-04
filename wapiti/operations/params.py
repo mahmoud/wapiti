@@ -1,6 +1,46 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+"""
+Fields, parameters, and coercion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Fields are typed slots which normalize and validate values passed to
+them, facilitating much more robust Operation usage.
+
+Parameters (aka params) are the values passed to a field. Another
+benefit of fields is that Operations will not initialize successfully
+without proper parameters, allowing earlier error detection (and in
+some cases correction).
+
+Coercion refers a field's [limited] ability to transform certain
+values into a parameters usable by the owning Operation. For instance,
+to get all members of 'Category:Africa', one can use the GetCategory
+operation like this, ``GetCategory('Category:Africa')``, or this,
+``GetCategory('Africa')``. The ``query_field`` on the GetCategory
+Operation will automatically prepend the 'Category:' prefix, as all
+Wikipedia categories start with 'Category:'.
+
+The normalized value can be retrieved with ``field.get_value()``,
+which (currently) always returns a single string (as would be used in
+an API call URL). ``field.get_value_list()`` also exists, which
+returns a list of strings.
+
+Fields also encapsulate a ``key``, which typically corresponds the URL
+query argument name used in API request URLs, as well as key
+preparation logic, like prefixing (e.g., 'title' -> 'gcmtitle').
+
+Here are some notes on various aspects of coercion:
+
+ - By default, fields allow submission of plain strings (or iterables
+   of strings), which are then normalized and subject to cardinality
+   constraints. This behavior can be disabled with allow_string=False.
+
+ - Fields can also accept non-string objects (i.e., WapitiModel
+   instances) by specifying the name of an attribute to get from any
+   non-string value submitted to the field.
+"""
+
 from collections import Sequence, Set
 from utils import is_scalar, prefixed
 

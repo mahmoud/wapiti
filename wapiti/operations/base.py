@@ -133,8 +133,7 @@ class Operation(object):
     of statefulness and introspection (e.g., progress monitoring).
     """
     __metaclass__ = OperationMeta
-    # input_field = _MISSING  # TODO: etc.
-    # output_type
+
     subop_chain = []
     per_call_limit = PER_CALL_LIMIT
 
