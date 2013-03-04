@@ -53,7 +53,7 @@ class GetCategory(QueryOperation):  # TODO: SubjectResolvingQueryOperation):
     Lists the members in a category.
     """
     field_prefix = 'gcm'
-    input_field = SingleParam('title', val_prefix='Category:', required=True)
+    input_field = SingleParam('title', val_prefix='Category:', attr='title', required=True)
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection'),
@@ -85,7 +85,7 @@ class GetSubcategoryInfos(QueryOperation):
     of members or sub-categories.
     """
     field_prefix = 'gcm'
-    input_field = SingleParam('title', val_prefix='Category:', required=True)
+    input_field = SingleParam('title', val_prefix='Category:', attr='title', required=True)
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'categoryinfo'),
               StaticParam('gcmtype', 'subcat')]

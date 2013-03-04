@@ -11,7 +11,7 @@ from os.path import dirname
 sys.path.append(dirname(dirname((__file__))))
 from ransom import Client
 
-from params import param_str2list, SingleParam, StaticParam, MultiParam  # tmp
+from params import SingleParam, StaticParam, MultiParam  # tmp
 from utils import PriorityQueue
 
 
@@ -54,8 +54,8 @@ class NoMoreResults(Exception):
 """
 Notes on "multiargument" and "bijective":
 
-There are lots of ways to classify query operations, and
-these are just a couple.
+There are lots of ways to classify operations, and these are just a
+couple.
 
 "Multiargument" operations can take more than one search parameter
 at once, such as the GetProtections operation. Others, can only take
@@ -77,6 +77,7 @@ Going forward, these attributes can be determined as follows:
    it is a list, then bijective is true, if it's a bare type, then
    bijective is false.
 """
+
 
 class OperationMeta(ABCMeta):
     def __new__(cls, name, bases, attrs):
@@ -434,6 +435,8 @@ class MediaWikiCall(Operation):
         self.error = None
         self.error_code = None
         self.warnings = []
+
+        self._input_param = params
 
     def process(self):
         # TODO: add URL to all exceptions
