@@ -66,3 +66,29 @@ class PriorityQueue(object):
             raise IndexError('priority queues only support indexing on -1')
         _, _, task = self._pq[0]
         return task
+
+
+# From http://en.wikipedia.org/wiki/Wikipedia:Namespace
+NAMESPACES = {
+    'Main': 0,
+    'Talk': 1,
+    'User': 2,
+    'User talk': 3,
+    'Wikipedia': 4,
+    'Wikipedia talk': 5,
+    'File': 6,
+    'File talk': 7,
+    'MediaWiki': 8,
+    'MediaWiki talk': 9,
+    'Template': 10,
+    'Template talk': 11,
+    'Help': 12,
+    'Help talk': 13,
+    'Category': 14,
+    'Category talk': 15,
+    'Portal': 100,
+    'Portal talk': 101,
+    'Book': 108,
+    'Book talk': 109,
+    'Special': -1,
+    'Media': -2}
