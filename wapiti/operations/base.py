@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import json
+from abc import ABCMeta
 from collections import OrderedDict
 
 import sys
@@ -11,7 +12,7 @@ sys.path.append(dirname(dirname((__file__))))
 from ransom import Client
 
 from params import param_str2list, SingleParam, StaticParam, MultiParam  # tmp
-from utils import PriorityQueue, is_scalar
+from utils import PriorityQueue
 
 
 # TODO: if input_field is None, maybe don't require subclasses to
@@ -77,9 +78,6 @@ Going forward, these attributes can be determined as follows:
    bijective is false.
 """
 
-from abc import ABCMeta
-
-
 class OperationMeta(ABCMeta):
     def __new__(cls, name, bases, attrs):
         ret = super(OperationMeta, cls).__new__(cls, name, bases, attrs)
@@ -92,7 +90,7 @@ class OperationMeta(ABCMeta):
             input_field = subop_chain[0].input_field
             ret.input_field = input_field
         if input_field is None:
-            # TODO: better support for random(), etc. (has no query field)
+            # TODO: better support for random(), etc. (has no input field)
             pass
         # TODO: run through subop_chain, checking the outputs match up
         try:
@@ -325,7 +323,8 @@ class QueryOperation(Operation):
     def get_field_dict(cls):
         ret = dict([(f.get_key(cls.field_prefix), f) for f in cls.fields])
         if cls.input_field:
-            ret[cls.input_field.get_key(cls.field_prefix)] = cls.input_field
+            query_key = cls.input_field.get_key(cls.field_prefix)
+            ret[query_key] = cls.input_field
         return ret
 
     def get_current_task(self):
