@@ -22,7 +22,8 @@ from utils import PriorityQueue, is_scalar
 # but is actually an list/tuple/iterable
 # TODO: parameter "coercion"
 # TODO: per_call_limit mess
-
+# TODO: abstracting away per-call limits by creating multiple
+# operations of the same type
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 IS_BOT = False
@@ -74,25 +75,6 @@ class NoMoreResults(Exception):
     pass
 
 
-class Operation(object):
-    """
-    A mostly abstract class connoting some semblance
-    of statefulness and introspection (e.g., progress monitoring).
-    """
-
-    def __init__(self):
-        pass
-
-    def parse_params(self, *a, **kw):
-        pass
-
-    def get_progress(self):
-        pass
-
-    def get_relative_progress(self):
-        pass
-
-
 """
 Notes on "multiargument" and "bijective":
 
@@ -121,7 +103,7 @@ Going forward, these attributes can be determined as follows:
 """
 
 
-class BaseQueryOperation(Operation):
+class BaseQueryOperation(OperationBase):
     source = None
     per_call_limit = PER_CALL_LIMIT
     default_limit = DEFAULT_LIMIT
@@ -141,19 +123,12 @@ class BaseQueryOperation(Operation):
         self.results = []
 
     @property
-    def query_param(self):
-        return self._query_param
-
-    @property
     def limit(self):
         return self._get_limit()
 
     @property
     def source(self):
         return self.api_url
-
-    def set_query_param(self, qp):
-        self._query_param = qp
 
     def set_limit(self, limit):
         self._orig_limit = limit
@@ -232,12 +207,6 @@ class QueryOperation(BaseQueryOperation):
         super(QueryOperation, self).__init__(query_param, limit, *a, **kw)
         self.cont_strs = []
         self._set_params()
-
-    def set_query_param(self, qp):
-        self._orig_query_param = qp
-        if self.query_field:
-            qp = self.query_field.get_value(qp)
-        super(QueryOperation, self).set_query_param(qp)
 
     def _set_params(self):
         params = {}
@@ -550,12 +519,14 @@ Some notes on Operation design/usage:
 
 """
 
+from abc import ABCMeta, abstractmethod
 
-class OperationMeta(type):
+class OperationMeta(ABCMeta):
     def __new__(cls, name, bases, attrs):
         ret = super(OperationMeta, cls).__new__(cls, name, bases, attrs)
+        if name == 'OperationBase':
+            return ret  # TODO: add elegance?
         subop_chain = getattr(ret, 'subop_chain', [])
-        query_field = getattr(ret, 'query_field', None)
         try:
             query_field = ret.query_field
         except AttributeError:
@@ -583,3 +554,116 @@ class OperationMeta(type):
             ret.is_bijective = False
 
         return ret
+
+_MISSING = object()
+
+class OperationBase(object):
+    """
+    An abstract class connoting some semblance
+    of statefulness and introspection (e.g., progress monitoring).
+    """
+    __metaclass__ = OperationMeta
+    # input_field = _MISSING  # TODO: etc.
+    # output_type
+    # subop_chain
+
+    @abstractmethod
+    def __init__(self):
+        pass
+
+    @abstractmethod
+    def get_progress(self):
+        pass
+
+    @abstractmethod
+    def get_relative_progress(self):
+        pass
+
+    @abstractmethod
+    def process(self):
+        pass
+
+    @property
+    def input_param(self):
+        return self._input_param
+
+    def set_input_param(self, param):
+        self._orig_input_param = param
+        self._input_param = self.input_field.get_value(param)
+
+
+class QueryOperation(OperationBase):
+    api_action = 'query'
+
+    def __init__(self, query_param, **kw):
+        self.client = kw.pop('client', None)
+        if self.client:
+            self.api_url = self.client.api_url
+        else:
+            self.api_url = kw.get('api_url', DEFAULT_API_URL)
+        limit = kw.pop('limit', None)
+        self.set_limit(limit)
+
+        self.kwargs = kw
+        self.started = False
+        self.results = []  # TODO: orderedset-like thing
+
+        super(QueryOperation, self).__init__(**kw)
+
+    def set_limit(self, limit):
+        # TODO: use new limit structures
+        # TODO: add support for callable limit getters?
+        if isinstance(limit, QueryOperation):
+            self.parent = limit
+        self._limit = limit
+
+    @property
+    def limit(self):
+        if isinstance(self._limit, QueryOperation):
+            return self._limit.remaining
+        return self._limit
+
+    @property
+    def remaining(self):
+        # TODO: use new limit struct
+        # TODO: what about suboperations?
+        limit = self.limit or self.default_limit
+        return max(0, limit - len(self.results))
+
+    @property
+    def current_limit(self):
+        # TODO: use new limit struct
+        return min(self.remaining, self.per_call_limit)
+
+    def process(self):
+        self.started = True
+        task = self.get_current_task()
+        if task is None:
+            raise NoMoreResults()
+        results = task.process()
+        self.get_subops(task, results)
+        return results
+
+    def store_results(self, task, results):
+        if type(subop_chain) is Recursive:
+            pass
+        if self.subop_chain[-1] is type(task):
+            self.real_results.extend(results)
+        else:
+            i = self.subop_chain.index(type(task))
+            new_subops = [self.subop_chain[i+1](res) for res in results]
+            self.subop_queues[i].extend(new_subops)
+        return
+
+    def get_current_task(self):
+        if not self.remaining:
+            return None
+        while 1:
+            while self.suboperations:
+                subop = self.suboperations[-1]
+                if subop.remaining:
+                    pass  # return subop
+                else:
+                    self.suboperations.pop()
+            pass
+        return

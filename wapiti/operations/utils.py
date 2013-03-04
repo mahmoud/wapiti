@@ -13,6 +13,14 @@ def prefixed(arg, prefix=None):
         arg = prefix + arg
     return arg
 
+"""
+class _SentinelMeta(type):
+    def __new__(cls, name, bases, attrs):
+        pass
+
+def make_sentinel(name):
+    return _SentinelMeta(str(name), (object,), {})
+"""
 
 REMOVED = '<removed-task>'
 
