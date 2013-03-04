@@ -91,7 +91,7 @@ class Param(object):
                 else:
                     coerced.append(self.coerce_func(v))
         else:
-            coerced = self.coerce_func(v)
+            coerced = self.coerce_func(value)
         return coerced
 
     def get_value(self, value, prefix=None):
