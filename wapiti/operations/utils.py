@@ -13,6 +13,42 @@ def prefixed(arg, prefix=None):
         arg = prefix + arg
     return arg
 
+
+class TypeWrapperMeta(type):
+    def __new__(mcls, name, bases, attrs):
+        twm_bases = [b for b in bases if isinstance(b, TypeWrapperMeta)]
+        if twm_bases:
+            raise TypeError('%s attempted to subclass a wrapped type: %r'
+                            % (name, twm_bases))
+
+        ret = super(TypeWrapperMeta, mcls).__new__(mcls, name, bases, attrs)
+        ret._wrapped_attrs = set()
+        return ret
+
+    def __setattr__(cls, name, val):
+        super(TypeWrapperMeta, cls).__setattr__(name, val)
+        if not name == '_wrapped_attrs':
+            cls._wrapped_attrs.add(name)
+
+    def __delattr__(cls, name, val):
+        super(TypeWrapperMeta, cls).__delattr__(name, val)
+        try:
+            cls._wrapped_attrs.remove(name)
+        except KeyError:
+            pass
+
+
+def wrap_type(orig_type, **kw):
+    tw_cls = orig_type
+    if not isinstance(tw_cls, TypeWrapperMeta):
+        name = orig_type.__name__
+        tw_cls = TypeWrapperMeta(name, (tw_cls,), {})
+
+    for k, v in kw.items():
+        setattr(tw_cls, k, v)
+    return tw_cls
+
+
 """
 class _SentinelMeta(type):
     def __new__(cls, name, bases, attrs):
