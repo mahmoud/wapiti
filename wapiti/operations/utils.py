@@ -13,81 +13,103 @@ def prefixed(arg, prefix=None):
         arg = prefix + arg
     return arg
 
+"""
+TypeWrapper and MetaTypeWrapper are a pair of what are technically
+metaclasses, but really just a very overwrought way of enabling
+customized versions of types floating around in some
+locations. Because Wapiti is a DSL, but also just a bunch of Python,
+we have to deal with the fact that if you modify a type/class, it will
+be modified everywhere that references it.
+
+TL;DR: This overblown thing lets Operations use something like
+Prioritized(GetCategory, key='total_count'), which sets a priority for
+better queueing, without modifying the GetCategory Operation
+itself. (Different operations will want to prioritiez different
+things.)
+
+(There is almost certainly a better way, but this was a bit of
+fun. Ever made an object that is an instance and a subclass of
+itself?)
+"""
+
+
+class MetaTypeWrapper(type):
+    def __new__(mcls, name, reqd_kwargs=None):
+        reqd_kwargs = reqd_kwargs or []
+        wrapper = super(mcls, mcls).__new__(mcls,
+                                            name,
+                                            (TypeWrapper,),
+                                            {'_reqd_kwargs': reqd_kwargs})
+        return wrapper
+
+    def __init__(cls, *a, **kw):
+        super(MetaTypeWrapper, cls).__init__(cls.__name__,
+                                             cls.__bases__,
+                                             cls.__dict__)
+
 
 class TypeWrapper(type):
-    def __new__(mcls, name_or_type, bases=None, attrs=None):
+    def __new__(mcls, name_or_type, bases=None, attrs=None, **kw):
+        nort = name_or_type
         attrs = attrs or {}
         if bases is None:
-            if not isinstance(name_or_type, type):
-                raise TypeError('expected type, not %r' % name_or_type)
-            bases = (name_or_type,)
+            if not isinstance(nort, type):
+                raise TypeError('expected type, not %r' % nort)
+            bases = (nort,)
 
         if len(bases) > 1:
-            raise TypeError('type wrappers wrap a single type, not %r' % bases)
+            raise TypeError('TypeWrapper wraps a single type, not %r' % bases)
         elif not bases:
             raise TypeError('cannot create wrapped types without base type')
-        base_type = bases[0]
-        base_name = base_type.__name__
-        if isinstance(base_type, TypeWrapper):
-            raise TypeError('attempted to subclass a wrapped type: %s' % name)
 
+        old_attrs = {}
+        base_type = bases[0]
+        if isinstance(base_type, TypeWrapper):
+            for attr in base_type._wrapped_attrs:
+                old_attrs[attr] = getattr(base_type, attr)
+            base_type = base_type.__bases__[0]
+
+        bases = (base_type,)
+        base_name = base_type.__name__
+        attrs['__module__'] = base_type.__module__
         ret = super(TypeWrapper, mcls).__new__(mcls, base_name, bases, attrs)
         ret._wrapped_attrs = set()
-        ret.__module__ = base_type.__module__
+
+        for attr, val in old_attrs.items():
+            setattr(ret, attr, val)
         return ret
 
-    def get_unwrapped(cls):
-        return cls.__bases__[0]
+    def __init__(mcls, to_wrap, **kw):
+        for name in mcls._reqd_kwargs:
+            try:
+                val = kw.pop(name)
+            except KeyError:
+                msg = '%s expected keyword argument %r'
+                raise TypeError(msg % (mcls.__name__, name))
+            setattr(mcls, name, val)
+        if kw:
+            raise TypeError('%s got unexpected keyword arguments: %r'
+                            % kw.keys())
 
-    @classmethod
+    def __repr__(cls):
+        wrapped_attr_map = dict([(k, getattr(cls, k, None))
+                                 for k in cls._wrapped_attrs
+                                 if k in cls.__dict__])
+        kv = ', '.join(['%s=%r' % (k, v) for k, v in wrapped_attr_map.items()])
+        tmpl = "<wrapped class '%s.%s' (%s)>"
+        return  tmpl % (cls.__module__, cls.__name__, kv)
+
     def __setattr__(cls, name, val):
-        super(TypeWrapper, cls).__setattr__(cls, name, val)
+        super(TypeWrapper, cls).__setattr__(name, val)
         if not name == '_wrapped_attrs':
             cls._wrapped_attrs.add(name)
 
-    @classmethod
     def __delattr__(cls, name, val):
         super(TypeWrapper, cls).__delattr__(name, val)
         try:
             cls._wrapped_attrs.remove(name)
         except KeyError:
             pass
-
-    @classmethod
-    def __repr__(cls):
-        return "<wrapped class '%s.%s'>" % (cls.__module__, cls.__name__)
-
-    @classmethod
-    def make_wrapper(mcls, name, attr_names):
-
-        def __new__(mcls, nt, bases=None, attrs=None, **kw):
-            return super(mcls, mcls).__new__(mcls, nt, bases, attrs)
-
-        def __init__(mcls, to_wrap, **kw):
-            for name in attr_names:
-                try:
-                    val = kw.pop(name)
-                except KeyError:
-                    msg = '%s expected keyword argument %r'
-                    raise TypeError(msg % (mcls.__name__, name))
-                setattr(mcls, name, val)
-            if kw:
-                raise TypeError('%s got unexpected keyword arguments: %r'
-                                % kw.keys())
-        wrapper = mcls(name, (mcls,), {'__new__': __new__,
-                                       '__init__': __init__})
-        return wrapper
-
-
-def wrap_type(orig_type, **kw):
-    tw_cls = orig_type
-    if type(tw_cls) is not TypeWrapper:
-        name = orig_type.__name__
-        tw_cls = TypeWrapper(name, (tw_cls,), {})
-
-    for k, v in kw.items():
-        setattr(tw_cls, k, v)
-    return tw_cls
 
 
 """
