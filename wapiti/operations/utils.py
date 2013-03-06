@@ -14,35 +14,76 @@ def prefixed(arg, prefix=None):
     return arg
 
 
-class TypeWrapperMeta(type):
-    def __new__(mcls, name, bases, attrs):
-        twm_bases = [b for b in bases if isinstance(b, TypeWrapperMeta)]
-        if twm_bases:
-            raise TypeError('%s attempted to subclass a wrapped type: %r'
-                            % (name, twm_bases))
+class TypeWrapper(type):
+    def __new__(mcls, name_or_type, bases=None, attrs=None):
+        attrs = attrs or {}
+        if bases is None:
+            if not isinstance(name_or_type, type):
+                raise TypeError('expected type, not %r' % name_or_type)
+            bases = (name_or_type,)
 
-        ret = super(TypeWrapperMeta, mcls).__new__(mcls, name, bases, attrs)
+        if len(bases) > 1:
+            raise TypeError('type wrappers wrap a single type, not %r' % bases)
+        elif not bases:
+            raise TypeError('cannot create wrapped types without base type')
+        base_type = bases[0]
+        base_name = base_type.__name__
+        if isinstance(base_type, TypeWrapper):
+            raise TypeError('attempted to subclass a wrapped type: %s' % name)
+
+        ret = super(TypeWrapper, mcls).__new__(mcls, base_name, bases, attrs)
         ret._wrapped_attrs = set()
+        ret.__module__ = base_type.__module__
         return ret
 
+    def get_unwrapped(cls):
+        return cls.__bases__[0]
+
+    @classmethod
     def __setattr__(cls, name, val):
-        super(TypeWrapperMeta, cls).__setattr__(name, val)
+        super(TypeWrapper, cls).__setattr__(cls, name, val)
         if not name == '_wrapped_attrs':
             cls._wrapped_attrs.add(name)
 
+    @classmethod
     def __delattr__(cls, name, val):
-        super(TypeWrapperMeta, cls).__delattr__(name, val)
+        super(TypeWrapper, cls).__delattr__(name, val)
         try:
             cls._wrapped_attrs.remove(name)
         except KeyError:
             pass
 
+    @classmethod
+    def __repr__(cls):
+        return "<wrapped class '%s.%s'>" % (cls.__module__, cls.__name__)
+
+    @classmethod
+    def make_wrapper(mcls, name, attr_names):
+
+        def __new__(mcls, nt, bases=None, attrs=None, **kw):
+            return super(mcls, mcls).__new__(mcls, nt, bases, attrs)
+
+        def __init__(mcls, to_wrap, **kw):
+            for name in attr_names:
+                try:
+                    val = kw.pop(name)
+                except KeyError:
+                    msg = '%s expected keyword argument %r'
+                    raise TypeError(msg % (mcls.__name__, name))
+                setattr(mcls, name, val)
+            if kw:
+                raise TypeError('%s got unexpected keyword arguments: %r'
+                                % kw.keys())
+        wrapper = mcls(name, (mcls,), {'__new__': __new__,
+                                       '__init__': __init__})
+        return wrapper
+
 
 def wrap_type(orig_type, **kw):
     tw_cls = orig_type
-    if not isinstance(tw_cls, TypeWrapperMeta):
+    if type(tw_cls) is not TypeWrapper:
         name = orig_type.__name__
-        tw_cls = TypeWrapperMeta(name, (tw_cls,), {})
+        tw_cls = TypeWrapper(name, (tw_cls,), {})
 
     for k, v in kw.items():
         setattr(tw_cls, k, v)
