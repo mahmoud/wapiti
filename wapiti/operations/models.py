@@ -31,6 +31,8 @@ ExternalLink = namedtuple('ExternalLink', 'url origin_page')
 NamespaceDescriptor = namedtuple('NamespaceDescriptor', 'id title canonical')
 InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
 
+UserContrib = namedtuple('UserContrib',
+                         'page_identifier user_text user_id revision_id')
 
 _MISSING = object()
 
@@ -388,7 +390,7 @@ class ProtectionInfo(object):
         return u'ProtectionInfo(%r)' % self.protections
 
 
-class CoordinateIndentifier(object):
+class CoordinateIdentifier(object):
     def __init__(self, coord, page_ident=None):
         self.page_ident = page_ident
         self.lat = coord.get('lat')

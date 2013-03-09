@@ -14,9 +14,10 @@ DEFAULT_PROPS = ('general',
 
 class GetMeta(QueryOperation):
     field_prefix = 'si'
-    query_field = None
+    input_field = None
     fields = [StaticParam('meta', 'siteinfo'),
               MultiParam('prop', DEFAULT_PROPS)]
+    output_type = list
 
     def __init__(self, **kw):
         query_param = kw.pop('query_param', None)

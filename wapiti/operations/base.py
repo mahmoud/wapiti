@@ -203,8 +203,9 @@ class Operation(object):
     #    pass
 
     def set_input_param(self, param):
-        self._orig_input_param = param
-        self._input_param = self.input_field.get_value(param)
+        self._orig_input_param = self._input_param = param
+        if self.input_field:
+            self._input_param = self.input_field.get_value(param)
 
     @property
     def input_param(self):
@@ -327,7 +328,7 @@ class QueryOperation(Operation):
     field_prefix = None        # e.g., 'gcm'
     cont_str_key = None
 
-    def __init__(self, input_param, limit, **kw):
+    def __init__(self, input_param, limit=None, **kw):
         kw['limit'] = limit
         super(QueryOperation, self).__init__(input_param, **kw)
         self.cont_strs = []

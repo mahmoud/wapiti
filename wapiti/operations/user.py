@@ -1,26 +1,27 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation, CompoundQueryOperation, SingleParam, MultiParam, StaticParam
-from models import PageIdentifier, RevisionInfo
+from base import Operation, QueryOperation
+from params import SingleParam, StaticParam
+from models import PageIdentifier, UserContrib
 from revisions import GetRevisionInfos
-from collections import namedtuple
 
 DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|tags|title'
 
-UserContrib = namedtuple('UserContrib', 'page_identifier user_text user_id revision_id')
 
 class GetUserContribs(QueryOperation):
     field_prefix = 'uc'
-    query_field = SingleParam('user', required=True)
+    input_field = SingleParam('user', required=True)
     fields = [StaticParam('list', 'usercontribs'),
               StaticParam('ucprop', DEFAULT_PROPS)]
+    output_type = [PageIdentifier]
 
     def extract_results(self, query_resp):
         ret = []
         for rev_dict in query_resp.get('usercontribs', []):
             try:
-                page_ident = PageIdentifier.from_query(rev_dict, source=self.source)
+                page_ident = PageIdentifier.from_query(rev_dict,
+                                                       source=self.source)
                 user_contrib = UserContrib(page_ident,
                                            rev_dict['user'],
                                            rev_dict['userid'],
@@ -31,13 +32,11 @@ class GetUserContribs(QueryOperation):
         return ret
 
 
-class GetUserContribRevisionInfos(CompoundQueryOperation):
-    multiargument = False
-    default_generator = GetUserContribs
-    suboperation_type = GetRevisionInfos
-    suboperation_params = {'query_param': lambda uc: uc.revision_id}
+# TODO: fix
+class GetUserContribRevisionInfos(Operation):
+    subop_chain = (GetUserContribs, GetRevisionInfos)
 
-    def produce_suboperations(self):
+    def __produce_suboperations(self):
         if not self.generator or not self.generator.remaining:
             return None
         ret = []

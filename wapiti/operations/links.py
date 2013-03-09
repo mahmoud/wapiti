@@ -7,9 +7,10 @@ from models import PageIdentifier, LanguageLink, InterwikiLink, ExternalLink
 
 class GetImages(QueryOperation):
     field_prefix = 'gim'
-    query_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('generator', 'images'),
               StaticParam('prop', 'info')]
+    output_type = [PageIdentifier]
 
     def extract_results(self, query_resp):
         ret = []
@@ -27,8 +28,9 @@ class GetImages(QueryOperation):
 
 class GetBacklinks(QueryOperation):
     field_prefix = 'bl'
-    query_field = SingleParam('title', required=True)
+    input_field = SingleParam('title', required=True)
     fields = [StaticParam('list', 'backlinks')]
+    output_type = [PageIdentifier]
 
     def extract_results(self, query_resp):
         ret = []
@@ -44,10 +46,11 @@ class GetBacklinks(QueryOperation):
 
 class GetLinks(QueryOperation):
     field_prefix = 'gpl'
-    query_field = SingleParam('titles', key_prefix=False, required=True)
+    input_field = SingleParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('generator', 'links'),
               StaticParam('prop', 'info'),
               MultiParam('namespace', required=False)]
+    output_type = [PageIdentifier]
 
     def extract_results(self, query_resp):
         ret = []
@@ -63,8 +66,9 @@ class GetLinks(QueryOperation):
 
 class GetExternalLinks(QueryOperation):
     field_prefix = 'el'
-    query_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('prop', 'extlinks')]
+    output_type = [ExternalLink]
 
     def extract_results(self, query_resp):
         ret = []
@@ -89,9 +93,10 @@ class GetExternalLinks(QueryOperation):
 
 class GetLanguageLinks(QueryOperation):
     field_prefix = 'll'
-    query_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('prop', 'langlinks'),
               SingleParam('url', True)]
+    output_type = [LanguageLink]
 
     def extract_results(self, query_resp):
         ret = []
@@ -111,9 +116,10 @@ class GetLanguageLinks(QueryOperation):
 
 class GetInterwikiLinks(QueryOperation):
     field_prefix = 'iw'
-    query_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('prop', 'iwlinks'),
               SingleParam('url', True)]
+    output_type = [InterwikiLink]
 
     def extract_results(self, query_resp):
         ret = []

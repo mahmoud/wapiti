@@ -6,8 +6,9 @@ from base import QueryOperation, SingleParam, StaticParam
 
 class GetFeedbackV4(QueryOperation):
     field_prefix = 'af'
-    query_field = SingleParam('pageid', required=True)
+    input_field = SingleParam('pageid', required=True)
     fields = [StaticParam('list', 'articlefeedback')]
+    output_type = list
 
     def extract_results(self, query_resp):
         ret = query_resp['articlefeedback'][0].get('ratings', [])
@@ -22,8 +23,9 @@ class GetFeedbackV5(QueryOperation):
       post_process_response()
     """
     field_prefix = 'afvf'
-    query_field = SingleParam('pageid', required=True)
+    input_field = SingleParam('pageid', required=True)
     fields = [StaticParam('list', 'articlefeedbackv5-view-feedback')]
+    output_type = list
 
     def post_process_response(self, response):
         if not response.results:
