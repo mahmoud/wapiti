@@ -75,15 +75,28 @@ def normalize_param(p, prefix=None, multi=None):
     return param_list2str(p_list, prefix)
 
 
+# unacceptablllllllle
+PLURAL_MAP = {'titles': 'title', 'revids': 'revid'}
+
+
 class Param(object):
     def __init__(self, key, default=None, val_prefix=None, **kw):
         if not key:
             raise ValueError('expected key, not %r' % key)
         self.key = unicode(key)
         self.val_prefix = val_prefix
+        self.required = kw.pop('required', False)
+        self.multi = kw.pop('multi', None)
+        self.accept_str = kw.pop('accept_str', True)
+        self.key_prefix = kw.pop('key_prefix', True)  # True = filled in later
+
         param_attr = kw.pop('attr', None)
         coerce_func = kw.pop('coerce', None)
         if coerce_func is None:
+            if param_attr is None:
+                param_attr = self.key
+                if self.multi:
+                    param_attr = PLURAL_MAP.get(param_attr, param_attr)
             if isinstance(param_attr, basestring):
                 coerce_func = lambda x: getattr(x, param_attr)
             elif param_attr is None:
@@ -93,10 +106,6 @@ class Param(object):
         elif not callable(coerce_func):
             raise TypeError("'coerce' expected callable")
         self.coerce_func = coerce_func
-        self.accept_str = kw.pop('accept_str', True)
-        self.key_prefix = kw.pop('key_prefix', True)  # True = filled in later
-        self.required = kw.pop('required', False)
-        self.multi = kw.pop('multi', None)
         if kw:
             raise ValueError('unexpected keyword argument(s): %r' % kw)
         if default is not None:
