@@ -1,7 +1,47 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+"""
+Fields, parameters, and coercion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Fields are typed slots which normalize and validate values passed to
+them, facilitating much more robust Operation usage.
+
+Parameters (aka params) are the values passed to a field. Another
+benefit of fields is that Operations will not initialize successfully
+without proper parameters, allowing earlier error detection (and in
+some cases correction).
+
+Coercion refers a field's [limited] ability to transform certain
+values into a parameters usable by the owning Operation. For instance,
+to get all members of 'Category:Africa', one can use the GetCategory
+operation like this, ``GetCategory('Category:Africa')``, or this,
+``GetCategory('Africa')``. The ``query_field`` on the GetCategory
+Operation will automatically prepend the 'Category:' prefix, as all
+Wikipedia categories start with 'Category:'.
+
+The normalized value can be retrieved with ``field.get_value()``,
+which (currently) always returns a single string (as would be used in
+an API call URL). ``field.get_value_list()`` also exists, which
+returns a list of strings.
+
+Fields also encapsulate a ``key``, which typically corresponds the URL
+query argument name used in API request URLs, as well as key
+preparation logic, like prefixing (e.g., 'title' -> 'gcmtitle').
+
+Here are some notes on various aspects of coercion:
+
+ - By default, fields allow submission of plain strings (or iterables
+   of strings), which are then normalized and subject to cardinality
+   constraints. This behavior can be disabled with allow_string=False.
+
+ - Fields can also accept non-string objects (i.e., WapitiModel
+   instances) by specifying the name of an attribute to get from any
+   non-string value submitted to the field.
+"""
+
+from collections import Sequence, Set
 from utils import is_scalar, prefixed
 
 
@@ -35,15 +75,37 @@ def normalize_param(p, prefix=None, multi=None):
     return param_list2str(p_list, prefix)
 
 
+# unacceptablllllllle
+PLURAL_MAP = {'titles': 'title', 'revids': 'revid'}
+
+
 class Param(object):
     def __init__(self, key, default=None, val_prefix=None, **kw):
         if not key:
-            raise ValueError('expected name, not %r' % key)
+            raise ValueError('expected key, not %r' % key)
         self.key = unicode(key)
         self.val_prefix = val_prefix
-        self.key_prefix = kw.pop('key_prefix', True)  # True = filled in later
         self.required = kw.pop('required', False)
         self.multi = kw.pop('multi', None)
+        self.accept_str = kw.pop('accept_str', True)
+        self.key_prefix = kw.pop('key_prefix', True)  # True = filled in later
+
+        param_attr = kw.pop('attr', None)
+        coerce_func = kw.pop('coerce', None)
+        if coerce_func is None:
+            if param_attr is None:
+                param_attr = self.key
+                if self.multi:
+                    param_attr = PLURAL_MAP.get(param_attr, param_attr)
+            if isinstance(param_attr, basestring):
+                coerce_func = lambda x: getattr(x, param_attr)
+            elif param_attr is None:
+                coerce_func = lambda x: x
+            else:
+                raise TypeError("'attr' expected string")
+        elif not callable(coerce_func):
+            raise TypeError("'coerce' expected callable")
+        self.coerce_func = coerce_func
         if kw:
             raise ValueError('unexpected keyword argument(s): %r' % kw)
         if default is not None:
@@ -63,9 +125,28 @@ class Param(object):
             prefix = ''
         return prefix + self.key
 
+    def _coerce_value(self, value):
+        # TODO: it's real late and this is a bit of a sty
+        # also, in some cases the bar-split normalization
+        # should not occur (e.g., on a URL)
+        if not value or isinstance(value, basestring):
+            return value
+        if isinstance(value, (Sequence, Set)):
+            # some models are iterable, but none are sequences/sets (yet)
+            coerced = []
+            for v in value:
+                if isinstance(v, basestring):
+                    coerced.append(v)
+                else:
+                    coerced.append(self.coerce_func(v))
+        else:
+            coerced = self.coerce_func(value)
+        return coerced
+
     def get_value(self, value, prefix=None):
         if prefix is None:
             prefix = self.val_prefix
+        value = self._coerce_value(value)
         norm_val = normalize_param(value, prefix, self.multi)
         val = norm_val or self.default
         if val is None and self.required:
@@ -88,17 +169,6 @@ class Param(object):
     __call__ = get_value
 
 
-class StaticParam(Param):
-    def __init__(self, key, value):
-        super(StaticParam, self).__init__(key, value)
-
-    def get_key(self, *a, **kw):
-        return self.key
-
-    def get_value(self, *a, **kw):
-        return self.default
-
-
 class SingleParam(Param):
     def __init__(self, *a, **kw):
         kw['multi'] = False
@@ -109,3 +179,14 @@ class MultiParam(Param):
     def __init__(self, *a, **kw):
         kw['multi'] = True
         super(MultiParam, self).__init__(*a, **kw)
+
+
+class StaticParam(Param):
+    def __init__(self, key, value):
+        super(StaticParam, self).__init__(key, value)
+
+    def get_key(self, *a, **kw):
+        return self.key
+
+    def get_value(self, *a, **kw):
+        return self.default

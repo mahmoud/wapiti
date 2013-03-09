@@ -13,6 +13,113 @@ def prefixed(arg, prefix=None):
         arg = prefix + arg
     return arg
 
+"""
+TypeWrapper and MetaTypeWrapper are a pair of what are technically
+metaclasses, but really just a very overwrought way of enabling
+customized versions of types floating around in some
+locations. Because Wapiti is a DSL, but also just a bunch of Python,
+we have to deal with the fact that if you modify a type/class, it will
+be modified everywhere that references it.
+
+TL;DR: This overblown thing lets Operations use something like
+Prioritized(GetCategory, key='total_count'), which sets a priority for
+better queueing, without modifying the GetCategory Operation
+itself. (Different operations will want to prioritiez different
+things.)
+
+(There is almost certainly a better way, but this was a bit of
+fun. Ever made an object that is an instance and a subclass of
+itself?)
+"""
+
+
+class MetaTypeWrapper(type):
+    def __new__(mcls, name, reqd_kwargs=None):
+        reqd_kwargs = reqd_kwargs or []
+        wrapper = super(mcls, mcls).__new__(mcls,
+                                            name,
+                                            (TypeWrapper,),
+                                            {'_reqd_kwargs': reqd_kwargs})
+        return wrapper
+
+    def __init__(cls, *a, **kw):
+        super(MetaTypeWrapper, cls).__init__(cls.__name__,
+                                             cls.__bases__,
+                                             cls.__dict__)
+
+
+class TypeWrapper(type):
+    def __new__(mcls, name_or_type, bases=None, attrs=None, **kw):
+        nort = name_or_type
+        attrs = attrs or {}
+        if bases is None:
+            if not isinstance(nort, type):
+                raise TypeError('expected type, not %r' % nort)
+            bases = (nort,)
+
+        if len(bases) > 1:
+            raise TypeError('TypeWrapper wraps a single type, not %r' % bases)
+        elif not bases:
+            raise TypeError('cannot create wrapped types without base type')
+
+        old_attrs = {}
+        base_type = bases[0]
+        if isinstance(base_type, TypeWrapper):
+            for attr in base_type._wrapped_attrs:
+                old_attrs[attr] = getattr(base_type, attr)
+            base_type = base_type.__bases__[0]
+
+        bases = (base_type,)
+        base_name = base_type.__name__
+        attrs['__module__'] = base_type.__module__
+        ret = super(TypeWrapper, mcls).__new__(mcls, base_name, bases, attrs)
+        ret._wrapped_attrs = set()
+
+        for attr, val in old_attrs.items():
+            setattr(ret, attr, val)
+        return ret
+
+    def __init__(mcls, to_wrap, **kw):
+        for name in mcls._reqd_kwargs:
+            try:
+                val = kw.pop(name)
+            except KeyError:
+                msg = '%s expected keyword argument %r'
+                raise TypeError(msg % (mcls.__name__, name))
+            setattr(mcls, name, val)
+        if kw:
+            raise TypeError('%s got unexpected keyword arguments: %r'
+                            % kw.keys())
+
+    def __repr__(cls):
+        wrapped_attr_map = dict([(k, getattr(cls, k, None))
+                                 for k in cls._wrapped_attrs
+                                 if k in cls.__dict__])
+        kv = ', '.join(['%s=%r' % (k, v) for k, v in wrapped_attr_map.items()])
+        tmpl = "<wrapped class '%s.%s' (%s)>"
+        return  tmpl % (cls.__module__, cls.__name__, kv)
+
+    def __setattr__(cls, name, val):
+        super(TypeWrapper, cls).__setattr__(name, val)
+        if not name == '_wrapped_attrs':
+            cls._wrapped_attrs.add(name)
+
+    def __delattr__(cls, name, val):
+        super(TypeWrapper, cls).__delattr__(name, val)
+        try:
+            cls._wrapped_attrs.remove(name)
+        except KeyError:
+            pass
+
+
+"""
+class _SentinelMeta(type):
+    def __new__(cls, name, bases, attrs):
+        pass
+
+def make_sentinel(name):
+    return _SentinelMeta(str(name), (object,), {})
+"""
 
 REMOVED = '<removed-task>'
 
@@ -58,3 +165,29 @@ class PriorityQueue(object):
             raise IndexError('priority queues only support indexing on -1')
         _, _, task = self._pq[0]
         return task
+
+
+# From http://en.wikipedia.org/wiki/Wikipedia:Namespace
+NAMESPACES = {
+    'Main': 0,
+    'Talk': 1,
+    'User': 2,
+    'User talk': 3,
+    'Wikipedia': 4,
+    'Wikipedia talk': 5,
+    'File': 6,
+    'File talk': 7,
+    'MediaWiki': 8,
+    'MediaWiki talk': 9,
+    'Template': 10,
+    'Template talk': 11,
+    'Help': 12,
+    'Help talk': 13,
+    'Category': 14,
+    'Category talk': 15,
+    'Portal': 100,
+    'Portal talk': 101,
+    'Book': 108,
+    'Book talk': 109,
+    'Special': -1,
+    'Media': -2}

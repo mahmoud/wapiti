@@ -8,15 +8,17 @@
 """
 from __future__ import unicode_literals
 
+# SubjectResolvingQueryOperation,
+
 from models import (CategoryInfo,
                     PageIdentifier,
                     PageInfo)
-from base import (SubjectResolvingQueryOperation,
-                  QueryOperation,
-                  CompoundQueryOperation,
+from base import (QueryOperation,
+                  Operation,
                   StaticParam,
                   SingleParam,
-                  MultiParam)
+                  MultiParam,
+                  Recursive)
 
 
 class GetCategoryList(QueryOperation):
@@ -24,12 +26,12 @@ class GetCategoryList(QueryOperation):
     Lists the categories for a page.
     """
     field_prefix = 'gcl'
-    query_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('generator', 'categories'),
               StaticParam('prop', 'categoryinfo'),
               SingleParam('gclshow', ''),  # hidden, !hidden
               ]
-    return_type = [CategoryInfo]
+    output_type = [CategoryInfo]
 
     def extract_results(self, query_resp):
         ret = []
@@ -46,17 +48,17 @@ class GetCategoryList(QueryOperation):
         return ret
 
 
-class GetCategory(SubjectResolvingQueryOperation):
+class GetCategory(QueryOperation):  # TODO: SubjectResolvingQueryOperation):
     """
     Lists the members in a category.
     """
     field_prefix = 'gcm'
-    query_field = SingleParam('title', val_prefix='Category:', required=True)
+    input_field = SingleParam('title', val_prefix='Category:', required=True)
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection'),
               MultiParam('namespace', required=False)]
-    return_type = [PageInfo]
+    output_type = [PageInfo]
 
     def extract_results(self, query_resp):
         ret = []
@@ -83,11 +85,11 @@ class GetSubcategoryInfos(QueryOperation):
     of members or sub-categories.
     """
     field_prefix = 'gcm'
-    query_field = SingleParam('title', val_prefix='Category:', required=True)
+    input_field = SingleParam('title', val_prefix='Category:', required=True)
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'categoryinfo'),
               StaticParam('gcmtype', 'subcat')]
-    return_type = [CategoryInfo]
+    output_type = [CategoryInfo]
 
     def extract_results(self, query_resp):
         ret = []
@@ -109,67 +111,36 @@ class GetAllCategoryInfos(GetSubcategoryInfos):
     Lists all the categories on the wiki.
     """
     field_prefix = 'gac'
-    query_field = None
+    input_field = None
     fields = [StaticParam('generator', 'allcategories'),
               StaticParam('prop', 'categoryinfo')]
 
-    def __init__(self, limit=10, **kw):
-        super(GetAllCategoryInfos, self).__init__(None, limit, **kw)
+    def __init__(self, *a, **kw):
+        super(GetAllCategoryInfos, self).__init__(None, *a, **kw)
 
 
-class GetFlattenedCategory(CompoundQueryOperation):
+class GetFlattenedCategory(Operation):
     """
     Lists all of a category's sub-categories.
     """
-    bijective = False
-    multiargument = False
+    subop_chain = Recursive(GetSubcategoryInfos)
 
-    suboperation_type = GetSubcategoryInfos
-
-    def __init__(self, query_param, *a, **kw):
-        super(GetFlattenedCategory, self).__init__(query_param, *a, **kw)
-        self.seen_cat_names = set()
-
-    def store_results(self, results):
-        for cat_info in results:
-            title = cat_info.title
-            if title in self.seen_cat_names:
-                continue
-            self.seen_cat_names.add(title)
-            self.results.append(cat_info)
-            if cat_info.subcat_count:
-                priority = cat_info.subcat_count
-                subop = GetSubcategoryInfos(title, self)
-                self.suboperations.add(subop, priority)
-        return results
+    def __init__(self, *a, **kw):
+        super(GetFlattenedCategory, self).__init__(*a, **kw)
 
 
-class GetCategoryRecursive(CompoundQueryOperation):
+class GetCategoryRecursive(Operation):
     """
     Lists all the members of a category and its sub-categories. A Wikipedia
     category tree can have a large number of shallow categories, so this
     operation will prioritize the larger categories by default.
     """
-    bijective = False
-    multiargument = False
 
-    default_generator = GetFlattenedCategory
-    suboperation_type = GetCategory
-    suboperation_params = {'query_param': lambda ci: ci.title,
-                           'priority': lambda ci: ci.page_count}
+    subop_chain = (GetFlattenedCategory, GetCategory)
 
-    def __init__(self, query_param, *a, **kw):
-        super(GetCategoryRecursive, self).__init__(query_param, *a, **kw)
-        self.seen_titles = set()
-
-    def store_results(self, results):
-        for page_ident in results:
-            title = page_ident.title
-            if title in self.seen_titles:
-                continue
-            self.seen_titles.add(title)
-            self.results.append(page_ident)
-        return results
+    def __init__(self, input_param, limit=None, *a, **kw):
+        kw['limit'] = limit
+        super(GetCategoryRecursive, self).__init__(input_param, *a, **kw)
 
 
 class GetCategoryPagesRecursive(GetCategoryRecursive):
@@ -177,4 +148,4 @@ class GetCategoryPagesRecursive(GetCategoryRecursive):
     Lists all the pages (namespace 0 and 1) in a category and its sub-
     categories.
     """
-    suboperation_type = GetCategoryPages
+    subop_chain = (GetFlattenedCategory, GetCategoryPages)

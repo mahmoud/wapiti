@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from base import QueryOperation, SingleParam, MultiParam, StaticParam
-from models import PageIdentifier, CoordinateIndentifier, PageInfo, ImageInfo
+from models import PageIdentifier, CoordinateIdentifier, PageInfo, ImageInfo
 from collections import namedtuple
 
 # TODO: These operations should be moved to the proper file
@@ -13,10 +13,11 @@ QueryPageInfo = namedtuple('QueryPageInfo', 'title ns value querypage cache')
 
 class GetCoordinates(QueryOperation):
     field_prefix = 'co'
-    query_field = MultiParam('titles', required=True)
+    input_field = MultiParam('titles', required=True)
     fields = [StaticParam('prop', 'coordinates'),
               SingleParam('primary', 'all'),  # primary, secondary, all
               MultiParam('prop', 'type|name|dim|country|region')]
+    output_type = [CoordinateIdentifier]
 
     def extract_results(self, query_resp):
         ret = []
@@ -25,7 +26,7 @@ class GetCoordinates(QueryOperation):
                 page_ident = PageIdentifier.from_query(pid_dict,
                                                        source=self.source)
                 for coord in pid_dict['coordinates']:
-                    coord_ident = CoordinateIndentifier(coord, page_ident)
+                    coord_ident = CoordinateIdentifier(coord, page_ident)
             except ValueError:
                 continue
             ret.append(coord_ident)
@@ -34,14 +35,14 @@ class GetCoordinates(QueryOperation):
 
 class GeoSearch(QueryOperation):
     field_prefix = 'gs'
-    query_field = MultiParam('coord', required=True)
+    input_field = MultiParam('coord', required=True)
     fields = [StaticParam('list', 'geosearch'),
               SingleParam('radius', 10000),  # must be within 10 and 10000
               #SingleParam('maxdim', 1000),  # does not work?
               SingleParam('globe', 'earth'),  # which planet? donno...
               SingleParam('namespace', required=False),
-              StaticParam('gsprop', 'type|name|dim|country|region')
-              ]
+              StaticParam('gsprop', 'type|name|dim|country|region')]
+    output_type = [CoordinateIdentifier]
 
     def extract_results(self, query_resp):
         ret = []
@@ -49,7 +50,7 @@ class GeoSearch(QueryOperation):
             try:
                 page_ident = PageIdentifier.from_query(pid_dict,
                                                        source=self.source)
-                coord_ident = CoordinateIndentifier(pid_dict, page_ident)
+                coord_ident = CoordinateIdentifier(pid_dict, page_ident)
             except ValueError:
                 continue
             ret.append(coord_ident)
@@ -57,11 +58,13 @@ class GeoSearch(QueryOperation):
 
 DEFAULT_IMAGE_PROPS = 'timestamp|user|userid|comment|parsedcomment|url|size|dimensions|sha1|mime|thumbmime|mediatype|metadata|archivename|bitdepth'
 
+
 class GetImageInfos(QueryOperation):
     field_prefix = 'ii'
-    query_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('prop', 'imageinfo'),
               StaticParam('iiprop', DEFAULT_IMAGE_PROPS)]
+    output_type = [ImageInfo]
 
     def extract_results(self, query_resp):
         ret = []
@@ -72,7 +75,7 @@ class GetImageInfos(QueryOperation):
             try:
                 pid_dict.update(pid_dict.get('imageinfo', [{}])[0])
                 image_info = ImageInfo.from_query(pid_dict,
-                                                       source=self.source)
+                                                  source=self.source)
             except ValueError as e:
                 print e
                 continue
@@ -82,7 +85,7 @@ class GetImageInfos(QueryOperation):
 
 class GetAllImageInfos(GetImageInfos):
     field_prefix = 'gai'
-    query_field = None
+    input_field = None
     fields = []
     fields = [StaticParam('generator', 'allimages'),
               StaticParam('prop', 'imageinfo'),
@@ -94,10 +97,11 @@ class GetAllImageInfos(GetImageInfos):
 
 class GetTemplates(QueryOperation):
     field_prefix = 'gtl'
-    query_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('generator', 'templates'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection')]
+    output_type = [PageInfo]
 
     def extract_results(self, query_resp):
         ret = []
@@ -113,10 +117,11 @@ class GetTemplates(QueryOperation):
 
 class GetRecentChanges(QueryOperation):
     field_prefix = 'grc'
-    query_field = None
+    input_field = None
     fields = [StaticParam('generator', 'recentchanges'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection')]
+    output_type = [PageInfo]
 
     def __init__(self, *a, **kw):
         super(GetRecentChanges, self).__init__(None, *a, **kw)
@@ -143,8 +148,9 @@ class GetRecentChanges(QueryOperation):
 
 class GetQueryPage(QueryOperation):
     field_prefix = 'qp'
-    query_field = SingleParam('page', required=True)
+    input_field = SingleParam('page', required=True)
     fields = [StaticParam('list', 'querypage')]
+    output_type = QueryPageInfo
     known_qps = ['Ancientpages',
                  'BrokenRedirects',
                  'Deadendpages',

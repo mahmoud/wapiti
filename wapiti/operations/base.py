@@ -1,25 +1,33 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from functools import partial
 import json
+from abc import ABCMeta
+from collections import OrderedDict
+from functools import total_ordering
 
 import sys
-from os.path import dirname
+from os.path import dirname, abspath
 # just until ransom becomes its own package
-sys.path.append(dirname(dirname((__file__))))
+sys.path.append(dirname(dirname(abspath(__file__))))
 from ransom import Client
 
-from params import param_str2list, SingleParam, StaticParam, MultiParam  # tmp
-from utils import PriorityQueue, is_scalar
+from params import SingleParam, StaticParam, MultiParam  # tmp
+from utils import PriorityQueue
 
 
-# TODO: if query_field is None, maybe don't require subclasses to
+# TODO: if input_field is None, maybe don't require subclasses to
 # override __init__ somehow?
 # TODO: use an OrderedSet for results for automatic deduplication
 # TODO: use cont_str_key better for preparing parameters?
 # TODO: QueryParam that str()s to bar-separated string,
 # but is actually an list/tuple/iterable
+# TODO: parameter "coercion"
+# TODO: per_call_limit mess
+# TODO: abstracting away per-call limits by creating multiple
+# operations of the same type
+# TODO: better MAX_LIMIT/"ALL" constant
+# TODO: separate structure for saving completed subops (for debugging?)
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 IS_BOT = False
@@ -34,33 +42,37 @@ DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
 MAX_LIMIT = sys.maxint
 
+
+@total_ordering
+class MaxInt(long):
+    def __new__(cls, *a, **kw):
+        return super(MaxInt, cls).__new__(cls, sys.maxint + 1)
+
+    def __init__(self, name='MAX'):
+        self._name = str(name)
+
+    def __repr__(self):
+        return self._name
+
+    def __str__(self):
+        return repr(self)
+
+    # TODO: better math
+    for func in ('__add__', '__sub__', '__mul__', '__floordiv__', '__div__',
+                 '__mod__', '__divmod__', '__pow__', '__lshift__',
+                 '__rshift__'):
+        locals()[func] = lambda self, other: self
+
+    def __gt__(self, other):
+        return not self == other
+
+    def __eq__(self, other):
+        return isinstance(other, MaxInt)
+
+
+ALL = MaxInt('ALL')
+
 DEFAULT_CLIENT = Client({'headers': DEFAULT_HEADERS})
-
-
-# From http://en.wikipedia.org/wiki/Wikipedia:Namespace
-NAMESPACES = {
-    'Main': 0,
-    'Talk': 1,
-    'User': 2,
-    'User talk': 3,
-    'Wikipedia': 4,
-    'Wikipedia talk': 5,
-    'File': 6,
-    'File talk': 7,
-    'MediaWiki': 8,
-    'MediaWiki talk': 9,
-    'Template': 10,
-    'Template talk': 11,
-    'Help': 12,
-    'Help talk': 13,
-    'Category': 14,
-    'Category talk': 15,
-    'Portal': 100,
-    'Portal talk': 101,
-    'Book': 108,
-    'Book talk': 109,
-    'Special': -1,
-    'Media': -2}
 
 
 class WapitiException(Exception):
@@ -71,30 +83,11 @@ class NoMoreResults(Exception):
     pass
 
 
-class Operation(object):
-    """
-    A mostly abstract class connoting some semblance
-    of statefulness and introspection (e.g., progress monitoring).
-    """
-
-    def __init__(self):
-        pass
-
-    def parse_params(self, *a, **kw):
-        pass
-
-    def get_progress(self):
-        pass
-
-    def get_relative_progress(self):
-        pass
-
-
 """
 Notes on "multiargument" and "bijective":
 
-There are lots of ways to classify query operations, and
-these are just a couple.
+There are lots of ways to classify operations, and these are just a
+couple.
 
 "Multiargument" operations can take more than one search parameter
 at once, such as the GetProtections operation. Others, can only take
@@ -108,106 +101,206 @@ explicit limit on the number of results to be set by the user.
 Going forward, these attributes can be determined as follows:
 
  - Multiargument: determined by looking at an operation's
- `query_field`. If it is a SingleParam, then multiargument is false,
+ `input_field`. If it is a SingleParam, then multiargument is false,
  if it's a MultiParam, then multiargument is true.
 
- - Bijective: determined by looking at an operation's `return_type`,
+ - Bijective: determined by looking at an operation's `output_type`,
    which more accurately describes the *per-parameter* return type. If
    it is a list, then bijective is true, if it's a bare type, then
    bijective is false.
 """
 
 
-class BaseQueryOperation(Operation):
-    source = None
-    per_call_limit = PER_CALL_LIMIT
-    default_limit = DEFAULT_LIMIT
-    dynamic_limit = False
+class OperationMeta(ABCMeta):
+    def __new__(cls, name, bases, attrs):
+        ret = super(OperationMeta, cls).__new__(cls, name, bases, attrs)
+        if name == 'Operation' or name == 'QueryOperation':
+            return ret  # TODO: add elegance?
+        subop_chain = getattr(ret, 'subop_chain', [])
+        try:
+            input_field = ret.input_field
+        except AttributeError:
+            input_field = subop_chain[0].input_field
+            ret.input_field = input_field
+        if input_field is None:
+            # TODO: better support for random(), etc. (has no input field)
+            pass
+        # TODO: run through subop_chain, checking the outputs match up
+        try:
+            output_type = ret.output_type
+        except AttributeError:
+            output_type = subop_chain[-1].output_type
+            ret.output_type = output_type
 
-    def __init__(self, query_param, limit=None, *a, **kw):
-        self.client = kw.get('client', None)
+        try:
+            ret.singular_output_type = ret.output_type[0]
+        except (TypeError, IndexError):
+            ret.singular_output_type = ret.output_type
+
+        # TODO: support manual overrides for the following?
+        ret.is_multiargument = getattr(input_field, 'multi', False)
+        ret.is_bijective = True
+        if type(output_type) is list and output_type:
+            ret.is_bijective = False
+
+        return ret
+
+
+class Recursive(object):
+    def __init__(self, wrapped_type):
+        self.wrapped_type = wrapped_type
+
+    def __getitem__(self, key):
+        if key == 0 or key == -1:
+            return self.wrapped_type
+        raise IndexError("go away")
+
+    def __iter__(self):
+        return iter((self.wrapped_type,))
+
+
+class Operation(object):
+    """
+    An abstract class connoting some semblance
+    of statefulness and introspection (e.g., progress monitoring).
+    """
+    __metaclass__ = OperationMeta
+
+    subop_chain = []
+    per_call_limit = PER_CALL_LIMIT
+
+    def __init__(self, input_param, **kw):
+        self.client = kw.pop('client', None)
         if self.client:
             self.api_url = self.client.api_url
         else:
             self.api_url = kw.get('api_url', DEFAULT_API_URL)
-        self.set_query_param(query_param)
+        limit = kw.pop('limit', None)
+        self.set_input_param(input_param)
         self.set_limit(limit)
+
         self.kwargs = kw
-
         self.started = False
-        self.results = []
+        self.results = OrderedDict()
+
+        subop_queues = OrderedDict()
+        if self.subop_chain:
+            for subop_type in self.subop_chain:
+                subop_queues[subop_type] = PriorityQueue()
+            first_subop_type = self.subop_chain[0]
+            first_subop = first_subop_type(self.input_param,
+                                           limit=ALL,
+                                           client=self.client)
+            subop_queues[first_subop_type].add(first_subop)
+        self.subop_queues = subop_queues
+
+    #@abstractmethod
+    #def get_progress(self):
+    #    pass
+
+    #@abstractmethod
+    #def get_relative_progress(self):
+    #    pass
+
+    def set_input_param(self, param):
+        self._orig_input_param = self._input_param = param
+        if self.input_field:
+            self._input_param = self.input_field.get_value(param)
 
     @property
-    def query_param(self):
-        return self._query_param
-
-    @property
-    def limit(self):
-        return self._get_limit()
+    def input_param(self):
+        return self._input_param
 
     @property
     def source(self):
         return self.api_url
 
-    def set_query_param(self, qp):
-        self._query_param = qp
-
     def set_limit(self, limit):
+        # TODO: use new limit structures
+        # TODO: add support for callable limit getters?
         self._orig_limit = limit
-        self.dynamic_limit = True
-        if hasattr(limit, 'remaining'):
-            self._get_limit = lambda: limit.remaining
-        elif callable(limit):
-            self._get_limit = limit
-        else:
-            self.dynamic_limit = False
-            self._get_limit = lambda: limit
+        if isinstance(limit, Operation):
+            self.parent = limit
+        if self.is_bijective:
+            value_list = self.input_field.get_value_list(self.input_param)
+            limit = len(value_list)
+        self._limit = limit
+
+    @property
+    def limit(self):
+        if isinstance(self._limit, Operation):
+            return self._limit.remaining
+        return self._limit
 
     @property
     def remaining(self):
-        limit = self.limit or self.default_limit
+        # TODO: use new limit struct
+        # TODO: what about suboperations?
+        limit = self.limit
         return max(0, limit - len(self.results))
-
-    @property
-    def current_limit(self):
-        return min(self.remaining, self.per_call_limit)
-
-    @classmethod
-    def is_multiargument(cls):
-        return getattr(cls, 'multiargument', False)
-
-    @classmethod
-    def is_bijective(cls):
-        if type(getattr(cls, 'return_type', None)) is list:
-            return False
-        return getattr(cls, 'bijective', True)
-
-    def fetch(self):
-        raise NotImplementedError('inheriting classes should return'
-                                  ' a list of results from the response')
-
-    def post_process_response(self, response):
-        """
-        Used to rectify inconsistencies in API responses
-        (looking at you, Feedback API)
-        """
-        return response
-
-    def store_results(self, results):
-        self.results.extend(results[:self.remaining])
-
-    def get_current_task(self):
-        if not self.remaining:
-            return None
-        return self.fetch_and_store
 
     def process(self):
         self.started = True
         task = self.get_current_task()
+        print self, len(self.results), task
         if task is None:
             raise NoMoreResults()
-        results = task()
-        return results
+        elif isinstance(task, Operation):
+            results = task.process()
+        elif callable(task):  # not actually used
+            results = task()
+        else:
+            msg = 'task expected as Operation or callable, not: %r' % task
+            raise TypeError(msg)
+        # TODO: check resp for api errors/warnings
+        # TODO: check for unrecognized parameter values
+        new_results = self.store_results(task, results)
+        return new_results
+
+    def get_current_task(self):
+        if not self.remaining:
+            return None
+        for subop_type, subop_queue in reversed(self.subop_queues.items()):
+            while subop_queue:
+                subop = subop_queue[-1]
+                if subop.remaining:
+                    return subop
+                else:
+                    subop_queue.pop()
+        return None
+
+    def store_results(self, task, results):
+        new_res = []
+        if isinstance(self.subop_chain, Recursive):
+            new_res = self._update_results(results)
+            op_type = self.subop_chain.wrapped_type
+            new_subops = [op_type(r, limit=ALL) for r in new_res]
+            for op in new_subops:
+                self.subop_queues[op_type].add(op)
+            return new_res
+
+        task_type = type(task)
+        if not self.subop_chain or task_type is self.subop_chain[-1]:
+            new_res = self._update_results(results)
+        else:
+            i = self.subop_chain.index(task_type)
+            new_subop_type = self.subop_chain[i + 1]
+            for res in results:
+                new_subop = new_subop_type(res, limit=ALL)
+                self.subop_queues[new_subop_type].add(new_subop)
+        return new_res
+
+    def _update_results(self, results):
+        ret = []
+        for res in results:
+            if not self.remaining:
+                break
+            unique_key = getattr(res, 'unique_key', res)
+            if unique_key in self.results:
+                continue
+            self.results[unique_key] = res
+            ret.append(res)
+        return ret
 
     def process_all(self):
         while 1:  # TODO: +retry behavior
@@ -215,35 +308,31 @@ class BaseQueryOperation(Operation):
                 self.process()
             except NoMoreResults:
                 break
-        return self.results
+        return self.results.values()
 
     __call__ = process_all
 
     def __repr__(self):
         cn = self.__class__.__name__
-        if self.dynamic_limit:
-            tmpl = '%s(%r, limit=lambda: %r)'
-        else:
-            tmpl = '%s(%r, limit=%r)'
-        return tmpl % (cn, self.query_param, self.limit)
+        tmpl = '%s(%r, limit=%r)'  # add dynamic-limity stuff
+        try:
+            ip_disp = self.input_param
+        except:
+            ip_disp = '(unprintable param)'
+        return tmpl % (cn, ip_disp, self.limit)
 
 
-class QueryOperation(BaseQueryOperation):
+class QueryOperation(Operation):
     api_action = 'query'
-    query_field = None
+    #input_field = None
     field_prefix = None        # e.g., 'gcm'
     cont_str_key = None
 
-    def __init__(self, query_param, limit=None, *a, **kw):
-        super(QueryOperation, self).__init__(query_param, limit, *a, **kw)
+    def __init__(self, input_param, limit=None, **kw):
+        kw['limit'] = limit
+        super(QueryOperation, self).__init__(input_param, **kw)
         self.cont_strs = []
         self._set_params()
-
-    def set_query_param(self, qp):
-        self._orig_query_param = qp
-        if self.query_field:
-            qp = self.query_field.get_value(qp)
-        super(QueryOperation, self).set_query_param(qp)
 
     def _set_params(self):
         params = {}
@@ -251,21 +340,16 @@ class QueryOperation(BaseQueryOperation):
             pref_key = field.get_key(self.field_prefix)
             kw_val = self.kwargs.get(field.key)
             params[pref_key] = field.get_value(kw_val)
-        if self.query_field:
-            qp_key_pref = self.query_field.get_key(self.field_prefix)
-            qp_val = self.query_field.get_value(self.query_param)
+        if self.input_field:
+            qp_key_pref = self.input_field.get_key(self.field_prefix)
+            qp_val = self.input_field.get_value(self.input_param)
             params[qp_key_pref] = qp_val
         self.params = params
 
-    def set_limit(self, limit):
-        self._orig_limit = limit
-        if limit is None and self.is_bijective():
-            p_list = param_str2list(self.query_param)
-            if is_scalar(p_list):
-                limit = 1
-            else:
-                limit = len(p_list)
-        super(QueryOperation, self).set_limit(limit)
+    @property
+    def current_limit(self):
+        # TODO: use new limit struct
+        return min(self.remaining, self.per_call_limit)
 
     @property
     def remaining(self):
@@ -280,23 +364,42 @@ class QueryOperation(BaseQueryOperation):
         return self.cont_strs[-1]
 
     @classmethod
-    def is_multiargument(cls):
-        return getattr(cls.query_field, 'multi', False)
-
-    @classmethod
-    def is_bijective(cls):
-        if hasattr(cls, 'bijective'):
-            return cls.bijective
-        if 'list' in cls.get_field_dict():
-            return False
-        return True
-
-    @classmethod
     def get_field_dict(cls):
         ret = dict([(f.get_key(cls.field_prefix), f) for f in cls.fields])
-        if cls.query_field:
-            ret[cls.query_field.get_key(cls.field_prefix)] = cls.query_field
+        if cls.input_field:
+            query_key = cls.input_field.get_key(cls.field_prefix)
+            ret[query_key] = cls.input_field
         return ret
+
+    def get_current_task(self):
+        if not self.remaining:
+            return None
+        params = self.prepare_params(**self.kwargs)
+        # TODO: blargh
+        client = lambda: None
+        client.api_url = self.api_url
+        mw_call = MediaWikiCall(params, client=client)
+        return mw_call
+
+    def prepare_params(self, **kw):
+        params = dict(self.params)
+        # TODO: should not include limit for bijective operations
+        params[self.field_prefix + 'limit'] = self.current_limit
+        if self.last_cont_str:
+            params[self.cont_str_key] = self.last_cont_str
+        params['action'] = self.api_action
+        return params
+
+    def post_process_response(self, response):
+        """
+        Used to rectify inconsistencies in API responses
+        (looking at you, Feedback API)
+        """
+        return response.results.get(self.api_action)
+
+    def extract_results(self, resp):
+        raise NotImplementedError('inheriting classes should return'
+                                  ' a list of results from the response')
 
     def get_cont_str(self, resp):
         qc_val = resp.results.get(self.api_action + '-continue')
@@ -312,78 +415,61 @@ class QueryOperation(BaseQueryOperation):
             self.cont_str_key = qc_val[next_key].keys()[0]
         return qc_val[next_key][self.cont_str_key]
 
-    def prepare_params(self, **kw):
-        params = dict(self.params)
-        # TODO: should not include limit for bijective operations
-        params[self.field_prefix + 'limit'] = self.current_limit
-        if self.last_cont_str:
-            params[self.cont_str_key] = self.last_cont_str
-        return params
-
-    def fetch(self):
-        params = self.prepare_params(**self.kwargs)
-        mw_call = MediawikiCall(self.api_url, self.api_action, params)
-        mw_call.do_call()
-        # TODO: check resp for api errors/warnings
-        # TODO: check for unrecognized paramater values
-        return mw_call
-
-    def extract_results(self, resp):
-        raise NotImplementedError('inheriting classes should return'
-                                  ' a list of results from the response')
-
-    def post_process_response(self, response):
-        return response.results.get(self.api_action)
-
-    def fetch_and_store(self):
-        resp = self.fetch()
-        if resp.notices:
+    def store_results(self, task, resp):
+        if resp.notices:  # TODO: lift this
             pass  # TODO: resolve some limit warnings
             #print "may have an error: %r (%r)" % (resp.notices, resp.url)
         processed_resp = self.post_process_response(resp)
         if processed_resp is None:
-            return []
+            return []  # TODO: keep an eye on this
         try:
             new_results = self.extract_results(processed_resp)
         except Exception:
             raise
-        self.store_results(new_results)
+        super(QueryOperation, self).store_results(task, new_results)
         new_cont_str = self.get_cont_str(resp)
         self.cont_strs.append(new_cont_str)
         return new_results
 
 
-class SubjectResolvingQueryOperation(QueryOperation):
-    def store_results(self, pages):
+class SubjectResolvingQueryOperation(object):  # QueryOperation
+    """
+    def store_results(self, task, resp):
         if self.kwargs.get('resolve_to_subject'):
             pages = [p.get_subject_info() for p in pages]
         return super(SubjectResolvingQueryOperation, self).store_results(pages)
+    """
 
 
 BASE_API_PARAMS = {'format': 'json',
                    'servedby': 'true'}
 
 
-class MediawikiCall(object):
+class MediaWikiCall(Operation):
     """
     Sets up actual API HTTP request, makes the request, encapsulates
     error handling, and stores results.
     """
-    def __init__(self, api_url, action, params=None, **kw):
-        self.api_url = api_url
-        self.action = action
+    input_field = SingleParam('url_params')  # param_type=dict)
+    output_type = Operation
 
+    _limit = 1
+
+    def __init__(self, params, **kw):
+        # These settings will all go on the WapitiClient
         self.raise_exc = kw.pop('raise_exc', True)
         self.raise_err = kw.pop('raise_err', True)
         self.raise_warn = kw.pop('raise_warn', False)
-        self.client = kw.pop('client', DEFAULT_CLIENT)
+        self.client = kw.pop('client')
+        self.ransom_client = getattr(self.client, 'ransom_client', DEFAULT_CLIENT)
         if kw:
             raise ValueError('got unexpected keyword arguments: %r'
                              % kw.keys())
+        self.api_url = self.client.api_url
         params = params or {}
         self.params = dict(BASE_API_PARAMS)
         self.params.update(params)
-        self.params['action'] = self.action
+        self.action = params['action']
 
         self.url = ''
         self.results = None
@@ -393,11 +479,13 @@ class MediawikiCall(object):
         self.error_code = None
         self.warnings = []
 
-    def do_call(self):
+        self._input_param = params
+
+    def process(self):
         # TODO: add URL to all exceptions
         resp = None
         try:
-            resp = self.client.get(self.api_url, self.params)
+            resp = self.ransom_client.get(self.api_url, self.params)
         except Exception as e:
             # TODO: log
             self.exception = e  # TODO: wrap
@@ -443,85 +531,57 @@ class MediawikiCall(object):
             ret.extend(self.warnings)
         return ret
 
-
-class CompoundQueryOperation(BaseQueryOperation):
-    def __init__(self, *a, **kw):
-        generator = kw.pop('generator', None)
-        super(CompoundQueryOperation, self).__init__(*a, **kw)
-
-        self.suboperations = PriorityQueue()
-        root_op_kwargs = dict(self.kwargs)
-        root_op_kwargs['query_param'] = self.query_param
-        root_op_kwargs['limit'] = self
-        root_op = self.suboperation_type(**root_op_kwargs)
-        self.suboperations.add(root_op)
-
-        self.setup_generator(generator)
-
-    def setup_generator(self, generator=None):
-        if isinstance(generator, Operation):
-            self.generator = generator
-            return
-        generator_type = getattr(self, 'default_generator', None)
-        if not generator_type:
-            self.generator = None
-            return
-        gen_kw_tmpl = getattr(self, 'generator_params', {})
-        gen_kw = {'query_param': self.query_param}
-        if not generator_type.is_bijective():
-            gen_kw['limit'] = MAX_LIMIT
-        for k, v in gen_kw_tmpl.items():
-            if callable(v):
-                gen_kw[k] = v(self)
-        self.generator = generator_type(**gen_kw)
-        return
-
-    def produce_suboperations(self):
-        if not self.generator or not self.generator.remaining:
-            return None
-        ret = []
-        generated = self.generator.process()
-        subop_kw_tmpl = getattr(self, 'suboperation_params', {})
-        for g in generated:
-            subop_kw = dict(self.kwargs)
-            for k, v in subop_kw_tmpl.items():
-                if callable(v):
-                    subop_kw[k] = v(g)
-            priority = subop_kw.pop('priority', 0)
-            subop_kw['limit'] = self
-            subop = self.suboperation_type(**subop_kw)
-            self.suboperations.add(subop, priority)
-            ret.append(subop)
-        return ret
-
-    def get_current_task(self):
-        if not self.remaining:
-            return None
-        while 1:
-            while self.suboperations:
-                subop = self.suboperations[-1]
-                if subop.remaining:
-                    print subop, len(self.suboperations), len(self.results)
-                    return partial(self.fetch_and_store, op=subop)
-                else:
-                    self.suboperations.pop()
-            if not self.generator or not self.generator.remaining:
-                break
-            else:
-                self.produce_suboperations()
-        return None
-
-    def fetch_and_store(self, op):
-        try:
-            res = op.process()
-        except NoMoreResults:
-            return []
-        return self.store_results(res)
+    @property
+    def remaining(self):
+        if self.done:
+            return 0
+        return 1
 
 """
 GetCategoryPagesRecursive
 (FlattenCategory -> GetCategoryPages -> Wikipedia API call -> URL fetch     )
 (PageInfos       <- PageInfos        <- MediaWikiCall      <- RansomResponse)
 
+operation's input_field = explicit or first field of chain
+
+def process(op):
+   res = op.process()
+   return self.store_results(res)
+
+what about producing subops?
+
+def process():
+   task = self.get_current_task()
+   res = task.process()
+   if res and isinstance(res[0], Operation):
+      self.store_subops(res)
+      return  # return subops?
+   return self.store_results(res)  # returns *new* results
+
+GetCategoryPagesRecursive
+(FlattenCategory --(CatInfos)->
+        GetCategoryPages --("APIParamStructs")->
+               MediawikiCall [--(url)-> URL fetch])
+
+An "APIParamStruct" is really just something with the API url and param
+dictionary, so QueryOperations themselves could be viewed as
+APIParamStructs. In other words, hopefully no new model type needed
+just for that.
+
+At its most basic level, an Operation is something which:
+
+  - Has a type-declared input field, and a declared return type
+  - Has a process() function that returns results (of the output type)
+    or raises NoMoreResults
+  - Most likely takes a WapitiClient as a 'client' keyword
+    argument in its __init__()
+  - Provides a uniform way of checking progress (checking if it's done)
+
+Some notes on Operation design/usage:
+  - An Operation typically keeps a copy of its results internally,
+  most likely a unique list of some sort, and should return only
+  new results.
+  - Calling an Operation directly calls process() repeatedly until the
+  operation is complete, then returns the internally tracked results.
 
 """

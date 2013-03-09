@@ -4,18 +4,19 @@ from __future__ import unicode_literals
 from base import QueryOperation, StaticParam, MultiParam, SingleParam
 from models import PageIdentifier, RevisionInfo, Revision
 
+
 DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|parsedcomment|tags'
+
 
 class GetPageRevisionInfos(QueryOperation):
     """
     todo: switch to new data model (using unified PageIdentifiers)
     """
     field_prefix = 'rv'
-    query_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False, required=True)
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS)]
-    multiargument = False  # for now. it's not a big help in this case anyway.
-    bijective = False
+    output_type = [RevisionInfo]
 
     def extract_results(self, query_resp):
         ret = []
@@ -32,8 +33,8 @@ class GetPageRevisionInfos(QueryOperation):
 
 
 class GetRevisionInfos(GetPageRevisionInfos):
-    query_field = MultiParam('revids', key_prefix=False, required=True)
-    bijective = True
+    input_field = MultiParam('revids', key_prefix=False, required=True)
+    output_type = RevisionInfo
 
     def prepare_params(self, *a, **kw):
         ret = super(GetRevisionInfos, self).prepare_params()
@@ -42,13 +43,13 @@ class GetRevisionInfos(GetPageRevisionInfos):
 
 
 class GetCurrentContent(QueryOperation):
-    query_field = SingleParam('titles', key_prefix=False, required=True)
+    input_field = SingleParam('titles', key_prefix=False, attr='title', required=True)
     field_prefix = 'rv'
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS + '|content'),
               SingleParam('parse', False),
               SingleParam('redirects', True, key_prefix=False)]
-    bijective = True
+    output_type = Revision
 
     def extract_results(self, query_resp):
         ret = []
@@ -72,7 +73,7 @@ class GetCurrentContent(QueryOperation):
 
 
 class GetCurrentTalkContent(GetCurrentContent):
-    query_field = MultiParam('titles',
+    input_field = MultiParam('titles',
                              val_prefix='Talk:',
                              key_prefix=False,
                              required=True)
