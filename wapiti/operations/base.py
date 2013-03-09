@@ -48,11 +48,11 @@ class MaxInt(long):
     def __new__(cls, *a, **kw):
         return super(MaxInt, cls).__new__(cls, sys.maxint + 1)
 
-    def __init__(self, desc=''):
-        self._desc = desc
+    def __init__(self, name='MAX'):
+        self._name = str(name)
 
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self._desc)
+        return self._name
 
     def __str__(self):
         return repr(self)
@@ -70,7 +70,7 @@ class MaxInt(long):
         return isinstance(other, MaxInt)
 
 
-ALL = MaxInt('all results')
+ALL = MaxInt('ALL')
 
 DEFAULT_CLIENT = Client({'headers': DEFAULT_HEADERS})
 
@@ -271,7 +271,7 @@ class Operation(object):
     def store_results(self, task, results):
         new_res = []
         if isinstance(self.subop_chain, Recursive):
-            new_res = self._update_results(results)[:self.remaining]
+            new_res = self._update_results(results)
             op_type = self.subop_chain.wrapped_type
             new_subops = [op_type(r, limit=ALL) for r in new_res]
             for op in new_subops:
@@ -280,7 +280,7 @@ class Operation(object):
 
         task_type = type(task)
         if not self.subop_chain or task_type is self.subop_chain[-1]:
-            new_res = self._update_results(results)[:self.remaining]
+            new_res = self._update_results(results)
         else:
             i = self.subop_chain.index(task_type)
             new_subop_type = self.subop_chain[i + 1]
@@ -292,7 +292,9 @@ class Operation(object):
     def _update_results(self, results):
         ret = []
         for res in results:
-            unique_key = self.unique_func(res)
+            if not self.remaining:
+                break
+            unique_key = getattr(res, 'unique_key', res)
             if unique_key in self.results:
                 continue
             self.results[unique_key] = res
@@ -305,7 +307,7 @@ class Operation(object):
                 self.process()
             except NoMoreResults:
                 break
-        return self.results
+        return self.results.values()
 
     __call__ = process_all
 
