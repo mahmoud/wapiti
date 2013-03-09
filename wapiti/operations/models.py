@@ -88,6 +88,19 @@ def title_subject2talk(title):
     return new_title
 
 
+def get_unique_func(val):
+    if callable(val):
+        return val
+    elif isinstance(val, basestring):
+        return lambda obj: getattr(obj, val, obj)
+    try:
+        if all([isinstance(v, basestring) for v in val]):
+            return lambda obj: tuple([getattr(obj, v, obj) for v in val])
+    except TypeError:
+        pass
+    raise TypeError('could not derive uniqueification function from %r' % val)
+
+
 class WapitiModelMeta(type):
     """
     The foundation of Wapiti's data models, which attempt to add
@@ -117,6 +130,8 @@ class WapitiModelMeta(type):
                                  in attrs.get('attributes', [])])
         all_attributes.update(attr_dict)
         attrs['attributes'] = all_attributes.values()
+        if 'unique_on' in attrs:
+            attrs['unique_key'] = property(get_unique_func(attrs['unique_on']))
         ret = super(WapitiModelMeta, cls).__new__(cls, name, bases, attrs)
         return ret
 
@@ -139,6 +154,7 @@ class WapitiModelBase(object):
 
     __metaclass__ = WapitiModelMeta
     attributes = []
+    unique_on = lambda self: self
 
     def __init__(self, **kw):
         missing = []
@@ -201,6 +217,8 @@ class PageIdentifier(WapitiModelBase):
                   WMA('page_id', mw_name='pageid', display=True),
                   WMA('ns', display=True),
                   WMA('source')]
+
+    unique_on = 'title'
 
     @property
     def is_subject_page(self):
@@ -268,6 +286,8 @@ class RevisionInfo(PageInfo):
                   WMA('comment', default=''),
                   WMA('parsed_comment', mw_name='parsedcomment', default=''),
                   WMA('tags')]
+
+    unique_on = 'rev_id'
 
     # note that certain revisions may have hidden the fields
     # user_id, user_text, and comment for administrative reasons,
