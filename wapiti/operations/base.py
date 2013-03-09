@@ -4,11 +4,12 @@ from __future__ import unicode_literals
 import json
 from abc import ABCMeta
 from collections import OrderedDict
+from functools import total_ordering
 
 import sys
-from os.path import dirname
+from os.path import dirname, abspath
 # just until ransom becomes its own package
-sys.path.append(dirname(dirname((__file__))))
+sys.path.append(dirname(dirname(abspath(__file__))))
 from ransom import Client
 
 from params import SingleParam, StaticParam, MultiParam  # tmp
@@ -26,6 +27,7 @@ from utils import PriorityQueue
 # TODO: abstracting away per-call limits by creating multiple
 # operations of the same type
 # TODO: better MAX_LIMIT/"ALL" constant
+# TODO: separate structure for saving completed subops (for debugging?)
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 IS_BOT = False
@@ -39,6 +41,36 @@ DEFAULT_LIMIT = 500  # TODO
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
 MAX_LIMIT = sys.maxint
+
+
+@total_ordering
+class MaxInt(long):
+    def __new__(cls, *a, **kw):
+        return super(MaxInt, cls).__new__(cls, sys.maxint + 1)
+
+    def __init__(self, desc=''):
+        self._desc = desc
+
+    def __repr__(self):
+        return '%s(%r)' % (self.__class__.__name__, self._desc)
+
+    def __str__(self):
+        return repr(self)
+
+    # TODO: better math
+    for func in ('__add__', '__sub__', '__mul__', '__floordiv__', '__div__',
+                 '__mod__', '__divmod__', '__pow__', '__lshift__',
+                 '__rshift__'):
+        locals()[func] = lambda self, other: self
+
+    def __gt__(self, other):
+        return not self == other
+
+    def __eq__(self, other):
+        return isinstance(other, MaxInt)
+
+
+ALL = MaxInt('all results')
 
 DEFAULT_CLIENT = Client({'headers': DEFAULT_HEADERS})
 
@@ -149,16 +181,15 @@ class Operation(object):
 
         self.kwargs = kw
         self.started = False
-        self.results = []  # TODO: orderedset-like thing
+        self.results = OrderedDict()
 
-        # TODO: separate structure for saving completed subops (for debugging?)
         subop_queues = OrderedDict()
         if self.subop_chain:
             for subop_type in self.subop_chain:
                 subop_queues[subop_type] = PriorityQueue()
             first_subop_type = self.subop_chain[0]
             first_subop = first_subop_type(self.input_param,
-                                           limit=MAX_LIMIT,
+                                           limit=ALL,
                                            client=self.client)
             subop_queues[first_subop_type].add(first_subop)
         self.subop_queues = subop_queues
@@ -238,25 +269,35 @@ class Operation(object):
         return None
 
     def store_results(self, task, results):
+        new_res = []
         if isinstance(self.subop_chain, Recursive):
-            self.results.extend(results[:self.remaining])
+            new_res = self._update_results(results)[:self.remaining]
             op_type = self.subop_chain.wrapped_type
-            new_subops = [op_type(r, limit=MAX_LIMIT) for r in results]
+            new_subops = [op_type(r, limit=ALL) for r in new_res]
             for op in new_subops:
                 self.subop_queues[op_type].add(op)
-            return results
+            return new_res
 
         task_type = type(task)
         if not self.subop_chain or task_type is self.subop_chain[-1]:
-            self.results.extend(results[:self.remaining])
+            new_res = self._update_results(results)[:self.remaining]
         else:
             i = self.subop_chain.index(task_type)
             new_subop_type = self.subop_chain[i + 1]
             for res in results:
-                new_subop = new_subop_type(res, limit=MAX_LIMIT)
+                new_subop = new_subop_type(res, limit=ALL)
                 self.subop_queues[new_subop_type].add(new_subop)
-            return []
-        return results
+        return new_res
+
+    def _update_results(self, results):
+        ret = []
+        for res in results:
+            unique_key = self.unique_func(res)
+            if unique_key in self.results:
+                continue
+            self.results[unique_key] = res
+            ret.append(res)
+        return ret
 
     def process_all(self):
         while 1:  # TODO: +retry behavior
