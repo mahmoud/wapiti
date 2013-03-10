@@ -214,7 +214,7 @@ class Operation(object):
     def process(self):
         self.started = True
         task = self.get_current_task()
-        print self, len(self.results), task
+        print self.remaining,
         if task is None:
             raise NoMoreResults()
         elif isinstance(task, Operation):
@@ -275,11 +275,13 @@ class Operation(object):
         return ret
 
     def process_all(self):
+        print self.__class__.__name__,
         while 1:  # TODO: +retry behavior
             try:
                 self.process()
             except NoMoreResults:
                 break
+        print
         return self.results.values()
 
     __call__ = process_all

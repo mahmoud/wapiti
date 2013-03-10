@@ -268,8 +268,7 @@ def test_all_transcludes(limit):
 @magnitude(norm=20, big=550, huge=2000)
 def test_resolve_subjects(limit):
     get_res_transcludes = GetTranscludes('Template:ArticleHistory', limit)
-
-    pages = call_and_ret(get_cat_pages_rec)
+    pages = call_and_ret(get_res_transcludes)
     return len(pages) == limit
 
 

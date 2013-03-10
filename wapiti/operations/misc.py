@@ -57,14 +57,14 @@ class GeoSearch(QueryOperation):
             ret.append(coord_ident)
         return ret
 
-DEFAULT_IMAGE_PROPS = 'timestamp|user|userid|comment|parsedcomment|url|size|dimensions|sha1|mime|thumbmime|mediatype|metadata|archivename|bitdepth'
+DEFAULT_IMAGE_PROPS = 'timestamp|user|userid|comment|parsedcomment|url|size|dimensions|sha1|mime|mediatype|metadata|bitdepth'
 
 
 class GetImageInfos(QueryOperation):
     field_prefix = 'ii'
     input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'imageinfo'),
-              StaticParam('iiprop', DEFAULT_IMAGE_PROPS)]
+              StaticParam('iiprop', DEFAULT_IMAGE_PROPS + '|thumbmime|archivename')]
     output_type = [ImageInfo]
 
     def extract_results(self, query_resp):
