@@ -14,19 +14,13 @@ sys.path.append(dirname(dirname(abspath(__file__))))
 from ransom import Client
 
 from params import SingleParam
-from utils import PriorityQueue, MaxInt
+from utils import PriorityQueue, MaxInt, chunked_iter
 
-
-# TODO: if input_field is None, maybe don't require subclasses to
-# override __init__ somehow?
-# TODO: use cont_str_key better for preparing parameters?
-# TODO: per_call_limit mess
-# TODO: abstracting away per-call limits by creating multiple
-# operations of the same type
+# TODO: prioritization
+# TODO: suboperation deduplication (avoid redoing work)
 # TODO: separate structure for saving completed subops (for debugging?)
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
-IS_BOT = False
 
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
@@ -58,11 +52,6 @@ class LimitSpec(object):
     def __int__(self):
         return self.max
 
-    #def __repr__(self):
-    #    ret = super(LimitSpec, self).__repr__()
-    #    _, _, args = ret.partition('(')  # lulz
-    #    return '%s(%s' % (self.__class__.__name__, args)
-
 
 class ParamLimit(LimitSpec):
     pass
@@ -83,35 +72,11 @@ QL_50_500 = QueryLimit(50, 500, 10)
 DEFAULT_QUERY_LIMIT = QL_500_5000 = QueryLimit(500, 5000, 10)
 
 
-"""
-Notes on "multiargument" and "bijective":
-
-There are lots of ways to classify operations, and these are just a
-couple.
-
-"Multiargument" operations can take more than one search parameter
-at once, such as the GetProtections operation. Others, can only take
-one argument at a time, like GetCategory.
-
-"Bijective" only return at most one result per argument. GetProtections
-is an example of a bijective query. Bijective queries do not require an
-explicit limit on the number of results to be set by the user.
-
-
-Going forward, these attributes can be determined as follows:
-
- - Multiargument: determined by looking at an operation's
- `input_field`. If it is a SingleParam, then multiargument is false,
- if it's a MultiParam, then multiargument is true.
-
- - Bijective: determined by looking at an operation's `output_type`,
-   which more accurately describes the *per-parameter* return type. If
-   it is a list, then bijective is true, if it's a bare type, then
-   bijective is false.
-"""
-
-
 def get_inputless_init(old_init):
+    """
+    Used for Operations like get_random() which don't take an input
+    parameter.
+    """
     @wraps(old_init)
     def inputless_init(self, limit=None, **kw):
         return old_init(self, None, limit, **kw)
@@ -169,8 +134,8 @@ class Recursive(object):
 
 class Operation(object):
     """
-    An abstract class connoting some semblance
-    of statefulness and introspection (e.g., progress monitoring).
+    An abstract class connoting some semblance of statefulness and
+    introspection (e.g., progress monitoring).
     """
     __metaclass__ = OperationMeta
 
@@ -214,10 +179,18 @@ class Operation(object):
         self._orig_input_param = self._input_param = param
         if self.input_field:
             self._input_param = self.input_field.get_value(param)
+            self._input_param_list = self.input_field.get_value_list(param)
+        else:
+            self._input_param = None
+            self._input_param_list = []  # TODO: necessary?
 
     @property
     def input_param(self):
         return self._input_param
+
+    @property
+    def input_param_list(self):
+        return self._input_param_list
 
     @property
     def source(self):
@@ -228,7 +201,7 @@ class Operation(object):
         self._orig_limit = limit
         if isinstance(limit, Operation):
             self.parent = limit
-        if self.is_bijective:
+        if self.is_bijective and self.input_field:
             value_list = self.input_field.get_value_list(self.input_param)
             limit = len(value_list)
         self._limit = limit
@@ -243,13 +216,13 @@ class Operation(object):
     def remaining(self):
         limit = self.limit
         if limit is None:
-            limit = sys.maxint
+            limit = ALL
         return max(0, limit - len(self.results))
 
     def process(self):
         self.started = True
         task = self.get_current_task()
-        print self, len(self.results), task
+        print self.remaining,
         if task is None:
             raise NoMoreResults()
         elif isinstance(task, Operation):
@@ -310,11 +283,13 @@ class Operation(object):
         return ret
 
     def process_all(self):
+        print self.__class__.__name__
         while 1:  # TODO: +retry behavior
             try:
                 self.process()
             except NoMoreResults:
                 break
+        print
         return self.results.values()
 
     __call__ = process_all
@@ -323,17 +298,16 @@ class Operation(object):
         cn = self.__class__.__name__
         if self.input_field is None:
             return '%s(limit=%r)' % (cn, self.limit)
-        tmpl = '%s(%r, limit=%r)'  # add dynamic-limity stuff
+        tmpl = '%s(%s, limit=%r)'  # add dynamic-limity stuff
         try:
-            ip_disp = self.input_param
+            ip_disp = repr(self.input_param)
         except:
-            ip_disp = '(unprintable param)'
+            ip_disp = "'(unprintable param)'"
         return tmpl % (cn, ip_disp, self.limit)
 
 
 class QueryOperation(Operation):
     api_action = 'query'
-    #input_field = None
     field_prefix = None        # e.g., 'gcm'
     cont_str_key = None
     per_query_limit = QL_50_500
@@ -346,6 +320,13 @@ class QueryOperation(Operation):
         super(QueryOperation, self).__init__(input_param, **kw)
         self.cont_strs = []
         self._set_params()
+
+        if self.is_bijective and self.input_param and \
+                len(self.input_param_list) > self.per_query_param_limit:
+            self.is_multiplexing = True
+            self._setup_multiplexing()
+        else:
+            self.is_multiplexing = False
 
     def _set_params(self):
         is_bot_op = self.is_bot_op
@@ -373,6 +354,15 @@ class QueryOperation(Operation):
             per_query_limit = int(self.per_query_limit)
         self.per_query_limit = per_query_limit
 
+        return
+
+    def _setup_multiplexing(self):
+        subop_type = type(self)
+        self.subop_queues[subop_type] = subop_queue = PriorityQueue()
+        chunk_size = self.per_query_param_limit
+        for chunk in chunked_iter(self.input_param_list, chunk_size):
+            print len(chunk)
+            subop_queue.add(subop_type(chunk))
         return
 
     @property
@@ -404,6 +394,8 @@ class QueryOperation(Operation):
         return ret
 
     def get_current_task(self):
+        if self.is_multiplexing:
+            return super(QueryOperation, self).get_current_task()
         if not self.remaining:
             return None
         params = self.prepare_params(**self.kwargs)
@@ -415,8 +407,8 @@ class QueryOperation(Operation):
 
     def prepare_params(self, **kw):
         params = dict(self.params)
-        # TODO: should not include limit for bijective operations
-        params[self.field_prefix + 'limit'] = self.current_limit
+        if not self.is_bijective:
+            params[self.field_prefix + 'limit'] = self.current_limit
         if self.last_cont_str:
             params[self.cont_str_key] = self.last_cont_str
         params['action'] = self.api_action
@@ -424,8 +416,8 @@ class QueryOperation(Operation):
 
     def post_process_response(self, response):
         """
-        Used to rectify inconsistencies in API responses
-        (looking at you, Feedback API)
+        Used to rectify inconsistencies in API responses (looking at
+        you, Feedback API)
         """
         return response.results.get(self.api_action)
 
@@ -448,8 +440,9 @@ class QueryOperation(Operation):
         return qc_val[next_key][self.cont_str_key]
 
     def store_results(self, task, resp):
+        if self.is_multiplexing:
+            return super(QueryOperation, self).store_results(task, resp)
         if resp.notices:  # TODO: lift this
-            pass # TODO: resolve some limit warnings
             print "may have an error: %r (%r)" % (resp.notices, resp.url)
         processed_resp = self.post_process_response(resp)
         if processed_resp is None:
@@ -561,52 +554,3 @@ class MediaWikiCall(Operation):
         if self.done:
             return 0
         return 1
-
-"""
-GetCategoryPagesRecursive
-(FlattenCategory -> GetCategoryPages -> Wikipedia API call -> URL fetch     )
-(PageInfos       <- PageInfos        <- MediaWikiCall      <- RansomResponse)
-
-operation's input_field = explicit or first field of chain
-
-def process(op):
-   res = op.process()
-   return self.store_results(res)
-
-what about producing subops?
-
-def process():
-   task = self.get_current_task()
-   res = task.process()
-   if res and isinstance(res[0], Operation):
-      self.store_subops(res)
-      return  # return subops?
-   return self.store_results(res)  # returns *new* results
-
-GetCategoryPagesRecursive
-(FlattenCategory --(CatInfos)->
-        GetCategoryPages --("APIParamStructs")->
-               MediawikiCall [--(url)-> URL fetch])
-
-An "APIParamStruct" is really just something with the API url and param
-dictionary, so QueryOperations themselves could be viewed as
-APIParamStructs. In other words, hopefully no new model type needed
-just for that.
-
-At its most basic level, an Operation is something which:
-
-  - Has a type-declared input field, and a declared return type
-  - Has a process() function that returns results (of the output type)
-    or raises NoMoreResults
-  - Most likely takes a WapitiClient as a 'client' keyword
-    argument in its __init__()
-  - Provides a uniform way of checking progress (checking if it's done)
-
-Some notes on Operation design/usage:
-  - An Operation typically keeps a copy of its results internally,
-  most likely a unique list of some sort, and should return only
-  new results.
-  - Calling an Operation directly calls process() repeatedly until the
-  operation is complete, then returns the internally tracked results.
-
-"""

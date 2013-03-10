@@ -41,8 +41,6 @@ class NamespaceDescriptor(object):
         self.canonical = canonical
 
 
-
-
 class WapitiModelAttr(object):
     def __init__(self, name, **kw):
         self.name = name
@@ -86,8 +84,9 @@ def title_talk2subject(title):
 def title_subject2talk(title):
     subj_pref, _, title_suf = title.partition(':')
     subj_pref = subj_pref.strip()
-    if not subj_pref:
+    if not title_suf:
         talk_pref = 'Talk'
+        title_suf = subj_pref
     elif subj_pref.endswith('talk'):
         talk_pref = subj_pref
     else:

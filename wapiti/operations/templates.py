@@ -30,5 +30,5 @@ class GetAllTranscludes(GetTranscludes):
     field_prefix = 'gat'
     input_field = None
     fields = [StaticParam('generator', 'alltransclusions'),
-              StaticParam('prop', 'imageinfo'),
+              StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection')]

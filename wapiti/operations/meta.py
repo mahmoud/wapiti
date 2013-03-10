@@ -18,7 +18,7 @@ class GetSourceInfo(QueryOperation):
     input_field = None
     fields = [StaticParam('meta', 'siteinfo'),
               MultiParam('prop', DEFAULT_PROPS)]
-    output_type = [SourceInfo]
+    output_type = SourceInfo
 
     def extract_results(self, query_resp):
         ret = query_resp['general']

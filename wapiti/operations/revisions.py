@@ -44,7 +44,7 @@ def extract_template(tmpl_name, text):
 
 class GetPageRevisionInfos(QueryOperation):
     """
-    todo: switch to new data model (using unified PageIdentifiers)
+
     """
     field_prefix = 'rv'
     input_field = MultiParam('titles', key_prefix=False)
@@ -103,7 +103,6 @@ class GetCurrentContent(QueryOperation):
                                            is_parsed=is_parsed)
             revision.req_title = requested_title
             ret.append(revision)
-            import pdb;pdb.set_trace()
         return ret
 
 
