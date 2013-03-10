@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation, SingleParam, MultiParam, StaticParam
+from base import QueryOperation
+from params import SingleParam, MultiParam, StaticParam
 from models import PageIdentifier, LanguageLink, InterwikiLink, ExternalLink
 
 

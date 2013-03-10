@@ -13,7 +13,7 @@ from os.path import dirname, abspath
 sys.path.append(dirname(dirname(abspath(__file__))))
 from ransom import Client
 
-from params import SingleParam, StaticParam, MultiParam  # tmp
+from params import SingleParam
 from utils import PriorityQueue, MaxInt
 
 
