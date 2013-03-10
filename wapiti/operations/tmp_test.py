@@ -5,6 +5,8 @@ from argparse import ArgumentParser
 from pprint import pprint
 
 from category import GetSubcategoryInfos, GetCategory, GetCategoryRecursive
+from rand import GetRandom
+
 
 PDB_ALL = True
 PDB_ERROR = False
@@ -57,6 +59,12 @@ def create_parser():
     parser.add_argument('--magnitude', '-m',
                         default=DEFAULT_MAGNITUDE)
     return parser
+
+
+def test_random(limit=50):
+    get_fifty_random = GetRandom(limit)
+    pages = call_and_ret(get_fifty_random)
+    return len(pages) == limit
 
 
 def main():

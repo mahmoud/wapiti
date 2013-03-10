@@ -13,11 +13,6 @@ class GetRandom(QueryOperation):
     input_field = None
     output_type = [PageIdentifier]
 
-    def __init__(self, limit, **kw):
-        # TODO: removed query arg parameter, random doesn't need it, but is
-        # there a less ugly way?
-        super(GetRandom, self).__init__(None, limit, **kw)
-
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
