@@ -367,7 +367,7 @@ class QueryOperation(Operation):
                 pq_pl = int(field_limit)
             self.per_query_param_limit = pq_pl
         self.params = params
-
+        import pdb; pdb.set_trace()
         try:
             per_query_limit = self.per_query_limit.get_limit(is_bot_op)
         except AttributeError:
@@ -378,9 +378,10 @@ class QueryOperation(Operation):
 
     @property
     def current_limit(self):
-        ret = min(self.remaining, self.per_query_limit)
+        ret = self.remaining
         if not self.is_bijective:
             ret = max(DEFAULT_MIN, ret)
+        ret = min(ret, self.per_query_limit)
         return ret
 
     @property
