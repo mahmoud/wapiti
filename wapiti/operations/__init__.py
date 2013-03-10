@@ -34,7 +34,7 @@ from misc import (GetCoordinates,
                   GetRecentChanges,
                   GetAllImageInfos)
 from meta import GetSourceInfo
-from user import GetUserContribs, GetUserContribRevisions
+from user import GetUserContribs  # , GetUserContribRevisions
 from templates import GetTranscludes
 
 ALL_OPERATIONS = [GetCoordinates,
@@ -70,5 +70,4 @@ ALL_OPERATIONS = [GetCoordinates,
                   GetPageRevisionInfos,
                   GetLinks,
                   GetExternalLinks,
-                  GetUserContribs,
-                  GetUserContribRevisions]
+                  GetUserContribs]

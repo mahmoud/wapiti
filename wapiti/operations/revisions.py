@@ -10,38 +10,6 @@ import re
 DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|parsedcomment|tags'
 
 
-def tmpl_text_to_odict(text):
-    ret = OrderedDict()
-    pairs = text.split('|')
-    for p in pairs:
-        p = p.strip()
-        if not p:
-            continue
-        k,_,v = p.partition('=')
-        k = k.strip()
-        v = v.strip()
-        if not k:
-            print 'blank key error', k
-            #import pdb;pdb.set_trace()
-            continue
-        if k in ret:
-            print 'duplicate key error', k
-            #import pdb;pdb.set_trace()
-            continue
-        ret[k] = v
-    return ret
-
-
-def extract_template(tmpl_name, text):
-    ret = []
-    tmpl = re.compile('\{\{(\s*' + tmpl_name + '.*?)\}\}',
-                      flags=re.DOTALL |re.IGNORECASE|re.M)
-    tmpl_txts = re.findall(tmpl, text)
-    for txt in tmpl_txts:
-        ret.append(tmpl_text_to_odict(txt))
-    return ret
-
-
 class GetPageRevisionInfos(QueryOperation):
     """
 

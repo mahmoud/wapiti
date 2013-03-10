@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import Operation, QueryOperation
+from base import QueryOperation
 from params import SingleParam, StaticParam
 from models import RevisionInfo
-from revisions import GetRevisionInfos
 
 DEFAULT_PROPS = 'ids|flags|timestamp|size|comment|tags|title'
 
@@ -28,5 +27,5 @@ class GetUserContribs(QueryOperation):
         return ret
 
 
-class GetUserContribRevisions(Operation):
-    subop_chain = (GetUserContribs, GetRevisionInfos)
+#class GetUserContribRevisions(Operation):
+#    subop_chain = (GetUserContribs, GetRevision)

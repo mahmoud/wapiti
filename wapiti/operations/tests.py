@@ -34,8 +34,7 @@ from misc import (GetCoordinates,
                   GetQueryPage,
                   GetRecentChanges,
                   GetAllImageInfos)
-from user import (GetUserContribs,
-                  GetUserContribRevisions)
+from user import GetUserContribs #, GetUserContribRevisions
 from meta import GetSourceInfo
 
 PDB_ALL = True

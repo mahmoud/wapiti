@@ -102,7 +102,11 @@ class OperationMeta(ABCMeta):
         try:
             output_type = ret.output_type
         except AttributeError:
-            output_type = subop_chain[-1].output_type
+            output_type = subop_chain[-1].singular_output_type
+            for st in subop_chain:
+                if not st.is_bijective:
+                    output_type = [output_type]
+                    break
             ret.output_type = output_type
 
         try:
@@ -340,7 +344,7 @@ class QueryOperation(Operation):
             qp_val = self.input_field.get_value(self.input_param)
             params[qp_key_pref] = qp_val
 
-            field_limit = self.input_field.limit or QL_50_500
+            field_limit = self.input_field.limit or PL_50_500
             try:
                 pq_pl = field_limit.get_limit(is_bot_op)
             except AttributeError:
