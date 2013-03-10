@@ -20,7 +20,7 @@ from links import (GetBacklinks,
                    GetExternalLinks,
                    GetImages,
                    GetLinks)
-from feedback import GetFeedbackV4, GetFeedbackV5
+from feedback import GetFeedbackV5
 from revisions import (GetPageRevisionInfos,
                        GetRevisionInfos,
                        GetCurrentContent,
@@ -266,10 +266,9 @@ def test_all_transcludes(limit):
 
 @magnitude(norm=20, big=550, huge=2000)
 def test_resolve_subjects(limit):
-    get_res_transcludes = GetTranscludes('Template:ArticleHistory',
-                                         limit,
-                                         resolve_to_subject=True)
+    get_res_transcludes = GetTranscludes('Template:ArticleHistory', limit)
     tr_list = call_and_ret(get_res_transcludes)
+    tr_list = [t.get_subject_info() for t in tr_list]
     return len(tr_list) == limit and all([t.is_subject_page for t in tr_list])
 
 
@@ -301,7 +300,7 @@ def test_flatten_category(limit):
 
 @magnitude(norm=10, big=550, huge=2000)
 def test_cat_mem_namespace(limit):
-    get_star_portals = GetCategory('Astronomy_portals', limit, namespace=[100])
+    get_star_portals = GetCategory('Astronomy_portals', limit, namespace=['100'])
     portals = call_and_ret(get_star_portals)
     return len(portals) == limit
 
@@ -358,7 +357,7 @@ def test_get_user_contribs(limit):
 def test_get_meta(limit):
     get_source_info = GetSourceInfo()
     meta = call_and_ret(get_source_info)
-    return len(meta.values()) > 1
+    return bool(meta)
 
 
 def test_get_revision_infos(limit):
@@ -422,6 +421,7 @@ def create_parser():
     parser = ArgumentParser(description='Test operations')
     parser.add_argument('functions', nargs='*')
     parser.add_argument('--pdb_all', '-a', action='store_true')
+    parser.add_argument('--pdb_int', action='store_true', default=False)
     parser.add_argument('--pdb_error', '-e', action='store_true')
     parser.add_argument('--do_print', '-p', action='store_true')
     parser.add_argument('--magnitude', '-m',
@@ -436,6 +436,13 @@ def main():
     PDB_ALL = args.pdb_all
     PDB_ERROR = args.pdb_error
     DO_PRINT = args.do_print
+
+    if args.pdb_int:
+        import signal
+        def pdb_int_handler(signal, frame):
+            import pdb;pdb.set_trace()
+        signal.signal(signal.SIGINT, pdb_int_handler)
+
     if args.functions:
         tests = {}
         for func in args.functions:

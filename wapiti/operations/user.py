@@ -14,7 +14,7 @@ class GetUserContribs(QueryOperation):
     input_field = SingleParam('user')
     fields = [StaticParam('list', 'usercontribs'),
               StaticParam('ucprop', DEFAULT_PROPS)]
-    output_type = [PageIdentifier]
+    output_type = [UserContrib]
 
     def extract_results(self, query_resp):
         ret = []

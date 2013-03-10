@@ -134,12 +134,6 @@ class GetRecentChanges(QueryOperation):
             ret.append(page_ident)
         return ret
 
-    def prepare_params(self, **kw):
-        params = super(GetRecentChanges, self).prepare_params(**kw)
-        if params.get('qpcontinue'):
-            params['grcstart'] = params.pop('grccontinue')
-        return params
-
 
 class GetQueryPage(QueryOperation):
     field_prefix = 'qp'
