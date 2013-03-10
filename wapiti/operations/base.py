@@ -367,7 +367,6 @@ class QueryOperation(Operation):
                 pq_pl = int(field_limit)
             self.per_query_param_limit = pq_pl
         self.params = params
-        import pdb; pdb.set_trace()
         try:
             per_query_limit = self.per_query_limit.get_limit(is_bot_op)
         except AttributeError:
