@@ -6,6 +6,11 @@ from params import SingleParam, StaticParam
 
 
 class GetFeedbackV4(QueryOperation):
+    """
+    This API is no longer available (on en or de wikipedia).  As of
+    3/9/2013, this API does not even appear in the documentation at:
+    http://en.wikipedia.org/w/api.php
+    """
     field_prefix = 'af'
     input_field = SingleParam('pageid', required=True)
     fields = [StaticParam('list', 'articlefeedback')]

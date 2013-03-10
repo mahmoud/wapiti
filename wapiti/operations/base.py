@@ -126,6 +126,8 @@ class OperationMeta(ABCMeta):
             ret.input_field = input_field
         if input_field is None:
             ret.__init__ = get_inputless_init(ret.__init__)
+        else:
+            input_field.required = True
         # TODO: run through subop_chain, checking the outputs match up
         try:
             output_type = ret.output_type

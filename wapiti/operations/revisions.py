@@ -56,7 +56,7 @@ class GetCurrentContent(QueryOperation):
         ret = []
         #redirect_list = query_resp.get('redirects', [])  # TODO
         #redirects = dict([(r['from'], r['to']) for r in redirect_list])
-        requested_title = self.query_param
+        requested_title = self.input_param
         is_parsed = self.kwargs.get('rvparse', False)
 
         pages = query_resp.get('pages', {})
