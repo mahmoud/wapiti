@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 from argparse import ArgumentParser
 from functools import wraps
+from pprint import pprint
 
 import base
 from category import (GetCategory,
@@ -300,7 +301,9 @@ def test_flatten_category(limit):
 
 @magnitude(norm=10, big=550, huge=2000)
 def test_cat_mem_namespace(limit):
-    get_star_portals = GetCategory('Astronomy_portals', limit, namespace=['100'])
+    get_star_portals = GetCategory('Astronomy_portals',
+                                   limit,
+                                   namespace=['100'])
     portals = call_and_ret(get_star_portals)
     return len(portals) == limit
 
@@ -366,12 +369,6 @@ def test_get_revision_infos(limit):
     return len(rev_infos) == 3
 
 
-@magnitude(norm=20, big=550, huge=2000)
-def test_get_contrib_rev_infos(limit):
-    get_contrib_rev_infos = GetUserContribRevisionInfos('Jimbo Wales', limit)
-    contrib_rev_infos = call_and_ret(get_contrib_rev_infos)
-    return len(contrib_rev_infos) == limit
-
 def test_get_image_info(limit):
     get_image_info = GetImageInfos('File:Logo.gif')
     image_info = call_and_ret(get_image_info)
@@ -421,7 +418,7 @@ def create_parser():
     parser = ArgumentParser(description='Test operations')
     parser.add_argument('functions', nargs='*')
     parser.add_argument('--pdb_all', '-a', action='store_true')
-    parser.add_argument('--pdb_int', action='store_true', default=False)
+    parser.add_argument('--no_pdb_int', action='store_true')
     parser.add_argument('--pdb_error', '-e', action='store_true')
     parser.add_argument('--do_print', '-p', action='store_true')
     parser.add_argument('--magnitude', '-m',
@@ -437,7 +434,7 @@ def main():
     PDB_ERROR = args.pdb_error
     DO_PRINT = args.do_print
 
-    if args.pdb_int:
+    if not args.no_pdb_int:
         import signal
         def pdb_int_handler(signal, frame):
             import pdb;pdb.set_trace()
@@ -458,8 +455,15 @@ def main():
     for k, v in tests.items():
         results[k] = v(args.magnitude)
         print k, results[k]
+    pprint(results)
+    print
+    failures = [k for k, v in results.items() if not v and v is not None]
+    if failures:
+        print '-- the following tests failed: %r' % failures
+    else:
+        print '++ all tests passed'
+
     return results
 
 if __name__ == '__main__':
-    from pprint import pprint
-    pprint(main())
+    main()

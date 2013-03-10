@@ -14,7 +14,7 @@ QueryPageInfo = namedtuple('QueryPageInfo', 'title ns value querypage cache')
 
 class GetCoordinates(QueryOperation):
     field_prefix = 'co'
-    input_field = MultiParam('titles')
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'coordinates'),
               SingleParam('primary', 'all'),  # primary, secondary, all
               MultiParam('prop', 'type|name|dim|country|region')]
