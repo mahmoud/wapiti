@@ -357,14 +357,19 @@ class QueryOperation(Operation):
     field_prefix = None        # e.g., 'gcm'
     cont_str_key = None
     per_query_limit = QL_50_500
+    default_limit = ALL
 
     def __init__(self, input_param, limit=None, **kw):
+        if limit is None:
+            limit = self.default_limit
         kw['limit'] = limit
         super(QueryOperation, self).__init__(input_param, **kw)
         self.cont_strs = []
         self._set_params()
 
     def _set_params(self):
+        is_bot_op = self.is_bot_op
+
         params = {}
         for field in self.fields:
             pref_key = field.get_key(self.field_prefix)
@@ -375,11 +380,14 @@ class QueryOperation(Operation):
             qp_val = self.input_field.get_value(self.input_param)
             params[qp_key_pref] = qp_val
 
-            pc_pl = self.input_field.limit.get_limit(self.is_bot_op)
-            self.per_call_param_limit = pc_pl
+            field_limit = self.input_field.limit or QL_50_500
+            try:
+                pq_pl = field_limit.get_limit(is_bot_op)
+            except AttributeError:
+                pq_pl = int(field_limit)
+            self.per_query_param_limit = pq_pl
         self.params = params
 
-        is_bot_op = self.is_bot_op
         try:
             per_query_limit = self.per_query_limit.get_limit(is_bot_op)
         except AttributeError:
