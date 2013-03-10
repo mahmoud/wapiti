@@ -20,6 +20,7 @@ class GetTranscludes(QueryOperation):
             try:
                 page_ident = PageInfo.from_query(pid_dict,
                                                  source=self.source)
+                import pdb;pdb.set_trace()
             except ValueError:
                 continue
             ret.append(page_ident)
@@ -27,8 +28,8 @@ class GetTranscludes(QueryOperation):
 
 
 class GetAllTranscludes(GetTranscludes):
-    field_prefix = 'gat'
+    field_prefix = 'at'
     input_field = None
-    fields = [StaticParam('generator', 'alltransclusions'),
-              StaticParam('prop', 'info'),
-              StaticParam('inprop', 'subjectid|talkid|protection')]
+    fields = [StaticParam('list', 'alltransclusions'),
+              #StaticParam('prop', 'info'),
+              StaticParam('atprop', 'ids|title')] # 'subjectid|talkid|protection')]

@@ -18,7 +18,7 @@ from links import (GetBacklinks,
                    GetLanguageLinks,
                    GetInterwikiLinks,
                    GetImages)
-from feedback import GetFeedbackV4, GetFeedbackV5
+from feedback import GetFeedbackV5
 from revisions import (GetRevisionInfos,
                        GetCurrentContent,
                        GetCurrentTalkContent)
@@ -38,7 +38,6 @@ ALL_OPERATIONS = [GetRandom,
                   GetBacklinks,
                   GetLanguageLinks,
                   GetInterwikiLinks,
-                  GetFeedbackV4,
                   GetFeedbackV5,
                   GetRevisionInfos,
                   GetCurrentContent,

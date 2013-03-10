@@ -26,7 +26,7 @@ from revisions import (GetPageRevisionInfos,
                        GetRevisionInfos,
                        GetCurrentContent,
                        GetCurrentTalkContent)
-from templates import GetTranscludes, GetAllTranscludes
+from templates import GetTranscludes
 from misc import (GetCoordinates,
                   GeoSearch,
                   GetImageInfos,
@@ -265,11 +265,11 @@ def test_transclusions(limit):
     return len(tr_list) == limit
 
 
-@magnitude(norm=20, big=550, huge=2000)
-def test_all_transcludes(limit):
-    get_all_transcludes = GetAllTranscludes(limit)
-    tr_list = call_and_ret(get_all_transcludes)
-    return len(tr_list) == limit
+#@magnitude(norm=20, big=550, huge=2000)
+#def test_all_transcludes(limit):
+#    get_all_transcludes = GetAllTranscludes(limit)
+#    tr_list = call_and_ret(get_all_transcludes)
+#    return len(tr_list) == limit
 
 
 @magnitude(norm=20, big=550, huge=2000)
