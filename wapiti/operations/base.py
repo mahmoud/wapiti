@@ -75,7 +75,8 @@ class QueryLimit(LimitSpec):
 
 
 PL_50_500 = ParamLimit(50, 500)
-DEFAULT_QUERY_LIMIT = QL_50_500 = QueryLimit(50, 500, 10)
+QL_50_500 = QueryLimit(50, 500, 10)
+DEFAULT_QUERY_LIMIT = QL_500_5000 = QueryLimit(500, 5000, 10)
 
 
 """

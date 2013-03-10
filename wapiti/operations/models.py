@@ -31,9 +31,6 @@ ExternalLink = namedtuple('ExternalLink', 'url origin_page')
 NamespaceDescriptor = namedtuple('NamespaceDescriptor', 'id title canonical')
 InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
 
-UserContrib = namedtuple('UserContrib',
-                         'page_identifier user_text user_id revision_id')
-
 _MISSING = object()
 
 

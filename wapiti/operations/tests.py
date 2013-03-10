@@ -34,7 +34,7 @@ from misc import (GetCoordinates,
                   GetRecentChanges,
                   GetAllImageInfos)
 from user import (GetUserContribs,
-                  GetUserContribRevisionInfos)
+                  GetUserContribRevisions)
 from meta import GetSourceInfo
 
 PDB_ALL = True
@@ -358,7 +358,7 @@ def test_get_user_contribs(limit):
 def test_get_meta(limit):
     get_source_info = GetSourceInfo()
     meta = call_and_ret(get_source_info)
-    return len(meta.values()) > 1
+    return len(meta[0].interwiki_map) > 1
 
 
 def test_get_revision_infos(limit):
@@ -369,7 +369,7 @@ def test_get_revision_infos(limit):
 
 @magnitude(norm=20, big=550, huge=2000)
 def test_get_contrib_rev_infos(limit):
-    get_contrib_rev_infos = GetUserContribRevisionInfos('Jimbo Wales', limit)
+    get_contrib_rev_infos = GetUserContribRevisions('Jimbo Wales', limit)
     contrib_rev_infos = call_and_ret(get_contrib_rev_infos)
     return len(contrib_rev_infos) == limit
 

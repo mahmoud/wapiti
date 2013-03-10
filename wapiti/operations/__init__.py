@@ -13,17 +13,30 @@ from category import (GetCategoryList,
                       GetSubcategoryInfos,
                       GetFlattenedCategory,
                       GetCategoryRecursive,
-                      GetCategoryPagesRecursive)
+                      GetCategoryPagesRecursive,
+                      GetAllCategoryInfos)
 from links import (GetBacklinks,
                    GetLanguageLinks,
                    GetInterwikiLinks,
-                   GetImages)
+                   GetImages,
+                   GetLinks,
+                   GetExternalLinks)
 from feedback import GetFeedbackV4, GetFeedbackV5
 from revisions import (GetRevisionInfos,
                        GetCurrentContent,
-                       GetCurrentTalkContent)
-from misc import GetCoordinates, GeoSearch
+                       GetCurrentTalkContent,
+                       GetPageRevisionInfos)
+from misc import (GetCoordinates,
+                  GeoSearch,
+                  GetImageInfos,
+                  GetTemplates,
+                  GetQueryPage,
+                  GetRecentChanges,
+                  GetAllImageInfos)
 from meta import GetSourceInfo
+from user import (GetUserContribs,
+                  GetUserContribRevisions)
+from templates import GetTranscludes, GetAllTranscludes
 
 ALL_OPERATIONS = [GetRandom,
                   GetTranscludes,
@@ -44,6 +57,18 @@ ALL_OPERATIONS = [GetRandom,
                   GetCurrentContent,
                   GetCurrentTalkContent,
                   GetImages,
+                  GetImageInfos,
                   GetCoordinates,
                   GeoSearch,
-                  GetSourceInfo]
+                  GetSourceInfo,
+                  GetAllCategoryInfos,
+                  GetAllImageInfos,
+                  GetQueryPage,
+                  GetRecentChanges,
+                  GetTranscludes,
+                  GetAllTranscludes,
+                  GetPageRevisionInfos,
+                  GetLinks,
+                  GetExternalLinks,
+                  GetUserContribs,
+                  GetUserContribRevisions]
