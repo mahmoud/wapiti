@@ -17,8 +17,7 @@ from params import SingleParam
 from utils import PriorityQueue, MaxInt, chunked_iter
 
 # TODO: prioritization
-# TODO: abstracting away per-call limits by creating multiple
-# operations of the same type (multiplexing)
+# TODO: suboperation deduplication (avoid redoing work)
 # TODO: separate structure for saving completed subops (for debugging?)
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'

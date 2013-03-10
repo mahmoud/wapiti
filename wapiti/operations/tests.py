@@ -417,6 +417,9 @@ def main():
     for k, v in tests.items():
         results[k] = v(args.magnitude)
         print k, results[k]
+    if not results:
+        print '-- no tests run'
+        return
     pprint(results)
     print
     failures = [k for k, v in results.items() if not v and v is not None]
@@ -424,6 +427,7 @@ def main():
         print '-- the following tests failed: %r' % failures
     else:
         print '++ all tests passed'
+    print
 
     return results
 
