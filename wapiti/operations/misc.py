@@ -14,7 +14,7 @@ QueryPageInfo = namedtuple('QueryPageInfo', 'title ns value querypage cache')
 
 class GetCoordinates(QueryOperation):
     field_prefix = 'co'
-    input_field = MultiParam('titles')
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'coordinates'),
               SingleParam('primary', 'all'),  # primary, secondary, all
               MultiParam('prop', 'type|name|dim|country|region')]
@@ -133,12 +133,6 @@ class GetRecentChanges(QueryOperation):
                 continue
             ret.append(page_ident)
         return ret
-
-    def prepare_params(self, **kw):
-        params = super(GetRecentChanges, self).prepare_params(**kw)
-        if params.get('qpcontinue'):
-            params['grcstart'] = params.pop('grccontinue')
-        return params
 
 
 class GetQueryPage(QueryOperation):

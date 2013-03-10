@@ -132,6 +132,11 @@ class Param(object):
         # should not occur (e.g., on a URL)
         if not value or isinstance(value, basestring):
             return value
+        try:
+            return self.coerce_func(value)
+        except AttributeError:
+            pass
+
         if isinstance(value, (Sequence, Set)):
             # some models are iterable, but none are sequences/sets (yet)
             coerced = []
@@ -140,9 +145,8 @@ class Param(object):
                     coerced.append(v)
                 else:
                     coerced.append(self.coerce_func(v))
-        else:
-            coerced = self.coerce_func(value)
-        return coerced
+            return coerced
+        raise TypeError('could not coerce value %r to %r' % (value, self.key))
 
     def get_value(self, value, prefix=None):
         if prefix is None:

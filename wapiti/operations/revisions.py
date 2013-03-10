@@ -34,7 +34,7 @@ class GetPageRevisionInfos(QueryOperation):
 
 
 class GetRevisionInfos(GetPageRevisionInfos):
-    input_field = MultiParam('revids', key_prefix=False)
+    input_field = MultiParam('revids', attr='rev_id', key_prefix=False)
     output_type = RevisionInfo
 
     def prepare_params(self, *a, **kw):

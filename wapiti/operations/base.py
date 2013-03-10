@@ -32,6 +32,7 @@ DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
 
 ALL = MaxInt('ALL')
+DEFAULT_MIN = 50
 
 DEFAULT_CLIENT = Client({'headers': DEFAULT_HEADERS})
 
@@ -69,9 +70,12 @@ class ParamLimit(LimitSpec):
 
 class QueryLimit(LimitSpec):
     # TODO: magnitudes?
-    def __init__(self, _max, bot_max=None, mw_default=None):
+    def __init__(self, _max, bot_max=None, mw_default=None, _min=None):
         super(QueryLimit, self).__init__(_max, bot_max)
         self.mw_default = mw_default
+        if _min is None:
+            _min = DEFAULT_MIN
+        self.min = min(self.max, _min)
 
 
 PL_50_500 = ParamLimit(50, 500)
@@ -220,7 +224,6 @@ class Operation(object):
         return self.api_url
 
     def set_limit(self, limit):
-        # TODO: use new limit structures
         # TODO: add support for callable limit getters?
         self._orig_limit = limit
         if isinstance(limit, Operation):
@@ -238,8 +241,6 @@ class Operation(object):
 
     @property
     def remaining(self):
-        # TODO: use new limit struct
-        # TODO: what about suboperations?
         limit = self.limit
         if limit is None:
             limit = sys.maxint
@@ -377,7 +378,10 @@ class QueryOperation(Operation):
 
     @property
     def current_limit(self):
-        return min(self.remaining, self.per_query_limit)
+        ret = min(self.remaining, self.per_query_limit)
+        if not self.is_bijective:
+            ret = max(DEFAULT_MIN, ret)
+        return ret
 
     @property
     def remaining(self):
@@ -445,10 +449,12 @@ class QueryOperation(Operation):
 
     def store_results(self, task, resp):
         if resp.notices:  # TODO: lift this
-            pass  # TODO: resolve some limit warnings
-            #print "may have an error: %r (%r)" % (resp.notices, resp.url)
+            pass # TODO: resolve some limit warnings
+            print "may have an error: %r (%r)" % (resp.notices, resp.url)
         processed_resp = self.post_process_response(resp)
         if processed_resp is None:
+            new_cont_str = self.get_cont_str(resp)  # TODO: DRY this.
+            self.cont_strs.append(new_cont_str)
             return []  # TODO: keep an eye on this
         try:
             new_results = self.extract_results(processed_resp)

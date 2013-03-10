@@ -177,7 +177,7 @@ def test_external_links(limit):
 
 def test_feedback_v5(limit):
     client = WapitiClient('mahmoudrhashemi@gmail.com')
-    get_v5 = partial(client.get_feedback_v_5, '604727')  # TODO: support ints
+    get_v5 = partial(client.get_feedback_v5, '604727')  # TODO: support ints
     v5_list = call_and_ret(get_v5)
     return isinstance(v5_list, list)
 
@@ -226,6 +226,7 @@ def test_resolve_subjects(limit):
                                          limit,
                                          resolve_to_subject=True)
     tr_list = call_and_ret(get_res_transcludes)
+    tr_list = [t.get_subject_info() for t in tr_list]
     return len(tr_list) == limit and all([t.is_subject_page for t in tr_list])
 
 
@@ -262,7 +263,7 @@ def test_flatten_category(limit):
 @magnitude(norm=10, big=550, huge=2000)
 def test_cat_mem_namespace(limit):
     client = WapitiClient('mahmoudrhashemi@gmail.com')
-    get_star_portals = partial(client.get_category, 'Astronomy_portals', limit, namespace=[100])
+    get_star_portals = partial(client.get_category, 'Astronomy_portals', limit, namespace=['100'])
     portals = call_and_ret(get_star_portals)
     return len(portals) == limit
 
@@ -303,7 +304,7 @@ def test_get_links(limit):
 
 def test_coordinates(limit):
     client = WapitiClient('mahmoudrhashemi@gmail.com')
-    get_coordinates = partial(client.get_coordintes, ['White House', 'Golden Gate Bridge', 'Mount Everest'])
+    get_coordinates = partial(client.get_coordinates, ['White House', 'Golden Gate Bridge', 'Mount Everest'])
     coords = call_and_ret(get_coordinates)
     return len(coords) == 3
 

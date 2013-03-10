@@ -38,7 +38,9 @@ from user import (GetUserContribs,
                   GetUserContribRevisions)
 from templates import GetTranscludes, GetAllTranscludes
 
-ALL_OPERATIONS = [GetRandom,
+ALL_OPERATIONS = [GetCoordinates,
+                  GeoSearch,
+                  GetRandom,
                   GetTranscludes,
                   GetProtections,
                   GetCategoryList,
@@ -58,6 +60,7 @@ ALL_OPERATIONS = [GetRandom,
                   GetCurrentTalkContent,
                   GetImages,
                   GetImageInfos,
+                  GetTemplates,
                   GetCoordinates,
                   GeoSearch,
                   GetSourceInfo,
