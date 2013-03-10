@@ -74,7 +74,6 @@ def magnitude(norm, big=None, huge=None):
         huge = big
 
     def mag_dec(func):
-
         @wraps(func)
         def wrapped(limit_or_mag=None):
             if limit_or_mag is None:
@@ -179,7 +178,7 @@ def test_backlinks(limit):
     return len(bls) == limit
 
 
-@magnitude(norm=20, big=550, huge=2000)
+@magnitude(norm=20, big=150, huge=300)
 def test_random(limit):
     get_fifty_random = GetRandom(limit)
     pages = call_and_ret(get_fifty_random)
@@ -328,13 +327,6 @@ def test_get_revision_infos(limit):
     get_revisions = GetRevisionInfos(['538903663', '539916351', '531458383'])
     rev_infos = call_and_ret(get_revisions)
     return len(rev_infos) == 3
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_get_contrib_rev_infos(limit):
-    get_contrib_rev_infos = GetUserContribRevisions('Jimbo Wales', limit)
-    contrib_rev_infos = call_and_ret(get_contrib_rev_infos)
-    return len(contrib_rev_infos) == limit
 
 
 def test_get_image_info(limit):
