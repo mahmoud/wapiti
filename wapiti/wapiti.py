@@ -74,7 +74,8 @@ class WapitiClient(object):
             self._init_source()
 
     def _init_source(self):
-        self.source_meta = self.get_meta()
+        self.source_info = self.get_source_info()[0]  # TODO: no input_field
+                                                      #       and single response
 
     def call_operation(self, op_type, *a, **kw):
         kw['client'] = self

@@ -240,6 +240,8 @@ class Operation(object):
         # TODO: use new limit struct
         # TODO: what about suboperations?
         limit = self.limit
+        if limit is None:
+            limit = sys.maxint
         return max(0, limit - len(self.results))
 
     def process(self):

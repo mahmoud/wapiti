@@ -35,7 +35,7 @@ from misc import (GetCoordinates,
                   GetAllImageInfos)
 from user import (GetUserContribs,
                   GetUserContribRevisionInfos)
-from meta import GetMeta
+from meta import GetSourceInfo
 
 PDB_ALL = True
 PDB_ERROR = False
@@ -356,9 +356,9 @@ def test_get_user_contribs(limit):
 
 
 def test_get_meta(limit):
-    get_meta = GetMeta()
-    metas = call_and_ret(get_meta)
-    return len(metas) > 20
+    get_source_info = GetSourceInfo()
+    meta = call_and_ret(get_source_info)
+    return len(meta.values()) > 1
 
 
 def test_get_revision_infos(limit):
