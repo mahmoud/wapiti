@@ -37,6 +37,15 @@ UserContrib = namedtuple('UserContrib',
 _MISSING = object()
 
 
+class NamespaceDescriptor(object):
+    def __init__(self, id, title, canonical, **kw):
+        self.id = id
+        self.title = title
+        self.canonical = canonical
+
+
+
+
 class WapitiModelAttr(object):
     def __init__(self, name, **kw):
         self.name = name
@@ -212,6 +221,16 @@ class WapitiModelBase(object):
             return self.get_display_str()
         except:
             return super(PageIdentifier, self).__repr__()
+
+
+class SourceInfo(WapitiModelBase):
+    attributes = [WMA('namespace_map'),
+                  WMA('interwiki_map')]
+
+    def __init__(self, **kw):
+        for k, v in kw.iteritems():
+            attr = WMA(k)
+            setattr(self, attr.name, v)
 
 
 class PageIdentifier(WapitiModelBase):

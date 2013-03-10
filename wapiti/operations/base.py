@@ -237,6 +237,8 @@ class Operation(object):
     @property
     def remaining(self):
         limit = self.limit
+        if limit is None:
+            limit = sys.maxint
         return max(0, limit - len(self.results))
 
     def process(self):
