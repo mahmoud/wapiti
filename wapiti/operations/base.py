@@ -3,8 +3,9 @@ from __future__ import unicode_literals
 
 import json
 from abc import ABCMeta
-from collections import OrderedDict, namedtuple
-from functools import total_ordering
+
+from collections import OrderedDict
+from functools import total_ordering, wraps
 
 import sys
 from os.path import dirname, abspath
@@ -34,6 +35,7 @@ else:
 
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
+
 
 @total_ordering
 class MaxInt(long):
@@ -139,6 +141,13 @@ Going forward, these attributes can be determined as follows:
 """
 
 
+def get_inputless_init(old_init):
+    @wraps(old_init)
+    def inputless_init(self, limit=None, **kw):
+        return old_init(self, None, limit, **kw)
+    return inputless_init
+
+
 class OperationMeta(ABCMeta):
     def __new__(cls, name, bases, attrs):
         ret = super(OperationMeta, cls).__new__(cls, name, bases, attrs)
@@ -151,8 +160,7 @@ class OperationMeta(ABCMeta):
             input_field = subop_chain[0].input_field
             ret.input_field = input_field
         if input_field is None:
-            # TODO: better support for random(), etc. (has no input field)
-            pass
+            ret.__init__ = get_inputless_init(ret.__init__)
         # TODO: run through subop_chain, checking the outputs match up
         try:
             output_type = ret.output_type
@@ -324,10 +332,13 @@ class Operation(object):
         for res in results:
             if not self.remaining:
                 break
-            unique_key = getattr(res, 'unique_key', res)
-            if unique_key in self.results:
-                continue
-            self.results[unique_key] = res
+            try:
+                unique_key = getattr(res, 'unique_key', res)
+                if unique_key in self.results:
+                    continue
+                self.results[unique_key] = res
+            except TypeError as e:
+                import pdb; pdb.set_trace()
             ret.append(res)
         return ret
 
@@ -343,6 +354,8 @@ class Operation(object):
 
     def __repr__(self):
         cn = self.__class__.__name__
+        if self.input_field is None:
+            return '%s(limit=%r)' % (cn, self.limit)
         tmpl = '%s(%r, limit=%r)'  # add dynamic-limity stuff
         try:
             ip_disp = self.input_param
