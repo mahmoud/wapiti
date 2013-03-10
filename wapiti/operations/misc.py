@@ -14,7 +14,7 @@ QueryPageInfo = namedtuple('QueryPageInfo', 'title ns value querypage cache')
 
 class GetCoordinates(QueryOperation):
     field_prefix = 'co'
-    input_field = MultiParam('titles', required=True)
+    input_field = MultiParam('titles')
     fields = [StaticParam('prop', 'coordinates'),
               SingleParam('primary', 'all'),  # primary, secondary, all
               MultiParam('prop', 'type|name|dim|country|region')]
@@ -36,12 +36,12 @@ class GetCoordinates(QueryOperation):
 
 class GeoSearch(QueryOperation):
     field_prefix = 'gs'
-    input_field = MultiParam('coord', required=True)
+    input_field = MultiParam('coord')
     fields = [StaticParam('list', 'geosearch'),
               SingleParam('radius', 10000),  # must be within 10 and 10000
               #SingleParam('maxdim', 1000),  # does not work?
               SingleParam('globe', 'earth'),  # which planet? donno...
-              SingleParam('namespace', required=False),
+              SingleParam('namespace'),
               StaticParam('gsprop', 'type|name|dim|country|region')]
     output_type = [CoordinateIdentifier]
 
@@ -62,7 +62,7 @@ DEFAULT_IMAGE_PROPS = 'timestamp|user|userid|comment|parsedcomment|url|size|dime
 
 class GetImageInfos(QueryOperation):
     field_prefix = 'ii'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'imageinfo'),
               StaticParam('iiprop', DEFAULT_IMAGE_PROPS)]
     output_type = [ImageInfo]
@@ -95,7 +95,7 @@ class GetAllImageInfos(GetImageInfos):
 
 class GetTemplates(QueryOperation):
     field_prefix = 'gtl'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('generator', 'templates'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection')]
@@ -143,7 +143,7 @@ class GetRecentChanges(QueryOperation):
 
 class GetQueryPage(QueryOperation):
     field_prefix = 'qp'
-    input_field = SingleParam('page', required=True)
+    input_field = SingleParam('page')
     fields = [StaticParam('list', 'querypage')]
     output_type = QueryPageInfo
     known_qps = ['Ancientpages',

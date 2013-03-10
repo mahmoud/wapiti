@@ -20,7 +20,7 @@ class GetCategoryList(QueryOperation):
     Lists the categories for a page.
     """
     field_prefix = 'gcl'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('generator', 'categories'),
               StaticParam('prop', 'categoryinfo'),
               SingleParam('gclshow', ''),  # hidden, !hidden
@@ -47,11 +47,11 @@ class GetCategory(QueryOperation):
     Lists the members in a category.
     """
     field_prefix = 'gcm'
-    input_field = SingleParam('title', val_prefix='Category:', required=True)
+    input_field = SingleParam('title', val_prefix='Category:')
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection'),
-              MultiParam('namespace', required=False)]
+              MultiParam('namespace')]
     output_type = [PageInfo]
 
     def extract_results(self, query_resp):
@@ -79,7 +79,7 @@ class GetSubcategoryInfos(QueryOperation):
     of members or sub-categories.
     """
     field_prefix = 'gcm'
-    input_field = SingleParam('title', val_prefix='Category:', required=True)
+    input_field = SingleParam('title', val_prefix='Category:')
     fields = [StaticParam('generator', 'categorymembers'),
               StaticParam('prop', 'categoryinfo'),
               StaticParam('gcmtype', 'subcat')]

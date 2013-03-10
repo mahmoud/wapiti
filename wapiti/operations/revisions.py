@@ -14,7 +14,7 @@ class GetPageRevisionInfos(QueryOperation):
     todo: switch to new data model (using unified PageIdentifiers)
     """
     field_prefix = 'rv'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS)]
     output_type = [RevisionInfo]
@@ -34,7 +34,7 @@ class GetPageRevisionInfos(QueryOperation):
 
 
 class GetRevisionInfos(GetPageRevisionInfos):
-    input_field = MultiParam('revids', key_prefix=False, required=True)
+    input_field = MultiParam('revids', key_prefix=False)
     output_type = RevisionInfo
 
     def prepare_params(self, *a, **kw):
@@ -44,7 +44,7 @@ class GetRevisionInfos(GetPageRevisionInfos):
 
 
 class GetCurrentContent(QueryOperation):
-    input_field = SingleParam('titles', key_prefix=False, attr='title', required=True)
+    input_field = SingleParam('titles', key_prefix=False, attr='title')
     field_prefix = 'rv'
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS + '|content'),
@@ -74,7 +74,4 @@ class GetCurrentContent(QueryOperation):
 
 
 class GetCurrentTalkContent(GetCurrentContent):
-    input_field = MultiParam('titles',
-                             val_prefix='Talk:',
-                             key_prefix=False,
-                             required=True)
+    input_field = MultiParam('titles', val_prefix='Talk:', key_prefix=False)

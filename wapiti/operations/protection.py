@@ -8,7 +8,7 @@ from models import ProtectionInfo
 
 class GetProtections(QueryOperation):
     field_prefix = 'in'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'info'),
               StaticParam('inprop', 'protection')]
     output_type = ProtectionInfo

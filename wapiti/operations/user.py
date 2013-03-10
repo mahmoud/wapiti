@@ -11,7 +11,7 @@ DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|tags|title'
 
 class GetUserContribs(QueryOperation):
     field_prefix = 'uc'
-    input_field = SingleParam('user', required=True)
+    input_field = SingleParam('user')
     fields = [StaticParam('list', 'usercontribs'),
               StaticParam('ucprop', DEFAULT_PROPS)]
     output_type = [PageIdentifier]

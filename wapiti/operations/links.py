@@ -8,7 +8,7 @@ from models import PageIdentifier, LanguageLink, InterwikiLink, ExternalLink
 
 class GetImages(QueryOperation):
     field_prefix = 'gim'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('generator', 'images'),
               StaticParam('prop', 'info')]
     output_type = [PageIdentifier]
@@ -29,7 +29,7 @@ class GetImages(QueryOperation):
 
 class GetBacklinks(QueryOperation):
     field_prefix = 'bl'
-    input_field = SingleParam('title', required=True)
+    input_field = SingleParam('title')
     fields = [StaticParam('list', 'backlinks')]
     output_type = [PageIdentifier]
 
@@ -47,10 +47,10 @@ class GetBacklinks(QueryOperation):
 
 class GetLinks(QueryOperation):
     field_prefix = 'gpl'
-    input_field = SingleParam('titles', key_prefix=False, required=True)
+    input_field = SingleParam('titles', key_prefix=False)
     fields = [StaticParam('generator', 'links'),
               StaticParam('prop', 'info'),
-              MultiParam('namespace', required=False)]
+              MultiParam('namespace')]
     output_type = [PageIdentifier]
 
     def extract_results(self, query_resp):
@@ -67,7 +67,7 @@ class GetLinks(QueryOperation):
 
 class GetExternalLinks(QueryOperation):
     field_prefix = 'el'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'extlinks')]
     output_type = [ExternalLink]
 
@@ -94,7 +94,7 @@ class GetExternalLinks(QueryOperation):
 
 class GetLanguageLinks(QueryOperation):
     field_prefix = 'll'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'langlinks'),
               SingleParam('url', True)]
     output_type = [LanguageLink]
@@ -117,7 +117,7 @@ class GetLanguageLinks(QueryOperation):
 
 class GetInterwikiLinks(QueryOperation):
     field_prefix = 'iw'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'iwlinks'),
               SingleParam('url', True)]
     output_type = [InterwikiLink]

@@ -12,7 +12,7 @@ class GetFeedbackV4(QueryOperation):
     http://en.wikipedia.org/w/api.php
     """
     field_prefix = 'af'
-    input_field = SingleParam('pageid', required=True)
+    input_field = SingleParam('pageid')
     fields = [StaticParam('list', 'articlefeedback')]
     output_type = list
 
@@ -29,7 +29,7 @@ class GetFeedbackV5(QueryOperation):
       post_process_response()
     """
     field_prefix = 'afvf'
-    input_field = SingleParam('pageid', required=True)
+    input_field = SingleParam('pageid')
     fields = [StaticParam('list', 'articlefeedbackv5-view-feedback')]
     output_type = list
 
