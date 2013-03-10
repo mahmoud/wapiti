@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 import json
 from abc import ABCMeta
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from functools import total_ordering
 
 import sys
@@ -18,15 +18,10 @@ from utils import PriorityQueue
 
 # TODO: if input_field is None, maybe don't require subclasses to
 # override __init__ somehow?
-# TODO: use an OrderedSet for results for automatic deduplication
 # TODO: use cont_str_key better for preparing parameters?
-# TODO: QueryParam that str()s to bar-separated string,
-# but is actually an list/tuple/iterable
-# TODO: parameter "coercion"
 # TODO: per_call_limit mess
 # TODO: abstracting away per-call limits by creating multiple
 # operations of the same type
-# TODO: better MAX_LIMIT/"ALL" constant
 # TODO: separate structure for saving completed subops (for debugging?)
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
@@ -36,12 +31,9 @@ if IS_BOT:
 else:
     PER_CALL_LIMIT = 500
 
-DEFAULT_LIMIT = 500  # TODO
 
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
-MAX_LIMIT = sys.maxint
-
 
 @total_ordering
 class MaxInt(long):
@@ -69,6 +61,8 @@ class MaxInt(long):
     def __eq__(self, other):
         return isinstance(other, MaxInt)
 
+    def __int__(self):
+        return self
 
 ALL = MaxInt('ALL')
 
@@ -81,6 +75,40 @@ class WapitiException(Exception):
 
 class NoMoreResults(Exception):
     pass
+
+
+class LimitSpec(object):
+    def __init__(self, _max, bot_max=None):
+        self.max = int(_max)
+        self.bot_max = bot_max or (self.max * 10)
+
+    def get_limit(self, is_bot=False):
+        if is_bot:
+            return self.bot_max
+        return self.max
+
+    def __int__(self):
+        return self.max
+
+    #def __repr__(self):
+    #    ret = super(LimitSpec, self).__repr__()
+    #    _, _, args = ret.partition('(')  # lulz
+    #    return '%s(%s' % (self.__class__.__name__, args)
+
+
+class ParamLimit(LimitSpec):
+    pass
+
+
+class QueryLimit(LimitSpec):
+    # TODO: magnitudes?
+    def __init__(self, _max, bot_max=None, mw_default=None):
+        super(QueryLimit, self).__init__(_max, bot_max)
+        self.mw_default = mw_default
+
+
+PL_50_500 = ParamLimit(50, 500)
+DEFAULT_QUERY_LIMIT = QL_50_500 = QueryLimit(50, 500, 10)
 
 
 """
@@ -167,14 +195,15 @@ class Operation(object):
     __metaclass__ = OperationMeta
 
     subop_chain = []
-    per_call_limit = PER_CALL_LIMIT
 
     def __init__(self, input_param, **kw):
         self.client = kw.pop('client', None)
         if self.client:
             self.api_url = self.client.api_url
+            self.is_bot_op = self.client.is_bot
         else:
             self.api_url = kw.get('api_url', DEFAULT_API_URL)
+            self.is_bot_op = False
         limit = kw.pop('limit', None)
         self.set_input_param(input_param)
         self.set_limit(limit)
@@ -327,6 +356,7 @@ class QueryOperation(Operation):
     #input_field = None
     field_prefix = None        # e.g., 'gcm'
     cont_str_key = None
+    per_query_limit = QL_50_500
 
     def __init__(self, input_param, limit=None, **kw):
         kw['limit'] = limit
@@ -344,12 +374,23 @@ class QueryOperation(Operation):
             qp_key_pref = self.input_field.get_key(self.field_prefix)
             qp_val = self.input_field.get_value(self.input_param)
             params[qp_key_pref] = qp_val
+
+            pc_pl = self.input_field.limit.get_limit(self.is_bot_op)
+            self.per_call_param_limit = pc_pl
         self.params = params
+
+        is_bot_op = self.is_bot_op
+        try:
+            per_query_limit = self.per_query_limit.get_limit(is_bot_op)
+        except AttributeError:
+            per_query_limit = int(self.per_query_limit)
+        self.per_query_limit = per_query_limit
+
+        return
 
     @property
     def current_limit(self):
-        # TODO: use new limit struct
-        return min(self.remaining, self.per_call_limit)
+        return min(self.remaining, self.per_query_limit)
 
     @property
     def remaining(self):
