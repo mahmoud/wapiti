@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from base import QueryOperation
 from params import StaticParam, MultiParam, SingleParam
-from models import PageIdentifier, RevisionInfo, Revision
+from models import RevisionInfo, Revision
 
 
 DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|parsedcomment|tags'
