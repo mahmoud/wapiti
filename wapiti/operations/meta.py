@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from base import QueryOperation, MultiParam, StaticParam
-from models import NamespaceDescriptor, InterwikiDescriptor
+from models import NamespaceDescriptor, InterwikiDescriptor, SourceInfo
 
 
 DEFAULT_PROPS = ('general',
@@ -12,17 +12,12 @@ DEFAULT_PROPS = ('general',
                  'interwikimap')
 
 
-class GetMeta(QueryOperation):
+class GetSourceInfo(QueryOperation):
     field_prefix = 'si'
     input_field = None
     fields = [StaticParam('meta', 'siteinfo'),
               MultiParam('prop', DEFAULT_PROPS)]
-    output_type = list
-
-    def __init__(self, **kw):
-        query_param = kw.pop('query_param', None)
-        limit = kw.pop('limit', None)
-        super(GetMeta, self).__init__(query_param, limit, **kw)
+    output_type = [SourceInfo]
 
     def extract_results(self, query_resp):
         ret = query_resp['general']
@@ -38,6 +33,8 @@ class GetMeta(QueryOperation):
             iw_map.append(InterwikiDescriptor(iw.get('prefix'),
                                               iw.get('url'),
                                               iw.get('language')))
-        ret['namespace_map'] = ns_map
-        ret['interwiki_map'] = iw_map
-        return ret.items()
+        ret['namespace_map'] = tuple(ns_map)
+        ret['interwiki_map'] = tuple(iw_map)
+        ret.update(query_resp['statistics'])
+        source_info = SourceInfo(**ret)
+        return [source_info]

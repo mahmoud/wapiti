@@ -10,9 +10,10 @@ from functools import partial
 
 def test_client_basic():
     client = WapitiClient('mahmoudrhashemi@gmail.com')
-    get_africa = partial(client.get_category_recursive, 'Africa', 100)
-    cat_pages = call_and_ret(get_africa)
-    return len(cat_pages) == 100
+    return len(client.source_info.namespace_map) > 10
+
+#     get_africa = partial(client.get_category_recursive, 'Africa', 100)
+#    cat_pages = call_and_ret(get_africa)
 
 
 def main():

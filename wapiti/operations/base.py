@@ -243,6 +243,8 @@ class Operation(object):
         # TODO: use new limit struct
         # TODO: what about suboperations?
         limit = self.limit
+        if limit is None:
+            limit = sys.maxint
         return max(0, limit - len(self.results))
 
     def process(self):
@@ -301,13 +303,10 @@ class Operation(object):
         for res in results:
             if not self.remaining:
                 break
-            try:
-                unique_key = getattr(res, 'unique_key', res)
-                if unique_key in self.results:
-                    continue
-                self.results[unique_key] = res
-            except TypeError as e:
-                import pdb; pdb.set_trace()
+            unique_key = getattr(res, 'unique_key', res)
+            if unique_key in self.results:
+                continue
+            self.results[unique_key] = res
             ret.append(res)
         return ret
 

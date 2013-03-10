@@ -23,7 +23,7 @@ from revisions import (GetRevisionInfos,
                        GetCurrentContent,
                        GetCurrentTalkContent)
 from misc import GetCoordinates, GeoSearch
-from meta import GetMeta
+from meta import GetSourceInfo
 
 ALL_OPERATIONS = [GetRandom,
                   GetTranscludes,
@@ -46,4 +46,4 @@ ALL_OPERATIONS = [GetRandom,
                   GetImages,
                   GetCoordinates,
                   GeoSearch,
-                  GetMeta]
+                  GetSourceInfo]
