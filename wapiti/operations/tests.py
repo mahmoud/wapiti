@@ -116,6 +116,13 @@ def test_nonexistent_cat_error(limit):
     pass
 
 
+def test_multiplexing(limit=None):
+    rev_ids = [str(x) for x in range(543184935 - 100, 543184935)]
+    get_rev_infos = GetRevisionInfos(rev_ids)
+    rev_infos = call_and_ret(get_rev_infos)
+    return len(rev_infos) > 90  # a couple might be missing
+
+
 @magnitude(norm=20, big=550, huge=2000)
 def test_subcategory_infos(limit):
     get_subcats = GetSubcategoryInfos('FA-Class_articles', limit)

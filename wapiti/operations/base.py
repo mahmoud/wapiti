@@ -14,11 +14,11 @@ sys.path.append(dirname(dirname(abspath(__file__))))
 from ransom import Client
 
 from params import SingleParam
-from utils import PriorityQueue, MaxInt
+from utils import PriorityQueue, MaxInt, chunked_iter
 
-
+# TODO: prioritization
 # TODO: abstracting away per-call limits by creating multiple
-# operations of the same type
+# operations of the same type (multiplexing)
 # TODO: separate structure for saving completed subops (for debugging?)
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
@@ -179,10 +179,18 @@ class Operation(object):
         self._orig_input_param = self._input_param = param
         if self.input_field:
             self._input_param = self.input_field.get_value(param)
+            self._input_param_list = self.input_field.get_value_list(param)
+        else:
+            self._input_param = None
+            self._input_param_list = []  # TODO: necessary?
 
     @property
     def input_param(self):
         return self._input_param
+
+    @property
+    def input_param_list(self):
+        return self._input_param_list
 
     @property
     def source(self):
@@ -208,7 +216,7 @@ class Operation(object):
     def remaining(self):
         limit = self.limit
         if limit is None:
-            limit = sys.maxint
+            limit = ALL
         return max(0, limit - len(self.results))
 
     def process(self):
@@ -275,7 +283,7 @@ class Operation(object):
         return ret
 
     def process_all(self):
-        print self.__class__.__name__,
+        print self.__class__.__name__
         while 1:  # TODO: +retry behavior
             try:
                 self.process()
@@ -290,11 +298,11 @@ class Operation(object):
         cn = self.__class__.__name__
         if self.input_field is None:
             return '%s(limit=%r)' % (cn, self.limit)
-        tmpl = '%s(%r, limit=%r)'  # add dynamic-limity stuff
+        tmpl = '%s(%s, limit=%r)'  # add dynamic-limity stuff
         try:
-            ip_disp = self.input_param
+            ip_disp = repr(self.input_param)
         except:
-            ip_disp = '(unprintable param)'
+            ip_disp = "'(unprintable param)'"
         return tmpl % (cn, ip_disp, self.limit)
 
 
@@ -312,6 +320,13 @@ class QueryOperation(Operation):
         super(QueryOperation, self).__init__(input_param, **kw)
         self.cont_strs = []
         self._set_params()
+
+        if self.is_bijective and self.input_param and \
+                len(self.input_param_list) > self.per_query_param_limit:
+            self.is_multiplexing = True
+            self._setup_multiplexing()
+        else:
+            self.is_multiplexing = False
 
     def _set_params(self):
         is_bot_op = self.is_bot_op
@@ -342,6 +357,15 @@ class QueryOperation(Operation):
 
         return
 
+    def _setup_multiplexing(self):
+        subop_type = type(self)
+        self.subop_queues[subop_type] = subop_queue = PriorityQueue()
+        chunk_size = self.per_query_param_limit
+        for chunk in chunked_iter(self.input_param_list, chunk_size):
+            print len(chunk)
+            subop_queue.add(subop_type(chunk))
+        return
+
     @property
     def current_limit(self):
         ret = min(self.remaining, self.per_query_limit)
@@ -370,6 +394,8 @@ class QueryOperation(Operation):
         return ret
 
     def get_current_task(self):
+        if self.is_multiplexing:
+            return super(QueryOperation, self).get_current_task()
         if not self.remaining:
             return None
         params = self.prepare_params(**self.kwargs)
@@ -414,6 +440,8 @@ class QueryOperation(Operation):
         return qc_val[next_key][self.cont_str_key]
 
     def store_results(self, task, resp):
+        if self.is_multiplexing:
+            return super(QueryOperation, self).store_results(task, resp)
         if resp.notices:  # TODO: lift this
             print "may have an error: %r (%r)" % (resp.notices, resp.url)
         processed_resp = self.post_process_response(resp)
