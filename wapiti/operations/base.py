@@ -5,7 +5,7 @@ import json
 from abc import ABCMeta
 
 from collections import OrderedDict
-from functools import total_ordering, wraps
+from functools import wraps
 
 import sys
 from os.path import dirname, abspath
@@ -14,7 +14,7 @@ sys.path.append(dirname(dirname(abspath(__file__))))
 from ransom import Client
 
 from params import SingleParam, StaticParam, MultiParam  # tmp
-from utils import PriorityQueue
+from utils import PriorityQueue, MaxInt
 
 
 # TODO: if input_field is None, maybe don't require subclasses to
@@ -27,44 +27,9 @@ from utils import PriorityQueue
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 IS_BOT = False
-if IS_BOT:
-    PER_CALL_LIMIT = 5000  # most of these globals will be set on client
-else:
-    PER_CALL_LIMIT = 500
-
 
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
-
-
-@total_ordering
-class MaxInt(long):
-    def __new__(cls, *a, **kw):
-        return super(MaxInt, cls).__new__(cls, sys.maxint + 1)
-
-    def __init__(self, name='MAX'):
-        self._name = str(name)
-
-    def __repr__(self):
-        return self._name
-
-    def __str__(self):
-        return repr(self)
-
-    # TODO: better math
-    for func in ('__add__', '__sub__', '__mul__', '__floordiv__', '__div__',
-                 '__mod__', '__divmod__', '__pow__', '__lshift__',
-                 '__rshift__'):
-        locals()[func] = lambda self, other: self
-
-    def __gt__(self, other):
-        return not self == other
-
-    def __eq__(self, other):
-        return isinstance(other, MaxInt)
-
-    def __int__(self):
-        return self
 
 ALL = MaxInt('ALL')
 
