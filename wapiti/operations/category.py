@@ -11,10 +11,8 @@ from __future__ import unicode_literals
 from models import CategoryInfo, PageInfo
 from base import (QueryOperation,
                   Operation,
-                  StaticParam,
-                  SingleParam,
-                  MultiParam,
                   Recursive)
+from params import StaticParam, SingleParam, MultiParam
 
 
 class GetCategoryList(QueryOperation):
@@ -111,18 +109,12 @@ class GetAllCategoryInfos(GetSubcategoryInfos):
     fields = [StaticParam('generator', 'allcategories'),
               StaticParam('prop', 'categoryinfo')]
 
-    def __init__(self, *a, **kw):
-        super(GetAllCategoryInfos, self).__init__(None, *a, **kw)
-
 
 class GetFlattenedCategory(Operation):
     """
     Lists all of a category's sub-categories.
     """
     subop_chain = Recursive(GetSubcategoryInfos)
-
-    def __init__(self, *a, **kw):
-        super(GetFlattenedCategory, self).__init__(*a, **kw)
 
 
 class GetCategoryRecursive(Operation):
@@ -131,12 +123,7 @@ class GetCategoryRecursive(Operation):
     category tree can have a large number of shallow categories, so this
     operation will prioritize the larger categories by default.
     """
-
     subop_chain = (GetFlattenedCategory, GetCategory)
-
-    def __init__(self, input_param, limit=None, *a, **kw):
-        kw['limit'] = limit
-        super(GetCategoryRecursive, self).__init__(input_param, *a, **kw)
 
 
 class GetCategoryPagesRecursive(GetCategoryRecursive):

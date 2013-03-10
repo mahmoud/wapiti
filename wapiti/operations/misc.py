@@ -92,9 +92,6 @@ class GetAllImageInfos(GetImageInfos):
               StaticParam('prop', 'imageinfo'),
               StaticParam('gaiprop', DEFAULT_IMAGE_PROPS)]
 
-    def __init__(self, limit=10, **kw):
-        super(GetAllImageInfos, self).__init__(None, limit, **kw)
-
 
 class GetTemplates(QueryOperation):
     field_prefix = 'gtl'
@@ -123,9 +120,6 @@ class GetRecentChanges(QueryOperation):
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection')]
     output_type = [PageInfo]
-
-    def __init__(self, *a, **kw):
-        super(GetRecentChanges, self).__init__(None, *a, **kw)
 
     def extract_results(self, query_resp):
         ret = []
@@ -186,7 +180,7 @@ class GetQueryPage(QueryOperation):
     def __init__(self, qp, *a, **kw):
         if qp not in self.known_qps:
             raise ValueError('Unrecognized query page: %r' % qp)
-        return super(GetQueryPage, self).__init__(qp, *a, **kw)
+        super(GetQueryPage, self).__init__(qp, *a, **kw)
 
     def extract_results(self, query_resp):
         ret = []

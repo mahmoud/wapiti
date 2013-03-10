@@ -32,6 +32,3 @@ class GetAllTranscludes(GetTranscludes):
     fields = [StaticParam('generator', 'alltransclusions'),
               StaticParam('prop', 'imageinfo'),
               StaticParam('inprop', 'subjectid|talkid|protection')]
-
-    def __init__(self, limit=10, **kw):
-        super(GetAllTranscludes, self).__init__(None, limit, **kw)

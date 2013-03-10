@@ -169,7 +169,7 @@ class Operation(object):
 
     subop_chain = []
 
-    def __init__(self, input_param, **kw):
+    def __init__(self, input_param, limit=None, **kw):
         self.client = kw.pop('client', None)
         if self.client:
             self.api_url = self.client.api_url
@@ -177,7 +177,6 @@ class Operation(object):
         else:
             self.api_url = kw.get('api_url', DEFAULT_API_URL)
             self.is_bot_op = False
-        limit = kw.pop('limit', None)
         self.set_input_param(input_param)
         self.set_limit(limit)
 
