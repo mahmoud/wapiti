@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation, SingleParam, StaticParam
+from base import QueryOperation
+from params import SingleParam, StaticParam
 
 
 class GetFeedbackV4(QueryOperation):
+    """
+    This API is no longer available (on en or de wikipedia).  As of
+    3/9/2013, this API does not even appear in the documentation at:
+    http://en.wikipedia.org/w/api.php
+    """
     field_prefix = 'af'
-    input_field = SingleParam('pageid', required=True)
+    input_field = SingleParam('pageid')
     fields = [StaticParam('list', 'articlefeedback')]
     output_type = list
 
@@ -23,7 +29,7 @@ class GetFeedbackV5(QueryOperation):
       post_process_response()
     """
     field_prefix = 'afvf'
-    input_field = SingleParam('pageid', required=True)
+    input_field = SingleParam('pageid')
     fields = [StaticParam('list', 'articlefeedbackv5-view-feedback')]
     output_type = list
 

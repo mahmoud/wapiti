@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation, StaticParam, MultiParam, SingleParam
-from models import PageIdentifier, RevisionInfo, Revision
+from base import QueryOperation
+from params import StaticParam, MultiParam, SingleParam
+from models import RevisionInfo, Revision
 
 
 DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|parsedcomment|tags'
@@ -13,7 +14,7 @@ class GetPageRevisionInfos(QueryOperation):
     todo: switch to new data model (using unified PageIdentifiers)
     """
     field_prefix = 'rv'
-    input_field = MultiParam('titles', key_prefix=False, required=True)
+    input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS)]
     output_type = [RevisionInfo]
@@ -33,7 +34,7 @@ class GetPageRevisionInfos(QueryOperation):
 
 
 class GetRevisionInfos(GetPageRevisionInfos):
-    input_field = MultiParam('revids', key_prefix=False, required=True)
+    input_field = MultiParam('revids', key_prefix=False)
     output_type = RevisionInfo
 
     def prepare_params(self, *a, **kw):
@@ -43,7 +44,7 @@ class GetRevisionInfos(GetPageRevisionInfos):
 
 
 class GetCurrentContent(QueryOperation):
-    input_field = SingleParam('titles', key_prefix=False, attr='title', required=True)
+    input_field = SingleParam('titles', key_prefix=False, attr='title')
     field_prefix = 'rv'
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS + '|content'),
@@ -55,7 +56,7 @@ class GetCurrentContent(QueryOperation):
         ret = []
         #redirect_list = query_resp.get('redirects', [])  # TODO
         #redirects = dict([(r['from'], r['to']) for r in redirect_list])
-        requested_title = self.query_param
+        requested_title = self.input_param
         is_parsed = self.kwargs.get('rvparse', False)
 
         pages = query_resp.get('pages', {})
@@ -73,7 +74,4 @@ class GetCurrentContent(QueryOperation):
 
 
 class GetCurrentTalkContent(GetCurrentContent):
-    input_field = MultiParam('titles',
-                             val_prefix='Talk:',
-                             key_prefix=False,
-                             required=True)
+    input_field = MultiParam('titles', val_prefix='Talk:', key_prefix=False)

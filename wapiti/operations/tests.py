@@ -219,14 +219,14 @@ def test_external_links(limit):
     return len(el_list) == limit
 
 
-def test_feedback_v4(limit):
-    get_v4 = GetFeedbackV4(604727)
-    v4_list = call_and_ret(get_v4)
-    return len(v4_list) > 1
+#def test_feedback_v4(limit):  # no longer available, see feedback.py for info
+#    get_v4 = GetFeedbackV4('604727')
+#    v4_list = call_and_ret(get_v4)
+#    return len(v4_list) > 1
 
 
 def test_feedback_v5(limit):
-    get_v5 = GetFeedbackV5(604727)
+    get_v5 = GetFeedbackV5('604727')  # TODO: support ints
     v5_list = call_and_ret(get_v5)
     return isinstance(v5_list, list)
 

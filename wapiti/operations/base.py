@@ -3,8 +3,9 @@ from __future__ import unicode_literals
 
 import json
 from abc import ABCMeta
+
 from collections import OrderedDict
-from functools import total_ordering, wraps
+from functools import wraps
 
 import sys
 from os.path import dirname, abspath
@@ -12,63 +13,23 @@ from os.path import dirname, abspath
 sys.path.append(dirname(dirname(abspath(__file__))))
 from ransom import Client
 
-from params import SingleParam, StaticParam, MultiParam  # tmp
-from utils import PriorityQueue
+from params import SingleParam
+from utils import PriorityQueue, MaxInt
 
 
 # TODO: if input_field is None, maybe don't require subclasses to
 # override __init__ somehow?
-# TODO: use an OrderedSet for results for automatic deduplication
 # TODO: use cont_str_key better for preparing parameters?
-# TODO: QueryParam that str()s to bar-separated string,
-# but is actually an list/tuple/iterable
-# TODO: parameter "coercion"
 # TODO: per_call_limit mess
 # TODO: abstracting away per-call limits by creating multiple
 # operations of the same type
-# TODO: better MAX_LIMIT/"ALL" constant
 # TODO: separate structure for saving completed subops (for debugging?)
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 IS_BOT = False
-if IS_BOT:
-    PER_CALL_LIMIT = 5000  # most of these globals will be set on client
-else:
-    PER_CALL_LIMIT = 500
-
-DEFAULT_LIMIT = 500  # TODO
 
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
-MAX_LIMIT = sys.maxint
-
-
-@total_ordering
-class MaxInt(long):
-    def __new__(cls, *a, **kw):
-        return super(MaxInt, cls).__new__(cls, sys.maxint + 1)
-
-    def __init__(self, name='MAX'):
-        self._name = str(name)
-
-    def __repr__(self):
-        return self._name
-
-    def __str__(self):
-        return repr(self)
-
-    # TODO: better math
-    for func in ('__add__', '__sub__', '__mul__', '__floordiv__', '__div__',
-                 '__mod__', '__divmod__', '__pow__', '__lshift__',
-                 '__rshift__'):
-        locals()[func] = lambda self, other: self
-
-    def __gt__(self, other):
-        return not self == other
-
-    def __eq__(self, other):
-        return isinstance(other, MaxInt)
-
 
 ALL = MaxInt('ALL')
 
@@ -81,6 +42,40 @@ class WapitiException(Exception):
 
 class NoMoreResults(Exception):
     pass
+
+
+class LimitSpec(object):
+    def __init__(self, _max, bot_max=None):
+        self.max = int(_max)
+        self.bot_max = bot_max or (self.max * 10)
+
+    def get_limit(self, is_bot=False):
+        if is_bot:
+            return self.bot_max
+        return self.max
+
+    def __int__(self):
+        return self.max
+
+    #def __repr__(self):
+    #    ret = super(LimitSpec, self).__repr__()
+    #    _, _, args = ret.partition('(')  # lulz
+    #    return '%s(%s' % (self.__class__.__name__, args)
+
+
+class ParamLimit(LimitSpec):
+    pass
+
+
+class QueryLimit(LimitSpec):
+    # TODO: magnitudes?
+    def __init__(self, _max, bot_max=None, mw_default=None):
+        super(QueryLimit, self).__init__(_max, bot_max)
+        self.mw_default = mw_default
+
+
+PL_50_500 = ParamLimit(50, 500)
+DEFAULT_QUERY_LIMIT = QL_50_500 = QueryLimit(50, 500, 10)
 
 
 """
@@ -131,6 +126,8 @@ class OperationMeta(ABCMeta):
             ret.input_field = input_field
         if input_field is None:
             ret.__init__ = get_inputless_init(ret.__init__)
+        else:
+            input_field.required = True
         # TODO: run through subop_chain, checking the outputs match up
         try:
             output_type = ret.output_type
@@ -173,15 +170,15 @@ class Operation(object):
     __metaclass__ = OperationMeta
 
     subop_chain = []
-    per_call_limit = PER_CALL_LIMIT
 
-    def __init__(self, input_param, **kw):
+    def __init__(self, input_param, limit=None, **kw):
         self.client = kw.pop('client', None)
         if self.client:
             self.api_url = self.client.api_url
+            self.is_bot_op = self.client.is_bot
         else:
             self.api_url = kw.get('api_url', DEFAULT_API_URL)
-        limit = kw.pop('limit', None)
+            self.is_bot_op = False
         self.set_input_param(input_param)
         self.set_limit(limit)
 
@@ -337,14 +334,20 @@ class QueryOperation(Operation):
     #input_field = None
     field_prefix = None        # e.g., 'gcm'
     cont_str_key = None
+    per_query_limit = QL_50_500
+    default_limit = ALL
 
     def __init__(self, input_param, limit=None, **kw):
+        if limit is None:
+            limit = self.default_limit
         kw['limit'] = limit
         super(QueryOperation, self).__init__(input_param, **kw)
         self.cont_strs = []
         self._set_params()
 
     def _set_params(self):
+        is_bot_op = self.is_bot_op
+
         params = {}
         for field in self.fields:
             pref_key = field.get_key(self.field_prefix)
@@ -354,12 +357,26 @@ class QueryOperation(Operation):
             qp_key_pref = self.input_field.get_key(self.field_prefix)
             qp_val = self.input_field.get_value(self.input_param)
             params[qp_key_pref] = qp_val
+
+            field_limit = self.input_field.limit or QL_50_500
+            try:
+                pq_pl = field_limit.get_limit(is_bot_op)
+            except AttributeError:
+                pq_pl = int(field_limit)
+            self.per_query_param_limit = pq_pl
         self.params = params
+
+        try:
+            per_query_limit = self.per_query_limit.get_limit(is_bot_op)
+        except AttributeError:
+            per_query_limit = int(self.per_query_limit)
+        self.per_query_limit = per_query_limit
+
+        return
 
     @property
     def current_limit(self):
-        # TODO: use new limit struct
-        return min(self.remaining, self.per_call_limit)
+        return min(self.remaining, self.per_query_limit)
 
     @property
     def remaining(self):
@@ -440,15 +457,6 @@ class QueryOperation(Operation):
         new_cont_str = self.get_cont_str(resp)
         self.cont_strs.append(new_cont_str)
         return new_results
-
-
-class SubjectResolvingQueryOperation(object):  # QueryOperation
-    """
-    def store_results(self, task, resp):
-        if self.kwargs.get('resolve_to_subject'):
-            pages = [p.get_subject_info() for p in pages]
-        return super(SubjectResolvingQueryOperation, self).store_results(pages)
-    """
 
 
 BASE_API_PARAMS = {'format': 'json',

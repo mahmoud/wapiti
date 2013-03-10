@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import sys
 from heapq import heappush, heappop
 import itertools
+from functools import total_ordering
 
 
 def is_scalar(obj):
@@ -12,6 +14,44 @@ def prefixed(arg, prefix=None):
     if prefix and not arg.startswith(prefix):
         arg = prefix + arg
     return arg
+
+
+@total_ordering
+class MaxInt(long):
+    """
+    A quite-large integer type that tries to be like float('inf')
+    (Infinity), but can be used for slicing and other integer
+    operations. float('inf') is generally more correct, except that
+    mixing a float and integer in arithmetic operations will result in
+    a float, which will raise an error on slicing.
+    """
+    def __new__(cls, *a, **kw):
+        return super(MaxInt, cls).__new__(cls, sys.maxint + 1)
+
+    def __init__(self, name='MAX'):
+        self._name = str(name)
+
+    def __repr__(self):
+        return self._name
+
+    def __str__(self):
+        return repr(self)
+
+    # TODO: better math
+    for func in ('__add__', '__sub__', '__mul__', '__floordiv__', '__div__',
+                 '__mod__', '__divmod__', '__pow__', '__lshift__',
+                 '__rshift__'):
+        locals()[func] = lambda self, other: self
+
+    def __gt__(self, other):
+        return not self == other
+
+    def __eq__(self, other):
+        return isinstance(other, MaxInt)
+
+    def __int__(self):
+        return self
+
 
 """
 TypeWrapper and MetaTypeWrapper are a pair of what are technically

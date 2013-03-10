@@ -89,6 +89,7 @@ class Param(object):
         self.multi = kw.pop('multi', None)
         self.accept_str = kw.pop('accept_str', True)
         self.key_prefix = kw.pop('key_prefix', True)  # True = filled in later
+        self.limit = kw.pop('limit', None)
 
         param_attr = kw.pop('attr', None)
         coerce_func = kw.pop('coerce', None)
