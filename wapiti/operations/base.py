@@ -227,7 +227,7 @@ class Operation(object):
         self._orig_limit = limit
         if isinstance(limit, Operation):
             self.parent = limit
-        if self.is_bijective:
+        if self.is_bijective and self.input_field:
             value_list = self.input_field.get_value_list(self.input_param)
             limit = len(value_list)
         self._limit = limit
@@ -415,7 +415,8 @@ class QueryOperation(Operation):
     def prepare_params(self, **kw):
         params = dict(self.params)
         # TODO: should not include limit for bijective operations
-        params[self.field_prefix + 'limit'] = self.current_limit
+        if not self.is_bijective:
+            params[self.field_prefix + 'limit'] = self.current_limit
         if self.last_cont_str:
             params[self.cont_str_key] = self.last_cont_str
         params['action'] = self.api_action

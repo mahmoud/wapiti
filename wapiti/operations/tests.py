@@ -268,51 +268,7 @@ def test_all_transcludes(limit):
 @magnitude(norm=20, big=550, huge=2000)
 def test_resolve_subjects(limit):
     get_res_transcludes = GetTranscludes('Template:ArticleHistory', limit)
-    tr_list = call_and_ret(get_res_transcludes)
-    tr_list = [t.get_subject_info() for t in tr_list]
-    return len(tr_list) == limit and all([t.is_subject_page for t in tr_list])
 
-
-def test_current_content(limit):
-    get_page = GetCurrentContent('Coffee')
-    page = call_and_ret(get_page)
-    return page[0].title == 'Coffee'
-
-
-def test_current_content_redirect(limit):
-    get_page = GetCurrentContent('Obama')
-    page = call_and_ret(get_page)
-    return page[0].title == 'Barack Obama'
-
-
-def test_current_talk_content(limit):
-    get_talk_page = GetCurrentTalkContent('Obama')
-    page = call_and_ret(get_talk_page)
-    return page[0].title == 'Talk:Barack Obama'
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_flatten_category(limit):
-    get_flat_cat = GetFlattenedCategory('History', limit)
-    cat_infos = call_and_ret(get_flat_cat)
-    assert len(set([ci.title for ci in cat_infos])) == len(cat_infos)
-    return len(cat_infos) == limit
-
-
-@magnitude(norm=10, big=550, huge=2000)
-def test_cat_mem_namespace(limit):
-    get_star_portals = GetCategory('Astronomy_portals',
-                                   limit,
-                                   namespace=['100'])
-    portals = call_and_ret(get_star_portals)
-    return len(portals) == limit
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_cat_pages_recursive(limit):
-    get_cat_pages_rec = GetCategoryPagesRecursive('Africa',
-                                                  limit,
-                                                  resolve_to_subject=True)
     pages = call_and_ret(get_cat_pages_rec)
     return len(pages) == limit
 
@@ -328,7 +284,7 @@ def test_cat_list(limit):
 def test_get_images(limit):
     get_imgs = GetImages('Coffee', limit)
     imgs = call_and_ret(get_imgs)
-    return len(imgs) == limit
+    return len(imgs) == limit or get_imgs.last_cont_str is None
 
 
 @magnitude(norm=5, big=550, huge=2000)
@@ -396,7 +352,7 @@ def test_query_pages(limit):
     for qpt in qp_types:
         get_pages = GetQueryPage(qpt, limit)
         ret.extend(call_and_ret(get_pages))
-    return len(ret) == limit * len(qp_types)
+    return len(ret) == len(qp_types)
 
 
 def test_nonexistent_query_page(limit):

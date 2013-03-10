@@ -6,7 +6,7 @@ from params import SingleParam, StaticParam
 from models import PageIdentifier, UserContrib
 from revisions import GetRevisionInfos
 
-DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|tags|title'
+DEFAULT_PROPS = 'ids|flags|timestamp|size|comment|tags|title'
 
 
 class GetUserContribs(QueryOperation):
