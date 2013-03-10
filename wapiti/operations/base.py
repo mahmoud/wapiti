@@ -473,15 +473,6 @@ class QueryOperation(Operation):
         return new_results
 
 
-class SubjectResolvingQueryOperation(object):  # QueryOperation
-    """
-    def store_results(self, task, resp):
-        if self.kwargs.get('resolve_to_subject'):
-            pages = [p.get_subject_info() for p in pages]
-        return super(SubjectResolvingQueryOperation, self).store_results(pages)
-    """
-
-
 BASE_API_PARAMS = {'format': 'json',
                    'servedby': 'true'}
 

@@ -8,11 +8,7 @@
 """
 from __future__ import unicode_literals
 
-# SubjectResolvingQueryOperation,
-
-from models import (CategoryInfo,
-                    PageIdentifier,
-                    PageInfo)
+from models import CategoryInfo, PageInfo
 from base import (QueryOperation,
                   Operation,
                   StaticParam,
@@ -48,7 +44,7 @@ class GetCategoryList(QueryOperation):
         return ret
 
 
-class GetCategory(QueryOperation):  # TODO: SubjectResolvingQueryOperation):
+class GetCategory(QueryOperation):
     """
     Lists the members in a category.
     """
