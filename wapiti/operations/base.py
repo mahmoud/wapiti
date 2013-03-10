@@ -219,7 +219,6 @@ class Operation(object):
         return self.api_url
 
     def set_limit(self, limit):
-        # TODO: use new limit structures
         # TODO: add support for callable limit getters?
         self._orig_limit = limit
         if isinstance(limit, Operation):
@@ -237,8 +236,6 @@ class Operation(object):
 
     @property
     def remaining(self):
-        # TODO: use new limit struct
-        # TODO: what about suboperations?
         limit = self.limit
         return max(0, limit - len(self.results))
 
@@ -442,7 +439,7 @@ class QueryOperation(Operation):
 
     def store_results(self, task, resp):
         if resp.notices:  # TODO: lift this
-            pass  # TODO: resolve some limit warnings
+            pass # TODO: resolve some limit warnings
             #print "may have an error: %r (%r)" % (resp.notices, resp.url)
         processed_resp = self.post_process_response(resp)
         if processed_resp is None:
