@@ -68,7 +68,8 @@ class QueryLimit(LimitSpec):
 
 
 PL_50_500 = ParamLimit(50, 500)
-DEFAULT_QUERY_LIMIT = QL_50_500 = QueryLimit(50, 500, 10)
+QL_50_500 = QueryLimit(50, 500, 10)
+DEFAULT_QUERY_LIMIT = QL_500_5000 = QueryLimit(500, 5000, 10)
 
 
 def get_inputless_init(old_init):
@@ -221,7 +222,7 @@ class Operation(object):
     def process(self):
         self.started = True
         task = self.get_current_task()
-        print self.remaining,
+        print self.__class__.__name__, self.remaining
         if task is None:
             raise NoMoreResults()
         elif isinstance(task, Operation):
@@ -282,7 +283,6 @@ class Operation(object):
         return ret
 
     def process_all(self):
-        print self.__class__.__name__
         while 1:  # TODO: +retry behavior
             try:
                 self.process()
@@ -309,7 +309,7 @@ class QueryOperation(Operation):
     api_action = 'query'
     field_prefix = None        # e.g., 'gcm'
     cont_str_key = None
-    per_query_limit = QL_50_500
+    per_query_limit = DEFAULT_QUERY_LIMIT
     default_limit = ALL
 
     def __init__(self, input_param, limit=None, **kw):
@@ -347,7 +347,6 @@ class QueryOperation(Operation):
                 pq_pl = int(field_limit)
             self.per_query_param_limit = pq_pl
         self.params = params
-
         try:
             per_query_limit = self.per_query_limit.get_limit(is_bot_op)
         except AttributeError:
@@ -361,15 +360,15 @@ class QueryOperation(Operation):
         self.subop_queues[subop_type] = subop_queue = PriorityQueue()
         chunk_size = self.per_query_param_limit
         for chunk in chunked_iter(self.input_param_list, chunk_size):
-            print len(chunk)
             subop_queue.add(subop_type(chunk))
         return
 
     @property
     def current_limit(self):
-        ret = min(self.remaining, self.per_query_limit)
+        ret = self.remaining
         if not self.is_bijective:
             ret = max(DEFAULT_MIN, ret)
+        ret = min(ret, self.per_query_limit)
         return ret
 
     @property

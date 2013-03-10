@@ -35,7 +35,7 @@ from misc import (GetCoordinates,
                   GetRecentChanges,
                   GetAllImageInfos)
 from user import (GetUserContribs,
-                  GetUserContribRevisionInfos)
+                  GetUserContribRevisions)
 from meta import GetSourceInfo
 
 PDB_ALL = True
@@ -318,17 +318,24 @@ def test_get_user_contribs(limit):
     contribs = call_and_ret(get_contribs)
     return len(contribs) == limit
 
-
+'''
 def test_get_meta(limit):
     get_source_info = GetSourceInfo()
     meta = call_and_ret(get_source_info)
     return bool(meta)
-
+'''
 
 def test_get_revision_infos(limit):
     get_revisions = GetRevisionInfos(['538903663', '539916351', '531458383'])
     rev_infos = call_and_ret(get_revisions)
     return len(rev_infos) == 3
+
+
+@magnitude(norm=20, big=550, huge=2000)
+def test_get_contrib_rev_infos(limit):
+    get_contrib_rev_infos = GetUserContribRevisions('Jimbo Wales', limit)
+    contrib_rev_infos = call_and_ret(get_contrib_rev_infos)
+    return len(contrib_rev_infos) == limit
 
 
 def test_get_image_info(limit):

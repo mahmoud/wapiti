@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from base import QueryOperation
+from base import QueryOperation, QueryLimit
 from params import StaticParam
 from models import PageIdentifier
 
@@ -13,6 +13,7 @@ class GetRandom(QueryOperation):
               StaticParam('inprop', 'subjectid|talkid|protection')]
     input_field = None
     output_type = [PageIdentifier]
+    per_query_limit = QueryLimit(10, 20)
 
     def extract_results(self, query_resp):
         ret = []

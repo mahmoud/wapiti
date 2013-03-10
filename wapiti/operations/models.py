@@ -31,9 +31,6 @@ ExternalLink = namedtuple('ExternalLink', 'url origin_page')
 NamespaceDescriptor = namedtuple('NamespaceDescriptor', 'id title canonical')
 InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
 
-UserContrib = namedtuple('UserContrib',
-                         'page_identifier user_text user_id rev_id')
-
 _MISSING = object()
 
 
@@ -275,7 +272,6 @@ class PageInfo(PageIdentifier):
         kwargs = dict(self.__dict__)
         kwargs['title'] = subj_title
         kwargs['ns'] = subj_ns
-        kwargs['page_id'] = self.subject_id
         return PageInfo(**kwargs)
 
     def get_talk_info(self):
@@ -288,7 +284,6 @@ class PageInfo(PageIdentifier):
         kwargs = dict(self.__dict__)
         kwargs['title'] = talk_title
         kwargs['ns'] = talk_ns
-        kwargs['page_id'] = self.talk_id
         return PageInfo(**kwargs)
 
 
