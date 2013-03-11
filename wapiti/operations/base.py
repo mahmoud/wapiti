@@ -32,12 +32,20 @@ from utils import PriorityQueue, MaxInt, chunked_iter
   non-dupe results, would set ops help?)
 - client -> root_owner.  parent operation (client
   if no parent op) -> owner.
+- pregenerate MediawikiCalls/URLs on QueryOperations
 
 fun metadata:
 
 - operations executed
 - suboperations skipped (from dedupe/prioritization/laziness)
 - web requests executed, kb downloaded
+
+retry strategies:
+
+- absolute number of failures
+- streaks/runs of failures
+- fail if first operation fails
+- reduce batch size/query limit on timeout
 """
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
