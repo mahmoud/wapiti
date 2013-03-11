@@ -18,6 +18,10 @@ from utils import PriorityQueue, MaxInt, chunked_iter
 
 # TODO: prioritization
 # TODO: suboperation deduplication (avoid redoing work)
+# TODO: handle automatic redirecting better
+# TODO: support batching and optimal limits
+# TODO: concurrency. get_current_task() -> get_current_tasks()
+# TODO: wrap exceptions
 # TODO: separate structure for saving completed subops (for debugging?)
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
@@ -58,7 +62,6 @@ class ParamLimit(LimitSpec):
 
 
 class QueryLimit(LimitSpec):
-    # TODO: magnitudes?
     def __init__(self, _max, bot_max=None, mw_default=None, _min=None):
         super(QueryLimit, self).__init__(_max, bot_max)
         self.mw_default = mw_default
