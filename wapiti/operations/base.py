@@ -200,16 +200,20 @@ class Operation(object):
         self.started = False
         self.results = OrderedDict()
 
-        subop_queues = OrderedDict()
+        subop_queues = [PriorityQueue()]
+        subop_param_sets = [set()]
         if self.subop_chain:
-            for subop_type in self.subop_chain:
-                subop_queues[subop_type] = PriorityQueue()
+            subop_queues.extend([PriorityQueue() for st in self.subop_chain])
+            subop_param_sets.extend([set() for st in self.subop_chain])
             first_subop_type = self.subop_chain[0]
             first_subop = first_subop_type(self.input_param,
                                            limit=ALL,
                                            client=self.client)
-            subop_queues[first_subop_type].add(first_subop)
+            first_subop._origin_queue = 1
+            subop_queues[1].add(first_subop)
+            subop_param_sets[1].update(self.input_param_list)
         self.subop_queues = subop_queues
+        self.subop_param_sets = subop_param_sets
 
     def get_progress(self):
         return len(self.results)
@@ -246,8 +250,7 @@ class Operation(object):
         if isinstance(limit, Operation):
             self.parent = limit
         if self.is_bijective and self.input_field:
-            value_list = self.input_field.get_value_list(self.input_param)
-            limit = len(value_list)
+            limit = len(self.input_param_list)
         self._limit = limit
 
     @property
@@ -284,7 +287,7 @@ class Operation(object):
     def get_current_task(self):
         if not self.remaining:
             return None
-        for subop_type, subop_queue in reversed(self.subop_queues.items()):
+        for subop_queue in reversed(self.subop_queues):
             while subop_queue:
                 subop = subop_queue[-1]
                 if subop.remaining:
@@ -295,23 +298,32 @@ class Operation(object):
 
     def store_results(self, task, results):
         new_res = []
+        origin_queue = getattr(task, '_origin_queue', len(self.subop_queues))
+        dest_queue = origin_queue + 1
+        do_save = True
+        do_enqueue = True
         if isinstance(self.subop_chain, Recursive):
-            new_res = self._update_results(results)
-            op_type = self.subop_chain.wrapped_type
-            new_subops = [op_type(r, limit=ALL) for r in new_res]
-            for op in new_subops:
-                self.subop_queues[op_type].add(op)
-            return new_res
-
-        task_type = type(task)
-        if not self.subop_chain or task_type is self.subop_chain[-1]:
-            new_res = self._update_results(results)
+            dest_queue = origin_queue
+            subop_type = self.subop_chain.wrapped_type
+        elif self.subop_chain and dest_queue < len(self.subop_queues):
+            # TODO: remedy gotcha: subop chain doesn't include parent
+            # task type, but subop queues do
+            do_save = False
+            subop_type = self.subop_chain[origin_queue]
         else:
-            i = self.subop_chain.index(task_type)
-            new_subop_type = self.subop_chain[i + 1]
+            do_enqueue = False
+
+        if do_save:
+            new_res = self._update_results(results)
+        if do_enqueue:
             for res in results:
-                new_subop = new_subop_type(res, limit=ALL)
-                self.subop_queues[new_subop_type].add(new_subop)
+                unique_key = getattr(res, 'unique_key', res)
+                if unique_key in self.subop_param_sets[dest_queue]:
+                    continue
+                new_subop = subop_type(res, limit=ALL)
+                new_subop.origin_queue = dest_queue
+                self.subop_queues[dest_queue].add(new_subop)
+                self.subop_param_sets[dest_queue].add(unique_key)
         return new_res
 
     def _update_results(self, results):
@@ -401,10 +413,12 @@ class QueryOperation(Operation):
 
     def _setup_multiplexing(self):
         subop_type = type(self)
-        self.subop_queues[subop_type] = subop_queue = PriorityQueue()
+        subop_queue = self.subop_queues[0]
         chunk_size = self.per_query_param_limit
         for chunk in chunked_iter(self.input_param_list, chunk_size):
-            subop_queue.add(subop_type(chunk))
+            subop = subop_type(chunk)
+            subop._origin_queue = 0
+            subop_queue.add(subop)
         return
 
     @property
