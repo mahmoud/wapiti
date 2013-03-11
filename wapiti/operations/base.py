@@ -24,7 +24,11 @@ from utils import PriorityQueue, MaxInt, chunked_iter
 # TODO: separate structure for saving completed subops (for debugging?)
 # TODO: WebRequestOperation: accepts URL, action (default: GET)
 # TODO: Model links (url attribute)
-
+# TODO: TypeWrapper for Recursive such that it can be used in a subop_chain
+#       not as the subop_chain itself.
+# TODO: support field param_type (for cases with ints and strs)
+# TODO: use source descriptor instead of api_url? (for op.source)
+# TODO: Redirect resolution cannot be used together with the revids= param
 """
 - what if operations were iterable over their results and process()
   returned the operation itself? (more expensive to iterate and find
@@ -32,6 +36,11 @@ from utils import PriorityQueue, MaxInt, chunked_iter
 - client -> root_owner.  parent operation (client
   if no parent op) -> owner.
 - pregenerate MediawikiCalls/URLs on QueryOperations
+
+Operation modifiers:
+- Prioritized
+- Recursive
+- Buffered
 
 fun metadata:
 
@@ -51,6 +60,10 @@ prioritization/batching/concurrency implementation thoughts:
 - hands-off implementation via multiplexing?
 - separate priority queues for params and suboperations?
 - fancy new datastructure with dedupe + priority queueing built-in
+- buffering: do 3/5/10 GetCategoryInfos before fetching member pages
+- early subop production based on next parameter priority
+  sinking below a certain threshold?
+  (e.g., next param's subcats=5 -> fetch more category infos)
 """
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'

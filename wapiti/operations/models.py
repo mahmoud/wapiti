@@ -33,7 +33,6 @@ InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
 
 _MISSING = object()
 
-
 class NamespaceDescriptor(object):
     def __init__(self, id, title, canonical, **kw):
         self.id = id
@@ -47,6 +46,12 @@ class WapitiModelAttr(object):
         self.mw_name = kw.pop('mw_name', name)
         self.display = kw.pop('display', False)
         try:
+            self.type = kw.pop('type')
+            if not isinstance(self.type, type):
+                raise TypeError("WapitiModelAttr kwarg 'type' expected type")
+        except KeyError:
+            self.type = _MISSING
+        try:
             self.default = kw.pop('default')
         except KeyError:
             self.default = _MISSING
@@ -58,6 +63,8 @@ class WapitiModelAttr(object):
         ret = [self.__class__.__name__, '(', repr(self.name)]
         if self.mw_name != self.name:
             ret.extend([', mw_name=', repr(self.mw_name)])
+        if self.type is not _MISSING:
+            ret.extend([', type=', self.type.__name__])
         if self.default is not _MISSING:
             ret.extend([', default=', repr(self.default)])
         if self.display:
@@ -66,7 +73,8 @@ class WapitiModelAttr(object):
         return ''.join(ret)
 
     def __iter__(self):
-        return iter((self.name, self.mw_name, self.default, self.display))
+        for attr in ('name', 'mw_name', 'type', 'default', 'display'):
+            yield getattr(self, attr)
 
 
 WMA = WapitiModelAttr  # Windows Media Audio
@@ -138,7 +146,8 @@ class WapitiModelMeta(type):
         all_attributes.update(attr_dict)
         attrs['attributes'] = all_attributes.values()
         if 'unique_on' in attrs:
-            attrs['unique_key'] = property(get_unique_func(attrs['unique_on']))
+            unique_func = get_unique_func(attrs['unique_on'])
+            attrs['unique_key'] = property(unique_func)
         ret = super(WapitiModelMeta, cls).__new__(cls, name, bases, attrs)
         return ret
 
@@ -173,6 +182,9 @@ class WapitiModelBase(object):
                     missing.append(attr.name)
                     continue
                 val = attr.default
+            if attr.type is not _MISSING and not isinstance(val, attr.type):
+                val = attr.type(val)
+                print val
             setattr(self, attr.name, val)
         if missing:
             raise ValueError('missing expected keyword arguments: %r'
@@ -185,7 +197,7 @@ class WapitiModelBase(object):
         kwargs = {}
         all_q_dict = dict(kw)
         all_q_dict.update(q_dict)
-        for name, mw_name, _, _ in cls.attributes:
+        for name, mw_name, _, _, _ in cls.attributes:
             if mw_name is None:
                 continue
             try:
@@ -197,7 +209,7 @@ class WapitiModelBase(object):
     def get_display_str(self, raise_exc=True):
         attr_list = []
         try:
-            for (name, _, _, do_disp) in self.attributes:
+            for (name, _, _, _, do_disp) in self.attributes:
                 if not do_disp:
                     continue
                 # TODO: don't display values if equal to default?
@@ -216,7 +228,7 @@ class WapitiModelBase(object):
         try:
             return self.get_display_str()
         except:
-            return super(PageIdentifier, self).__repr__()
+            return super(WapitiModelBase, self).__repr__()
 
 
 class SourceInfo(WapitiModelBase):
@@ -288,10 +300,12 @@ class PageInfo(PageIdentifier):
 
 
 class CategoryInfo(PageInfo):
-    attributes = [WMA('total_count', mw_name='size', default=0, display=True),
-                  WMA('page_count', mw_name='pages', default=0),
-                  WMA('file_count', mw_name='files', default=0),
-                  WMA('subcat_count', mw_name='subcats', default=0, display=True)]
+    kw = {'default': 0, 'type': int}
+    attributes = [WMA('total_count', mw_name='size', display=True, **kw),
+                  WMA('page_count', mw_name='pages', **kw),
+                  WMA('file_count', mw_name='files', **kw),
+                  WMA('subcat_count', mw_name='subcats', display=True, **kw)]
+    del kw
 
 
 class RevisionInfo(PageInfo):
