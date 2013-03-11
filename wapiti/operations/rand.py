@@ -4,9 +4,12 @@ from __future__ import unicode_literals
 from base import QueryOperation, QueryLimit
 from params import StaticParam
 from models import PageIdentifier
-
+from utils import OperationExample, len_eq
 
 class GetRandom(QueryOperation):
+    """
+    Fetch random pages using MediaWiki's Special:Random.
+    """
     field_prefix = 'grn'
     fields = [StaticParam('generator', 'random'),
               StaticParam('prop', 'info'),
@@ -14,6 +17,7 @@ class GetRandom(QueryOperation):
     input_field = None
     output_type = [PageIdentifier]
     per_query_limit = QueryLimit(10, 20)
+    examples = [OperationExample(test=len_eq)]
 
     def extract_results(self, query_resp):
         ret = []

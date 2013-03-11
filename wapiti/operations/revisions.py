@@ -44,7 +44,7 @@ def extract_template(tmpl_name, text):
 
 class GetPageRevisionInfos(QueryOperation):
     """
-
+    Fetch revisions for pages.
     """
     field_prefix = 'rv'
     input_field = MultiParam('titles', key_prefix=False)
@@ -67,6 +67,9 @@ class GetPageRevisionInfos(QueryOperation):
 
 
 class GetRevisionInfos(GetPageRevisionInfos):
+    """
+    Fetch information about specific revision.
+    """
     input_field = MultiParam('revids', attr='rev_id', key_prefix=False)
     output_type = RevisionInfo
 
@@ -77,6 +80,9 @@ class GetRevisionInfos(GetPageRevisionInfos):
 
 
 class GetCurrentContent(QueryOperation):
+    """
+    Fetch full content for current (top) revision.
+    """
     input_field = SingleParam('titles', key_prefix=False, attr='title')
     field_prefix = 'rv'
     fields = [StaticParam('prop', 'revisions'),
@@ -104,6 +110,10 @@ class GetCurrentContent(QueryOperation):
             revision.req_title = requested_title
             ret.append(revision)
         return ret
+
+
+class GetRevisionContent(GetCurrentContent):
+    input_field = SingleParam('revids', key_prefix=False, attr='rev_id')
 
 
 class GetCurrentTalkContent(GetCurrentContent):

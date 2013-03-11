@@ -25,7 +25,8 @@ from feedback import GetFeedbackV5
 from revisions import (GetPageRevisionInfos,
                        GetRevisionInfos,
                        GetCurrentContent,
-                       GetCurrentTalkContent)
+                       GetCurrentTalkContent,
+                       GetRevisionContent)
 from templates import GetTranscludes, GetAllTranscludes
 from misc import (GetCoordinates,
                   GeoSearch,
@@ -90,6 +91,32 @@ def magnitude(norm, big=None, huge=None):
         wrapped.huge = huge
         return wrapped
     return mag_dec
+
+
+def get_operations():
+    ret = []
+    for name, obj in globals().items():
+        if isinstance(obj, type) and issubclass(obj, base.Operation):
+            examples = getattr(obj, 'examples', None)
+            if not examples:
+                continue
+            ret.append(obj)
+    return ret
+
+def test_operation_examples(limit):
+    ops = get_operations()
+    ret = []
+    for op in ops:
+        op_limit = int(getattr(op, 'per_query_limit', 50)) * 2 + 1
+        for example in op.examples:
+            input_param = example.input_param
+            if input_param is None:
+                ret.append(op(limit=op_limit))
+            else:
+                ret.append(op(input_param, limit=op_limit))
+    for op in ret:
+        op()
+    return ret
 
 
 def test_unicode_title(limit):
@@ -324,6 +351,13 @@ def test_get_meta(limit):
     meta = call_and_ret(get_source_info)
     return bool(meta)
 '''
+
+
+def test_get_revision_content(limit):
+    get_rev_content = GetRevisionContent('539916351')
+    rev_content = call_and_ret(get_rev_content)
+    return len(rev_content) == 1
+
 
 def test_get_revision_infos(limit):
     get_revisions = GetRevisionInfos(['538903663', '539916351', '531458383'])

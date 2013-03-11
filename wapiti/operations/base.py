@@ -83,6 +83,18 @@ def get_inputless_init(old_init):
     return inputless_init
 
 
+def operation_signature_doc(operation):
+    if operation.input_field is None:
+        doc_input = 'None'
+    else:
+        doc_input = operation.input_field.key
+    doc_output = operation.singular_output_type.__name__
+    doc_template = 'Input: %s, Output: %s'
+    if not operation.is_bijective:
+        doc_template = 'Input: %s, Output: List of %ss'
+    return doc_template % (doc_input, doc_output)
+
+
 class OperationMeta(ABCMeta):
     def __new__(cls, name, bases, attrs):
         ret = super(OperationMeta, cls).__new__(cls, name, bases, attrs)
@@ -115,7 +127,8 @@ class OperationMeta(ABCMeta):
         ret.is_bijective = True
         if type(output_type) is list and output_type:
             ret.is_bijective = False
-
+        ret.__doc__ = (ret.__doc__ and ret.__doc__ + '\n\n') or ''
+        ret.__doc__ += operation_signature_doc(ret)
         return ret
 
 
