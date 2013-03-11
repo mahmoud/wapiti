@@ -23,6 +23,22 @@ from utils import PriorityQueue, MaxInt, chunked_iter
 # TODO: concurrency. get_current_task() -> get_current_tasks()
 # TODO: wrap exceptions
 # TODO: separate structure for saving completed subops (for debugging?)
+# TODO: WebRequestOperation: accepts URL, action (default: GET)
+# TODO: Model links (url attribute)
+
+"""
+- what if operations were iterable over their results and process()
+  returned the operation itself? (more expensive to iterate and find
+  non-dupe results, would set ops help?)
+- client -> root_owner.  parent operation (client
+  if no parent op) -> owner.
+
+fun metadata:
+
+- operations executed
+- suboperations skipped (from dedupe/prioritization/laziness)
+- web requests executed, kb downloaded
+"""
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 
