@@ -17,7 +17,7 @@ from params import StaticParam, SingleParam, MultiParam
 
 class GetCategoryList(QueryOperation):
     """
-    Lists the categories for a page.
+    Fetch the categories containing pages.
     """
     field_prefix = 'gcl'
     input_field = MultiParam('titles', key_prefix=False)
@@ -44,7 +44,7 @@ class GetCategoryList(QueryOperation):
 
 class GetCategory(QueryOperation):
     """
-    Lists the members in a category.
+    Fetch the members in category.
     """
     field_prefix = 'gcm'
     input_field = SingleParam('title', val_prefix='Category:')
@@ -68,15 +68,15 @@ class GetCategory(QueryOperation):
 
 class GetCategoryPages(GetCategory):
     """
-    Lists the pages (namespace 0 or 1) in a category.
+    Fetch the pages (namespace 0 or 1) that are members of category.
     """
     fields = GetCategory.fields + [StaticParam('gcmnamespace', '0|1')]
 
 
 class GetSubcategoryInfos(QueryOperation):
     """
-    The `CategoryInfo` for a category, which is useful to check the the number
-    of members or sub-categories.
+    Fetch `CategoryInfo` for category, used to get the count of of members or
+    sub-categories.
     """
     field_prefix = 'gcm'
     input_field = SingleParam('title', val_prefix='Category:')
@@ -102,7 +102,7 @@ class GetSubcategoryInfos(QueryOperation):
 
 class GetAllCategoryInfos(GetSubcategoryInfos):
     """
-    Lists all the categories on the wiki.
+    Fetch all categories on the source wiki.
     """
     field_prefix = 'gac'
     input_field = None
@@ -112,14 +112,14 @@ class GetAllCategoryInfos(GetSubcategoryInfos):
 
 class GetFlattenedCategory(Operation):
     """
-    Lists all of a category's sub-categories.
+    Fetch all category's sub-categories.
     """
     subop_chain = Recursive(GetSubcategoryInfos)
 
 
 class GetCategoryRecursive(Operation):
     """
-    Lists all the members of a category and its sub-categories. A Wikipedia
+    Fetch all the members of category and its sub-categories. A Wikipedia
     category tree can have a large number of shallow categories, so this
     operation will prioritize the larger categories by default.
     """
@@ -128,7 +128,7 @@ class GetCategoryRecursive(Operation):
 
 class GetCategoryPagesRecursive(GetCategoryRecursive):
     """
-    Lists all the pages (namespace 0 and 1) in a category and its sub-
+    Fetch all pages (namespace 0 and 1) in category and its sub-
     categories.
     """
     subop_chain = (GetFlattenedCategory, GetCategoryPages)

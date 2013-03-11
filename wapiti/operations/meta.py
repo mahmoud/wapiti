@@ -11,9 +11,44 @@ DEFAULT_PROPS = ('general',
                  'namespacealiases',
                  'statistics',
                  'interwikimap')
+"""
+OTHER_PROPS = ['namespaces',
+               'namespacealiases',
+               'specialpagealiases',
+               'magicwords',
+               'statistics',
+               'interwikimap',
+               'dbrepllag',
+               'usergroups',
+               'extensions',
+               'fileextensions',
+               'rightsinfo',
+               'languages',
+               'skins',
+               'extensiontags',
+               'functionhooks',
+               'showhooks',
+               'variables',
+               'protocols']
+ """
 
 
 class GetSourceInfo(QueryOperation):
+    """
+    Fetch meta site information about the source wiki.
+
+    The default properties include:
+
+    - General source information: Main Page, base, sitename, generator,
+      phpversion,  phpsapi, dbtype, dbversion, case, rights, lang, fallback,
+      fallback8bitEncoding, writeapi, timezone, timeoffset, articlepath,
+      scriptpath, script, variantarticlepath, server, wikiid, time, misermode,
+      maxuploadsize
+    - Namespace map
+    - Interwiki map
+    - Statistics: pages, articles, edits, images, users, activeusers, admins,
+      jobs
+    """
     field_prefix = 'si'
     input_field = None
     fields = [StaticParam('meta', 'siteinfo'),

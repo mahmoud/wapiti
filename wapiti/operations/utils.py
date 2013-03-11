@@ -53,6 +53,19 @@ class MaxInt(long):
         return self
 
 
+class OperationExample(object):
+    def __init__(self, input_param=None, test=None):
+        self.input_param = input_param
+        if test is None:
+            test = bool
+        self.test = test
+
+
+def len_eq(length):
+    def test_len_eq(other):
+        return len(other) == length
+    return test_len_eq
+
 """
 TypeWrapper and MetaTypeWrapper are a pair of what are technically
 metaclasses, but really just a very overwrought way of enabling

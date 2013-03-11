@@ -7,6 +7,9 @@ from models import PageIdentifier, LanguageLink, InterwikiLink, ExternalLink
 
 
 class GetImages(QueryOperation):
+    """
+    Fetch the images embedded on pages.
+    """
     field_prefix = 'gim'
     input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('generator', 'images'),
@@ -28,6 +31,9 @@ class GetImages(QueryOperation):
 
 
 class GetBacklinks(QueryOperation):
+    """
+    Fetch page's incoming links from other pages on source wiki.
+    """
     field_prefix = 'bl'
     input_field = SingleParam('title')
     fields = [StaticParam('list', 'backlinks')]
@@ -46,6 +52,9 @@ class GetBacklinks(QueryOperation):
 
 
 class GetLinks(QueryOperation):
+    """
+    Fetch page's outgoing links to other pages on source wiki.
+    """
     field_prefix = 'gpl'
     input_field = SingleParam('titles', key_prefix=False)
     fields = [StaticParam('generator', 'links'),
@@ -66,8 +75,11 @@ class GetLinks(QueryOperation):
 
 
 class GetExternalLinks(QueryOperation):
+    """
+    Fetch page outgoing links to URLs outside of source wiki.
+    """
     field_prefix = 'el'
-    input_field = MultiParam('titles', key_prefix=False)
+    input_field = SingleParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'extlinks')]
     output_type = [ExternalLink]
 
@@ -93,6 +105,12 @@ class GetExternalLinks(QueryOperation):
 
 
 class GetLanguageLinks(QueryOperation):
+    """
+    Fetch pages' interlanguage links (aka "Language Links" in the MediaWiki
+    API). Interlanguage links should correspond to pages on another language
+    wiki. Mostly useful on a source wiki with a family of similar multilingual
+    projects, such as Wikipedias.
+    """
     field_prefix = 'll'
     input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'langlinks'),
@@ -116,6 +134,9 @@ class GetLanguageLinks(QueryOperation):
 
 
 class GetInterwikiLinks(QueryOperation):
+    """
+    Fetch pages' interwiki links.
+    """
     field_prefix = 'iw'
     input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'iwlinks'),
