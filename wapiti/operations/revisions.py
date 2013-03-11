@@ -85,4 +85,9 @@ class GetRevisionContent(GetCurrentContent):
 
 
 class GetCurrentTalkContent(GetCurrentContent):
+    """
+    The simple prefix behavior means this operation will only work on
+    namespace 0 pages. I wouldn't rely on this operation being around
+    for long.
+    """
     input_field = MultiParam('titles', val_prefix='Talk:', key_prefix=False)
