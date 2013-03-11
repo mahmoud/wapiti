@@ -171,13 +171,13 @@ class Operation(object):
             subop_queues[first_subop_type].add(first_subop)
         self.subop_queues = subop_queues
 
-    #@abstractmethod
-    #def get_progress(self):
-    #    pass
+    def get_progress(self):
+        return len(self.results)
 
-    #@abstractmethod
-    #def get_relative_progress(self):
-    #    pass
+    def get_relative_progress(self):
+        if self.limit and self.limit is not ALL:
+            return len(self.results) / float(self.limit)
+        return 0.0
 
     def set_input_param(self, param):
         self._orig_input_param = self._input_param = param
