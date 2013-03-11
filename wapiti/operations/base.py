@@ -17,9 +17,8 @@ from params import SingleParam
 from utils import PriorityQueue, MaxInt, chunked_iter
 
 # TODO: prioritization
-# TODO: suboperation deduplication (avoid redoing work)
 # TODO: handle automatic redirecting better
-# TODO: support batching and optimal limits
+# TODO: support batching and optimization limits
 # TODO: concurrency. get_current_task() -> get_current_tasks()
 # TODO: wrap exceptions
 # TODO: separate structure for saving completed subops (for debugging?)
@@ -45,7 +44,13 @@ retry strategies:
 - absolute number of failures
 - streaks/runs of failures
 - fail if first operation fails
-- reduce batch size/query limit on timeout
+- reduce batch size/query limit on timeouts
+
+prioritization/batching/concurrency implementation thoughts:
+
+- hands-off implementation via multiplexing?
+- separate priority queues for params and suboperations?
+- fancy new datastructure with dedupe + priority queueing built-in
 """
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
@@ -321,7 +326,7 @@ class Operation(object):
                 if unique_key in self.subop_param_sets[dest_queue]:
                     continue
                 new_subop = subop_type(res, limit=ALL)
-                new_subop.origin_queue = dest_queue
+                new_subop._origin_queue = dest_queue
                 self.subop_queues[dest_queue].add(new_subop)
                 self.subop_param_sets[dest_queue].add(unique_key)
         return new_res
