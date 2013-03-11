@@ -54,7 +54,7 @@ class MaxInt(long):
 
 
 class OperationExample(object):
-    def __init__(self, input_param=None, test=None):
+    def __init__(self, input_param=None, limit=None, test=None):
         self.input_param = input_param
         if test is None:
             test = bool

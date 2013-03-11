@@ -92,19 +92,18 @@ def magnitude(norm, big=None, huge=None):
 
 
 def get_operations():
-    ret = []
-    for name, obj in globals().items():
-        if isinstance(obj, type) and issubclass(obj, base.Operation):
-            examples = getattr(obj, 'examples', None)
-            if not examples:
-                continue
-            ret.append(obj)
-    return ret
+    return [obj for obj in globals().values()
+            if isinstance(obj, type)
+            and issubclass(obj, base.Operation)]
 
-def test_operation_examples(limit):
+
+def get_example_operations(limit):
     ops = get_operations()
     ret = []
     for op in ops:
+        examples = getattr(op, 'examples', None)
+        if not examples:
+            continue
         op_limit = int(getattr(op, 'per_query_limit', 50)) * 2 + 1
         for example in op.examples:
             input_param = example.input_param
