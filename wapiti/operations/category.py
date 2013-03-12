@@ -14,6 +14,7 @@ from base import (QueryOperation,
                   Recursive,
                   Tune)
 from params import StaticParam, SingleParam, MultiParam
+from utils import OperationExample
 
 
 class GetCategoryList(QueryOperation):
@@ -24,8 +25,7 @@ class GetCategoryList(QueryOperation):
     input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('generator', 'categories'),
               StaticParam('prop', 'categoryinfo'),
-              SingleParam('gclshow', ''),  # hidden, !hidden
-              ]
+              SingleParam('gclshow', '')]  # hidden, !hidden
     output_type = [CategoryInfo]
 
     def extract_results(self, query_resp):
@@ -54,6 +54,7 @@ class GetCategory(QueryOperation):
               StaticParam('inprop', 'subjectid|talkid|protection'),
               MultiParam('namespace')]
     output_type = [PageInfo]
+    examples = [OperationExample('Featured_articles')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -85,6 +86,7 @@ class GetSubcategoryInfos(QueryOperation):
               StaticParam('prop', 'categoryinfo'),
               StaticParam('gcmtype', 'subcat')]
     output_type = [CategoryInfo]
+    examples = [OperationExample('FA-Class_articles')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -109,6 +111,7 @@ class GetAllCategoryInfos(GetSubcategoryInfos):
     input_field = None
     fields = [StaticParam('generator', 'allcategories'),
               StaticParam('prop', 'categoryinfo')]
+    examples = [OperationExample('basic allcats test')]
 
 
 class GetFlattenedCategory(Operation):
@@ -117,6 +120,7 @@ class GetFlattenedCategory(Operation):
     """
     subop_chain = [Tune(Recursive(GetSubcategoryInfos),
                         priority='subcat_count')]
+    examples = [OperationExample('Africa', 100)]
 
 
 class GetCategoryRecursive(Operation):
@@ -127,6 +131,7 @@ class GetCategoryRecursive(Operation):
     """
     subop_chain = (GetFlattenedCategory,
                    Tune(GetCategory, priority='total_count'))
+    examples = [OperationExample('Africa', 100)]
 
 
 class GetCategoryPagesRecursive(Operation):
@@ -136,3 +141,4 @@ class GetCategoryPagesRecursive(Operation):
     """
     subop_chain = (GetFlattenedCategory,
                    Tune(GetCategoryPages, priority='page_count'))
+    examples = [OperationExample('Africa', 100)]

@@ -152,6 +152,8 @@ def operation_signature_doc(operation):
 
 
 class OperationMeta(ABCMeta):
+    _all_ops = []
+
     def __new__(cls, name, bases, attrs):
         ret = super(OperationMeta, cls).__new__(cls, name, bases, attrs)
         if name == 'Operation' or name == 'QueryOperation':
@@ -193,6 +195,7 @@ class OperationMeta(ABCMeta):
 
         ret.__doc__ = (ret.__doc__ and ret.__doc__ + '\n\n') or ''
         ret.__doc__ += operation_signature_doc(ret)
+        cls._all_ops.append(ret)
         return ret
 
 

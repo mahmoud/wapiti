@@ -113,7 +113,9 @@ def test_example_operations(limit=None):
     ex_ops = get_op_examples()
     results = {}
     for ex in ex_ops:
-        results[ex.disp_name] = ex.make_op().process_all()
+        op = ex.make_op(mag=limit)
+        op.process_all()
+        results[ex.disp_name] = ex.test(op)
     return results
 
 
@@ -127,13 +129,6 @@ def test_coercion_basic(limit=None):
     pid = PageIdentifier(title='Africa', page_id=123, ns=4, source='enwp')
     get_subcats = GetSubcategoryInfos(pid, limit)
     return get_subcats.input_param == 'Category:Africa'
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_category_basic(limit):
-    get_2k_featured = GetCategory('Featured_articles', limit)
-    pages = call_and_ret(get_2k_featured)
-    return len(pages) == limit
 
 
 def test_nonexistent_cat_error(limit):
@@ -153,33 +148,6 @@ def test_multiplexing(limit=None):
     get_rev_infos = GetRevisionInfos(rev_ids)
     rev_infos = call_and_ret(get_rev_infos)
     return len(rev_infos) > (0.9 * limit)  # a couple might be missing
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_subcategory_infos(limit):
-    get_subcats = GetSubcategoryInfos('FA-Class_articles', limit)
-    subcats = call_and_ret(get_subcats)
-    return len(subcats) == limit
-
-
-def test_all_category_infos(limit):
-    get_all_cats = GetAllCategoryInfos(501)
-    all_cats = call_and_ret(get_all_cats)
-    return len(all_cats) == 501
-
-
-@magnitude(norm=60, big=1000, huge=10000)
-def test_category_recursive(limit):
-    get_limit_recursive = GetCategoryRecursive('Africa', limit)
-    pages = call_and_ret(get_limit_recursive)
-    return len(pages) == limit
-
-
-@magnitude(norm=60, big=1000, huge=10000)
-def test_flattened_category(limit):
-    get_flat_cat = GetFlattenedCategory('Africa', limit)
-    pages = call_and_ret(get_flat_cat)
-    return len(pages) == limit
 
 
 def test_single_prot(limit):

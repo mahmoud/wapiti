@@ -60,12 +60,12 @@ class OperationExample(object):
     # types of tests: limit_equal_or_depleted, ?
     """
     def __init__(self,
-                 name='',
                  param=None,
                  limit=None,
                  test=None,
-                 op_type=None):
-        self.name = name
+                 op_type=None,
+                 **kw):
+        self.name = kw.pop('name', '')
         self.op_type = op_type
         self.param = param
         self.limit = limit
@@ -99,16 +99,17 @@ class OperationExample(object):
             self.limit = pql.get_limit()
         print self.disp_name
 
-    def make_op(self, mag=1):
+    def make_op(self, mag=None):
         if not self.op_type:
             raise TypeError('no Operation type assigned')
+        mag = int(mag or 1)
         if self.op_type.input_field is None:
             return self.op_type(self.limit * mag)
         return self.op_type(self.param, self.limit * mag)
 
 
 def limit_equal_or_depleted(op):
-    if op.is_depleted:
+    if getattr(op, 'is_depleted', None):
         return True
     elif len(op.results) == op.limit:
         return True
