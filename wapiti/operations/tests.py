@@ -168,6 +168,13 @@ def test_category_recursive(limit):
     return len(pages) == limit
 
 
+@magnitude(norm=60, big=1000, huge=10000)
+def test_flattened_category(limit):
+    get_flat_cat = GetFlattenedCategory('Africa', limit)
+    pages = call_and_ret(get_flat_cat)
+    return len(pages) == limit
+
+
 def test_single_prot(limit):
     get_coffee_prot = GetProtections('Coffee')
     prots = call_and_ret(get_coffee_prot)

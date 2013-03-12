@@ -11,7 +11,8 @@ from __future__ import unicode_literals
 from models import CategoryInfo, PageInfo
 from base import (QueryOperation,
                   Operation,
-                  Recursive)
+                  Recursive,
+                  Tune)
 from params import StaticParam, SingleParam, MultiParam
 
 
@@ -114,7 +115,8 @@ class GetFlattenedCategory(Operation):
     """
     Fetch all category's sub-categories.
     """
-    subop_chain = Recursive(GetSubcategoryInfos)
+    subop_chain = [Tune(Recursive(GetSubcategoryInfos),
+                        priority='subcat_count')]
 
 
 class GetCategoryRecursive(Operation):
@@ -123,12 +125,14 @@ class GetCategoryRecursive(Operation):
     category tree can have a large number of shallow categories, so this
     operation will prioritize the larger categories by default.
     """
-    subop_chain = (GetFlattenedCategory, GetCategory)
+    subop_chain = (GetFlattenedCategory,
+                   Tune(GetCategory, priority='total_count'))
 
 
-class GetCategoryPagesRecursive(GetCategoryRecursive):
+class GetCategoryPagesRecursive(Operation):
     """
     Fetch all pages (namespace 0 and 1) in category and its sub-
     categories.
     """
-    subop_chain = (GetFlattenedCategory, GetCategoryPages)
+    subop_chain = (GetFlattenedCategory,
+                   Tune(GetCategoryPages, priority='page_count'))

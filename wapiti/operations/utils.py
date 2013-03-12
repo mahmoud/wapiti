@@ -100,10 +100,10 @@ def make_type_wrapper(name, init_args=None):
         args.append(arg)
 
     attrs = {'_args': args, '_defaults': defaults}
-    return TypeWrapperType(str(name), (TypeWrapper,), attrs)
+    return WrapperType(str(name), (Wrapper,), attrs)
 
 
-class TypeWrapperType(type):
+class WrapperType(type):
     @property
     def _repr_args(self):
         ret = []
@@ -122,40 +122,18 @@ class TypeWrapperType(type):
             return '%s(%r)' % (cname, name)
 
 
-class TypeWrapper(type):
-    __metaclass__ = TypeWrapperType
+class Wrapper(object):
+    __metaclass__ = WrapperType
     _args, _defaults = [], {}
 
-    def __new__(mcls, name_or_type, bases=None, attrs=None, **kw):
-        nort = name_or_type
-        attrs = attrs or {}
-        if bases is None:
-            if not isinstance(nort, type):
-                raise TypeError('expected type, not %r' % nort)
-            bases = (nort,)
-
-        if len(bases) > 1:
-            raise TypeError('TypeWrapper wraps a single type, not %r' % bases)
-        elif not bases:
-            raise TypeError('cannot create wrapped types without base type')
-
-        wrapped_attr_dict = {}
-        base_type = bases[0]
-        if isinstance(base_type, TypeWrapper):
-            wrapped_attr_dict = dict(base_type._wrapped_dict)
-            base_type = base_type.__bases__[0]
-
-        bases = (base_type,)
-        base_name = str(base_type.__name__)
-        attrs['__module__'] = base_type.__module__
-        attrs['_wrapped_dict'] = {}
-        ret = type.__new__(mcls, base_name, bases, attrs)
-
-        for attr, val in wrapped_attr_dict.items():
-            setattr(ret, attr, val)
-        return ret
-
     def __init__(self, to_wrap, *args, **kwargs):
+        wrapped_dict = {}
+        if isinstance(to_wrap, Wrapper):
+            wrapped_dict = dict(to_wrap._wrapped_dict)
+            to_wrap = to_wrap._wrapped
+        self.__dict__['_wrapped'] = to_wrap
+        self.__dict__['_wrapped_dict'] = wrapped_dict
+
         cn = self.__name__
         for arg_i, arg_name in enumerate(self._args):
             try:
@@ -173,27 +151,27 @@ class TypeWrapper(type):
                         raise TypeError('%s expected required arg %r'
                                         % (cn, arg_name))
             setattr(self, arg_name, val)
-        if kwargs:
-            raise TypeError('%s got unexpected keyword arguments: %r'
-                            % (cn, kwargs.keys()))
-
-    @property
-    def _wrapped_type(self):
-        return self.__bases__[0]
+        return
 
     def __repr__(self):
         kv = ', '.join(['%s=%r' % (k, v) for k, v
                         in self._wrapped_dict.items()])
-        tmpl = "<wrapped class '%s.%s' (%s)>"
-        return tmpl % (self.__module__, self.__name__, kv)
+        tmpl = "<wrapped %r (%s)>"
+        return tmpl % (self._wrapped, kv)
 
-    def __setattr__(cls, name, val):
-        super(TypeWrapper, cls).__setattr__(name, val)
-        cls._wrapped_dict[name] = val
+    def __getattr__(self, name):
+        return getattr(self._wrapped, name)
 
-    def __delattr__(cls, name, val):
-        super(TypeWrapper, cls).__delattr__(name, val)
-        cls._wrapped_dict.pop(name, None)
+    def __setattr__(self, name, val):
+        super(Wrapper, self).__setattr__(name, val)
+        self._wrapped_dict[name] = val
+
+    def __delattr__(self, name, val):
+        super(Wrapper, self).__delattr__(name, val)
+        self._wrapped_dict.pop(name, None)
+
+    def __call__(self, *a, **kw):
+        return self._wrapped(*a, **kw)
 
 
 #class Recursive(TypeWrapper):
@@ -243,7 +221,7 @@ class PriorityQueue(object):
                 heappop(self._pq)
                 continue
             return
-        raise IndexError('priority queue is empty')
+        raise IndexError('empty priority queue')
 
     def peek(self, default=REMOVED):
         try:
@@ -336,3 +314,57 @@ NAMESPACES = {
     'Book talk': 109,
     'Special': -1,
     'Media': -2}
+
+
+def bucketize(src, keyfunc=None):
+    """
+    Group values in 'src' iterable by value returned by 'keyfunc'.
+    keyfunc defaults to bool, which will group the values by
+    truthiness; at most there will be two keys, True and False, and
+    each key will have a list with at least one item.
+
+    >>> bucketize(range(5))
+    {False: [0], True: [1, 2, 3, 4]}
+    >>> is_odd = lambda x: x % 2 == 1
+    >>> bucketize(range(5), is_odd)
+    {False: [0, 2, 4], True: [1, 3]}
+
+    Value lists are not deduplicated:
+
+    >>> bucketize([None, None, None, 'hello'])
+    {False: [None, None, None], True: ['hello']}
+    """
+    if not is_iterable(src):
+        raise TypeError('expected an iterable')
+    if keyfunc is None:
+        keyfunc = bool
+    if not callable(keyfunc):
+        raise TypeError('expected callable key function')
+
+    ret = {}
+    for val in src:
+        key = keyfunc(val)
+        ret.setdefault(key, []).append(val)
+    return ret
+
+
+def bucketize_bool(src, keyfunc=None):
+    """
+    Like bucketize, but for added convenience returns a tuple of
+    (truthy_values, falsy_values).
+
+    >>> nonempty, empty = bucketize_bool(['', '', 'hi', '', 'bye'])
+    >>> nonempty
+    ['hi', 'bye']
+
+    keyfunc defaults to bool, but can be carefully overridden to
+    use any function that returns either True or False.
+
+    >>> import string
+    >>> is_digit = lambda x: x in string.digits
+    >>> decimal_digits, hexletters = bucketize_bool(string.hexdigits, is_digit)
+    >>> ''.join(decimal_digits), ''.join(hexletters)
+    ('0123456789', 'abcdefABCDEF')
+    """
+    bucketized = bucketize(src, keyfunc)
+    return bucketized.get(True, []), bucketized.get(False, [])

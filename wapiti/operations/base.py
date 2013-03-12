@@ -14,6 +14,7 @@ sys.path.append(dirname(dirname(abspath(__file__))))
 import ransom
 
 from params import SingleParam
+from models import get_unique_func, get_priority_func
 from utils import PriorityQueue, MaxInt, chunked_iter, make_type_wrapper
 
 # TODO: prioritization
@@ -88,6 +89,13 @@ class NoMoreResults(Exception):
 
 Tune = make_type_wrapper('Tune', [('priority', None), ('buffer', None)])
 Recursive = make_type_wrapper('Recursive', [('is_recursive', True)])
+
+
+def get_unwrapped_options(wr_type):
+    try:
+        return dict(wr_type._wrapped_dict), wr_type._wrapped
+    except AttributeError:
+        return {}, wr_type
 
 
 class LimitSpec(object):
@@ -186,17 +194,53 @@ class OperationMeta(ABCMeta):
         return ret
 
 
-class Recursive(object):
-    def __init__(self, wrapped_type):
-        self.wrapped_type = wrapped_type
+class OperationQueue(object):
+    # TODO: chunking/batching should probably happen here
+    # with the assistance of another queue for prioritized params
+    # (i.e., don't create subops so eagerly)
+    def __init__(self, qid, op_type, default_limit=ALL):
+        self.qid = qid
+        options, unwrapped = get_unwrapped_options(op_type)
+        self.op_type = op_type
+        self.unwrapped_type = unwrapped
+        self.options = options
 
-    def __getitem__(self, key):
-        if key == 0 or key == -1:
-            return self.wrapped_type
-        raise IndexError("go away")
+        self.unique_key = options.get('unique_key', 'unique_key')
+        self.unique_func = get_unique_func(self.unique_key)
+        self.priority = options.get('priority', 0)
+        self.priority_func = get_priority_func(self.priority)
+        self.default_limit = default_limit
 
-    def __iter__(self):
-        yield self.wrapped_type
+        self.param_set = set()
+        self.op_queue = PriorityQueue()
+        self._dup_params = []
+
+    def enqueue(self, param, **kw):
+        unique_key = self.unique_func(param)
+        if unique_key in self.param_set:
+            self._dup_params.append(unique_key)
+            return
+        priority = self.priority_func(param)
+        kwargs = {'limit': self.default_limit}
+        kwargs.update(kw)
+        new_subop = self.op_type(param, **kwargs)
+        new_subop._origin_queue = self.qid
+        self.op_queue.add(new_subop, priority)
+        self.param_set.add(unique_key)
+
+    def enqueue_many(self, param_list, **kw):
+        for param in param_list:
+            self.enqueue(param, **kw)
+        return
+
+    def __len__(self):
+        return len(self.op_queue)
+
+    def peek(self, *a, **kw):
+        return self.op_queue.peek(*a, **kw)
+
+    def pop(self, *a, **kw):
+        return self.op_queue.pop(*a, **kw)
 
 
 class Operation(object):
@@ -223,20 +267,13 @@ class Operation(object):
         self.started = False
         self.results = OrderedDict()
 
-        subop_queues = [PriorityQueue()]
-        subop_param_sets = [set()]
+        subop_queues = [OperationQueue(0, type(self))]
         if self.subop_chain:
-            subop_queues.extend([PriorityQueue() for st in self.subop_chain])
-            subop_param_sets.extend([set() for st in self.subop_chain])
-            first_subop_type = self.subop_chain[0]
-            first_subop = first_subop_type(self.input_param,
-                                           limit=ALL,
-                                           client=self.client)
-            first_subop._origin_queue = 1
-            subop_queues[1].add(first_subop)
-            subop_param_sets[1].update(self.input_param_list)
+            subop_queues.extend([OperationQueue(i + 1, st) for i, st
+                                 in enumerate(self.subop_chain)])
+            subop_queues[1].enqueue_many(self.input_param_list,
+                                         client=self.client)
         self.subop_queues = subop_queues
-        self.subop_param_sets = subop_param_sets
 
     def get_progress(self):
         return len(self.results)
@@ -321,32 +358,20 @@ class Operation(object):
 
     def store_results(self, task, results):
         new_res = []
-        origin_queue = getattr(task, '_origin_queue', len(self.subop_queues))
-        dest_queue = origin_queue + 1
-        do_save = True
-        do_enqueue = True
-        if isinstance(self.subop_chain, Recursive):
-            dest_queue = origin_queue
-            subop_type = self.subop_chain.wrapped_type
-        elif self.subop_chain and dest_queue < len(self.subop_queues):
-            # TODO: remedy gotcha: subop chain doesn't include parent
-            # task type, but subop queues do
-            do_save = False
-            subop_type = self.subop_chain[origin_queue]
-        else:
-            do_enqueue = False
+        oqi = getattr(task, '_origin_queue', None)
+        if oqi is None:
+            return self._update_results(results)
+        dqi = oqi + 1
 
-        if do_save:
+        origin_queue = self.subop_queues[oqi]
+        is_recursive = origin_queue.options.get('is_recursive')
+        if is_recursive:
+            origin_queue.enqueue_many(results)
+        if dqi < len(self.subop_queues):
+            dest_queue = self.subop_queues[dqi]
+            dest_queue.enqueue_many(results)
+        else:
             new_res = self._update_results(results)
-        if do_enqueue:
-            for res in results:
-                unique_key = getattr(res, 'unique_key', res)
-                if unique_key in self.subop_param_sets[dest_queue]:
-                    continue
-                new_subop = subop_type(res, limit=ALL)
-                new_subop._origin_queue = dest_queue
-                self.subop_queues[dest_queue].add(new_subop)
-                self.subop_param_sets[dest_queue].add(unique_key)
         return new_res
 
     def _update_results(self, results):
@@ -394,8 +419,7 @@ class QueryOperation(Operation):
     def __init__(self, input_param, limit=None, **kw):
         if limit is None:
             limit = self.default_limit
-        kw['limit'] = limit
-        super(QueryOperation, self).__init__(input_param, **kw)
+        super(QueryOperation, self).__init__(input_param, limit, **kw)
         self.cont_strs = []
         self._set_params()
 
@@ -435,13 +459,10 @@ class QueryOperation(Operation):
         return
 
     def _setup_multiplexing(self):
-        subop_type = type(self)
         subop_queue = self.subop_queues[0]
         chunk_size = self.per_query_param_limit
         for chunk in chunked_iter(self.input_param_list, chunk_size):
-            subop = subop_type(chunk)
-            subop._origin_queue = 0
-            subop_queue.add(subop)
+            subop_queue.enqueue(tuple(chunk))  # TODO
         return
 
     @property

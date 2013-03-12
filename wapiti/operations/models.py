@@ -116,6 +116,26 @@ def get_unique_func(val):
     raise TypeError('could not derive uniqueification function from %r' % val)
 
 
+def get_priority_func(val, default=0):
+    if val is None:
+        val = default
+    if callable(val):
+        return val
+    elif isinstance(val, basestring):
+        return lambda obj: getattr(obj, val, default)
+    try:
+        int_val = int(val)
+        return lambda obj: int_val
+    except TypeError:
+        pass
+    try:
+        if all([isinstance(v, basestring) for v in val]):
+            return lambda obj: tuple([getattr(obj, v, default) for v in val])
+    except TypeError:
+        pass
+    raise TypeError('could not derive priority function from %r' % val)
+
+
 class WapitiModelMeta(type):
     """
     The foundation of Wapiti's data models, which attempt to add
