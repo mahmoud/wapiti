@@ -14,7 +14,7 @@ sys.path.append(dirname(dirname(abspath(__file__))))
 import ransom
 
 from params import SingleParam
-from utils import PriorityQueue, MaxInt, chunked_iter
+from utils import PriorityQueue, MaxInt, chunked_iter, make_type_wrapper
 
 # TODO: prioritization
 # TODO: handle automatic redirecting better
@@ -84,6 +84,10 @@ class WapitiException(Exception):
 
 class NoMoreResults(Exception):
     pass
+
+
+Tune = make_type_wrapper('Tune', [('priority', None), ('buffer', None)])
+Recursive = make_type_wrapper('Recursive', [('is_recursive', True)])
 
 
 class LimitSpec(object):
@@ -308,7 +312,7 @@ class Operation(object):
             return None
         for subop_queue in reversed(self.subop_queues):
             while subop_queue:
-                subop = subop_queue[-1]
+                subop = subop_queue.peek()
                 if subop.remaining:
                     return subop
                 else:

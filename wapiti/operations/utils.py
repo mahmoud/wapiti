@@ -100,7 +100,7 @@ def make_type_wrapper(name, init_args=None):
         args.append(arg)
 
     attrs = {'_args': args, '_defaults': defaults}
-    return TypeWrapperType(name, (TypeWrapper,), attrs)
+    return TypeWrapperType(str(name), (TypeWrapper,), attrs)
 
 
 class TypeWrapperType(type):
@@ -146,7 +146,7 @@ class TypeWrapper(type):
             base_type = base_type.__bases__[0]
 
         bases = (base_type,)
-        base_name = base_type.__name__
+        base_name = str(base_type.__name__)
         attrs['__module__'] = base_type.__module__
         attrs['_wrapped_dict'] = {}
         ret = type.__new__(mcls, base_name, bases, attrs)
@@ -196,9 +196,6 @@ class TypeWrapper(type):
         cls._wrapped_dict.pop(name, None)
 
 
-Tune = make_type_wrapper('Tune', [('priority', None), ('buffer', None)])
-Recursive = make_type_wrapper('Recursive', [('is_recursive', True)])
-
 #class Recursive(TypeWrapper):
 #    def __init__(self, *a, **kw):
 #        super(Recursive, self).__init__(*a, **kw)
@@ -239,24 +236,25 @@ class PriorityQueue(object):
         entry = self._entry_map.pop(task)
         entry[-1] = REMOVED
 
-    def pop(self):
-        while self._pq:
-            priority, count, task = heappop(self._pq)
-            if task is not REMOVED:
-                del self._entry_map[task]
-                return task
-        raise KeyError('pop from an empty priority queue')
+    def pop(self, default=REMOVED):
+        task = self.peek(default)
+        heappop(self._pq)
+        del self._entry_map[task]
+        return task
 
     def __len__(self):
         return len(self._entry_map)
 
-    def __getitem__(self, index):
-        # this is hacky! could make a sorted copy from the
-        # heap and index into that at some point.
-        if index != -1:
-            raise IndexError('priority queues only support indexing on -1')
-        _, _, task = self._pq[0]
-        return task
+    def peek(self, default=REMOVED):
+        while self._pq:
+            priority, count, task = self._pq[0]
+            if task is REMOVED:
+                heappop(self._pq)
+            else:
+                return task
+        if default is not REMOVED:
+            return default
+        raise IndexError('priority queue is empty')
 
 
 def chunked_iter(src, size, **kw):
