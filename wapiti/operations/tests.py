@@ -140,11 +140,12 @@ def test_nonexistent_cat_error(limit):
     pass
 
 
+@magnitude(norm=100, big=1000, huge=2200)
 def test_multiplexing(limit=None):
-    rev_ids = [str(x) for x in range(543184935 - 100, 543184935)]
+    rev_ids = [str(x) for x in range(543184935 - limit, 543184935)]
     get_rev_infos = GetRevisionInfos(rev_ids)
     rev_infos = call_and_ret(get_rev_infos)
-    return len(rev_infos) > 90  # a couple might be missing
+    return len(rev_infos) > (0.9 * limit)  # a couple might be missing
 
 
 @magnitude(norm=20, big=550, huge=2000)
@@ -160,7 +161,7 @@ def test_all_category_infos(limit):
     return len(all_cats) == 501
 
 
-@magnitude(norm=10, big=1000, huge=10000)
+@magnitude(norm=60, big=1000, huge=10000)
 def test_category_recursive(limit):
     get_limit_recursive = GetCategoryRecursive('Africa', limit)
     pages = call_and_ret(get_limit_recursive)

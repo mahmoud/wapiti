@@ -236,30 +236,38 @@ class PriorityQueue(object):
         entry = self._entry_map.pop(task)
         entry[-1] = REMOVED
 
-    def pop(self, default=REMOVED):
-        try:
-            task = self.peek()
-            heappop(self._pq)
-            del self._entry_map[task]
-        except IndexError:
-            if default is REMOVED:
-                raise
-            return default
-        return task
-
-    def __len__(self):
-        return len(self._entry_map)
-
-    def peek(self, default=REMOVED):
+    def _cull(self):
         while self._pq:
             priority, count, task = self._pq[0]
             if task is REMOVED:
                 heappop(self._pq)
-            else:
-                return task
-        if default is not REMOVED:
-            return default
+                continue
+            return
         raise IndexError('priority queue is empty')
+
+    def peek(self, default=REMOVED):
+        try:
+            self._cull()
+            _, _, task = self._pq[0]
+        except IndexError:
+            if default is not REMOVED:
+                return default
+            raise IndexError('peek on empty queue')
+        return task
+
+    def pop(self, default=REMOVED):
+        try:
+            self._cull()
+            _, _, task = heappop(self._pq)
+            del self._entry_map[task]
+        except IndexError:
+            if default is not REMOVED:
+                return default
+            raise IndexError('pop on empty queue')
+        return task
+
+    def __len__(self):
+        return len(self._entry_map)
 
 
 def chunked_iter(src, size, **kw):
