@@ -284,6 +284,8 @@ class Link(WapitiModelBase):
 
 
 class LanguageLink(Link, PageIdentifier):
+    # TODO: URL is really the other language's title
+    unique_on = ('url', 'language')
     attributes = [WMA('language', display=True)]
 
 

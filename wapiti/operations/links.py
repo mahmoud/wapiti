@@ -42,11 +42,8 @@ class GetBacklinks(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for pid_dict in query_resp.get('backlinks', []):
-            try:
-                page_ident = PageIdentifier.from_query(pid_dict,
-                                                       source=self.source)
-            except ValueError:
-                continue
+            page_ident = PageIdentifier.from_query(pid_dict,
+                                                   source=self.source)
             ret.append(page_ident)
         return ret
 
@@ -65,11 +62,8 @@ class GetLinks(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
-            try:
-                page_ident = PageIdentifier.from_query(pid_dict,
-                                                       source=self.source)
-            except ValueError:
-                continue
+            page_ident = PageIdentifier.from_query(pid_dict,
+                                                   source=self.source)
             ret.append(page_ident)
         return ret
 
@@ -117,15 +111,12 @@ class GetLanguageLinks(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for pid_dict in query_resp.get('pages', {}).values():
-            try:
-                page_ident = PageIdentifier.from_query(pid_dict,
-                                                       source=self.source)
-            except ValueError:
-                continue
             for ld in pid_dict.get('langlinks', []):
-                link = LanguageLink(ld.get('url'),
-                                    ld.get('lang'),
-                                    page_ident)
+                cur_dict = dict(pid_dict)
+                cur_dict['source'] = self.source
+                cur_dict['url'] = ld.get('*')
+                cur_dict['language'] = ld.get('lang')
+                link = LanguageLink.from_query(cur_dict)
                 ret.append(link)
         return ret
 
@@ -143,14 +134,11 @@ class GetInterwikiLinks(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for pid_dict in query_resp.get('pages', {}).values():
-            try:
-                page_ident = PageIdentifier.from_query(pid_dict,
-                                                       source=self.source)
-            except ValueError:
-                continue
             for iwd in pid_dict.get('iwlinks', []):
-                link = InterwikiLink(iwd.get('url'),
-                                     iwd.get('prefix'),
-                                     page_ident)
+                cur_dict = dict(pid_dict)
+                cur_dict['source'] = self.source
+                cur_dict['url'] = iwd.get('url')
+                cur_dict['prefix'] = iwd.get('prefix')
+                link = InterwikiLink.from_query(cur_dict)
                 ret.append(link)
         return ret
