@@ -86,14 +86,11 @@ class GetExternalLinks(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for pid_dict in query_resp.get('pages', {}).values():
-            try:
-                page_ident = PageIdentifier.from_query(pid_dict,
-                                                       source=self.source)
-            except ValueError:
-                continue
             for el in pid_dict.get('extlinks', []):
-                link = ExternalLink(el.get('*'),
-                                    page_ident)
+                cur_dict = dict(pid_dict)
+                cur_dict['source'] = self.source
+                cur_dict['url'] = el.get('*')
+                link = ExternalLink.from_query(cur_dict)
                 ret.append(link)
         return ret
 

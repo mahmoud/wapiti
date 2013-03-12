@@ -24,10 +24,6 @@ def parse_timestamp(timestamp):
     return datetime.strptime(timestamp, '%Y-%m-%dT%H:%M:%SZ')
 
 
-LanguageLink = namedtuple('LanguageLink', 'url language origin_page')
-InterwikiLink = namedtuple('InterwikiLink', 'url prefix origin_page')
-ExternalLink = namedtuple('ExternalLink', 'url origin_page')
-
 NamespaceDescriptor = namedtuple('NamespaceDescriptor', 'id title canonical')
 InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
 
@@ -276,6 +272,27 @@ class PageIdentifier(WapitiModelBase):
     @property
     def is_talk_page(self):
         return (self.ns >= 0 and self.ns % 2 == 1)
+
+LanguageLink = namedtuple('LanguageLink', 'url language origin_page')
+InterwikiLink = namedtuple('InterwikiLink', 'url prefix origin_page')
+ExternalLink = namedtuple('ExternalLink', 'url origin_page')
+
+
+class Link(WapitiModelBase):
+    unique_on = 'url'
+    attributes = [WMA('url', display=True)]
+
+
+class LanguageLink(Link, PageIdentifier):
+    attributes = [WMA('language', display=True)]
+
+
+class InterwikiLink(Link, PageIdentifier):
+    attributes = [WMA('prefix')]
+
+
+class ExternalLink(Link, PageIdentifier):
+    pass
 
 
 class PageInfo(PageIdentifier):
