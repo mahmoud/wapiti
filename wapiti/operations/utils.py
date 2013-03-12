@@ -86,22 +86,46 @@ itself?)
 """
 
 
-class MetaTypeWrapper(type):
-    def __new__(mcls, name, reqd_kwargs=None):
-        reqd_kwargs = reqd_kwargs or []
-        wrapper = super(mcls, mcls).__new__(mcls,
-                                            name,
-                                            (TypeWrapper,),
-                                            {'_reqd_kwargs': reqd_kwargs})
-        return wrapper
+def make_type_wrapper(name, init_args=None):
+    init_args = init_args or []
+    args, defaults = [], {}
+    for ia in init_args:
+        try:
+            arg, _default = ia
+            defaults[arg] = _default
+        except ValueError:
+            arg = ia
+        if not isinstance(arg, basestring):
+            raise TypeError('expected string arg name, not %r' % arg)
+        args.append(arg)
 
-    def __init__(cls, *a, **kw):
-        super(MetaTypeWrapper, cls).__init__(cls.__name__,
-                                             cls.__bases__,
-                                             cls.__dict__)
+    attrs = {'_args': args, '_defaults': defaults}
+    return TypeWrapperType(name, (TypeWrapper,), attrs)
+
+
+class TypeWrapperType(type):
+    @property
+    def _repr_args(self):
+        ret = []
+        for a in self._args:
+            try:
+                ret.append((a, self._defaults[a]))
+            except KeyError:
+                ret.append(a)
+        return ret
+
+    def __repr__(cls):
+        name, cname = cls.__name__, cls.__class__.__name__
+        if cls._repr_args:
+            return '%s(%r, %r)' % (cname, name, cls._repr_args)
+        else:
+            return '%s(%r)' % (cname, name)
 
 
 class TypeWrapper(type):
+    __metaclass__ = TypeWrapperType
+    _args, _defaults = [], {}
+
     def __new__(mcls, name_or_type, bases=None, attrs=None, **kw):
         nort = name_or_type
         attrs = attrs or {}
@@ -115,55 +139,70 @@ class TypeWrapper(type):
         elif not bases:
             raise TypeError('cannot create wrapped types without base type')
 
-        old_attrs = {}
+        wrapped_attr_dict = {}
         base_type = bases[0]
         if isinstance(base_type, TypeWrapper):
-            for attr in base_type._wrapped_attrs:
-                old_attrs[attr] = getattr(base_type, attr)
+            wrapped_attr_dict = dict(base_type._wrapped_dict)
             base_type = base_type.__bases__[0]
 
         bases = (base_type,)
         base_name = base_type.__name__
         attrs['__module__'] = base_type.__module__
-        ret = super(TypeWrapper, mcls).__new__(mcls, base_name, bases, attrs)
-        ret._wrapped_attrs = set()
+        attrs['_wrapped_dict'] = {}
+        ret = type.__new__(mcls, base_name, bases, attrs)
 
-        for attr, val in old_attrs.items():
+        for attr, val in wrapped_attr_dict.items():
             setattr(ret, attr, val)
         return ret
 
-    def __init__(mcls, to_wrap, **kw):
-        for name in mcls._reqd_kwargs:
+    def __init__(self, to_wrap, *args, **kwargs):
+        cn = self.__name__
+        for arg_i, arg_name in enumerate(self._args):
             try:
-                val = kw.pop(name)
-            except KeyError:
-                msg = '%s expected keyword argument %r'
-                raise TypeError(msg % (mcls.__name__, name))
-            setattr(mcls, name, val)
-        if kw:
+                val = args[arg_i]
+                if arg_name in kwargs:
+                    raise TypeError('%s got multiple values for arg %r'
+                                    % (cn, arg_name))
+            except IndexError:
+                try:
+                    val = kwargs.pop(arg_name)
+                except KeyError:
+                    try:
+                        val = self._defaults[arg_name]
+                    except KeyError:
+                        raise TypeError('%s expected required arg %r'
+                                        % (cn, arg_name))
+            setattr(self, arg_name, val)
+        if kwargs:
             raise TypeError('%s got unexpected keyword arguments: %r'
-                            % kw.keys())
+                            % (cn, kwargs.keys()))
 
-    def __repr__(cls):
-        wrapped_attr_map = dict([(k, getattr(cls, k, None))
-                                 for k in cls._wrapped_attrs
-                                 if k in cls.__dict__])
-        kv = ', '.join(['%s=%r' % (k, v) for k, v in wrapped_attr_map.items()])
+    @property
+    def _wrapped_type(self):
+        return self.__bases__[0]
+
+    def __repr__(self):
+        kv = ', '.join(['%s=%r' % (k, v) for k, v
+                        in self._wrapped_dict.items()])
         tmpl = "<wrapped class '%s.%s' (%s)>"
-        return  tmpl % (cls.__module__, cls.__name__, kv)
+        return tmpl % (self.__module__, self.__name__, kv)
 
     def __setattr__(cls, name, val):
         super(TypeWrapper, cls).__setattr__(name, val)
-        if not name == '_wrapped_attrs':
-            cls._wrapped_attrs.add(name)
+        cls._wrapped_dict[name] = val
 
     def __delattr__(cls, name, val):
         super(TypeWrapper, cls).__delattr__(name, val)
-        try:
-            cls._wrapped_attrs.remove(name)
-        except KeyError:
-            pass
+        cls._wrapped_dict.pop(name, None)
 
+
+Tune = make_type_wrapper('Tune', [('priority', None), ('buffer', None)])
+Recursive = make_type_wrapper('Recursive', [('is_recursive', True)])
+
+#class Recursive(TypeWrapper):
+#    def __init__(self, *a, **kw):
+#        super(Recursive, self).__init__(*a, **kw)
+#        self.is_recursive = True
 
 """
 class _SentinelMeta(type):

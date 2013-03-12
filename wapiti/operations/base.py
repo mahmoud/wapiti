@@ -11,7 +11,7 @@ import sys
 from os.path import dirname, abspath
 # just until ransom becomes its own package
 sys.path.append(dirname(dirname(abspath(__file__))))
-from ransom import Client
+import ransom
 
 from params import SingleParam
 from utils import PriorityQueue, MaxInt, chunked_iter
@@ -29,6 +29,7 @@ from utils import PriorityQueue, MaxInt, chunked_iter
 # TODO: support field param_type (for cases with ints and strs)
 # TODO: use source descriptor instead of api_url? (for op.source)
 # TODO: Redirect resolution cannot be used together with the revids= param
+
 """
 - what if operations were iterable over their results and process()
   returned the operation itself? (more expensive to iterate and find
@@ -74,7 +75,7 @@ DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
 ALL = MaxInt('ALL')
 DEFAULT_MIN = 50
 
-DEFAULT_CLIENT = Client({'headers': DEFAULT_HEADERS})
+DEFAULT_WEB_CLIENT = ransom.Client({'headers': DEFAULT_HEADERS})
 
 
 class WapitiException(Exception):
@@ -191,7 +192,7 @@ class Recursive(object):
         raise IndexError("go away")
 
     def __iter__(self):
-        return iter((self.wrapped_type,))
+        yield self.wrapped_type
 
 
 class Operation(object):
@@ -553,7 +554,9 @@ class MediaWikiCall(Operation):
         self.raise_err = kw.pop('raise_err', True)
         self.raise_warn = kw.pop('raise_warn', False)
         self.client = kw.pop('client')
-        self.ransom_client = getattr(self.client, 'ransom_client', DEFAULT_CLIENT)
+        self.ransom_client = getattr(self.client,
+                                     'ransom_client',
+                                     DEFAULT_WEB_CLIENT)
         if kw:
             raise ValueError('got unexpected keyword arguments: %r'
                              % kw.keys())
