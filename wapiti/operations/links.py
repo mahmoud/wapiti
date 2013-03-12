@@ -15,6 +15,7 @@ class GetImages(QueryOperation):
     fields = [StaticParam('generator', 'images'),
               StaticParam('prop', 'info')]
     output_type = [PageIdentifier]
+    examples = [OperationExample('Coffee')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -38,6 +39,7 @@ class GetBacklinks(QueryOperation):
     input_field = SingleParam('title')
     fields = [StaticParam('list', 'backlinks')]
     output_type = [PageIdentifier]
+    examples = [OperationExample('Coffee')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -58,6 +60,7 @@ class GetLinks(QueryOperation):
               StaticParam('prop', 'info'),
               MultiParam('namespace')]
     output_type = [PageIdentifier]
+    examples = [OperationExample('Coffee')]
 
     def extract_results(self, query_resp):
         ret = []

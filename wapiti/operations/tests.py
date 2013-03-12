@@ -7,20 +7,12 @@ from pprint import pprint
 
 import base
 from models import PageIdentifier
-from category import GetSubcategoryInfos, GetCategoryRecursive
-
-from links import (GetBacklinks,
-                   GetLanguageLinks,
-                   GetInterwikiLinks,
-                   GetExternalLinks,
-                   GetImages,
-                   GetLinks)
+from category import GetSubcategoryInfos
 
 from revisions import GetCurrentContent, GetPageRevisionInfos, GetRevisionInfos
 
 from misc import (GetImageInfos,
                   GetQueryPage,
-                  GetRecentChanges,
                   GetAllImageInfos)
 
 from meta import GetSourceInfo
@@ -122,6 +114,14 @@ def test_coercion_basic(limit=None):
     return get_subcats.input_param == 'Category:Africa'
 
 
+@magnitude(norm=100, big=1000, huge=2200)
+def test_multiplexing(limit=None):
+    rev_ids = [str(x) for x in range(543184935 - limit, 543184935)]
+    get_rev_infos = GetRevisionInfos(rev_ids)
+    rev_infos = call_and_ret(get_rev_infos)
+    return len(rev_infos) > (0.9 * limit)  # a couple might be missing
+
+
 def test_nonexistent_cat_error(limit):
     '''
     Should return invalidcategory error
@@ -133,14 +133,6 @@ def test_nonexistent_cat_error(limit):
     pass
 
 
-@magnitude(norm=100, big=1000, huge=2200)
-def test_multiplexing(limit=None):
-    rev_ids = [str(x) for x in range(543184935 - limit, 543184935)]
-    get_rev_infos = GetRevisionInfos(rev_ids)
-    rev_infos = call_and_ret(get_rev_infos)
-    return len(rev_infos) > (0.9 * limit)  # a couple might be missing
-
-
 def test_nonexistent_prot(limit):
     '''
     returns 'missing' and negative id
@@ -148,23 +140,6 @@ def test_nonexistent_prot(limit):
     prots = call_and_ret(get_nonexistent_prot)
     '''
     pass
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_backlinks(limit):
-    get_bls = GetBacklinks('Coffee', limit)
-    bls = call_and_ret(get_bls)
-    '''
-    Nonexistent title returns []
-    '''
-    return len(bls) == limit
-
-
-@magnitude(norm=5, big=550, huge=2000)
-def test_lang_links(limit):
-    get_coffee_langs = GetLanguageLinks('Coffee', limit)
-    lang_list = call_and_ret(get_coffee_langs)
-    return len(lang_list) == limit
 
 
 def test_nonexistent_lang_links(limit):
@@ -176,13 +151,6 @@ def test_nonexistent_lang_links(limit):
     pass
 
 
-@magnitude(norm=5, big=550, huge=2000)
-def test_interwiki_links(limit):
-    get_coffee_iwlinks = GetInterwikiLinks('Coffee', limit)
-    iw_list = call_and_ret(get_coffee_iwlinks)
-    return len(iw_list) == limit
-
-
 def test_nonexistent_iw_links(limit):
     '''
     returns 'missing' and negative id
@@ -192,14 +160,6 @@ def test_nonexistent_iw_links(limit):
     pass
 
 
-@magnitude(norm=20, big=550, huge=2000)
-def test_external_links(limit):
-    get_coffee_elinks = GetExternalLinks('Croatian War of Independence', limit)
-    el_list = call_and_ret(get_coffee_elinks)
-    assert len(set(el_list)) == len(el_list)
-    return len(el_list) == limit
-
-
 def test_missing_revisions(limit):
     get_revs = GetPageRevisionInfos('Coffee_lololololol')
     rev_list = call_and_ret(get_revs)
@@ -207,20 +167,6 @@ def test_missing_revisions(limit):
     Should return 'missing' and negative pageid
     '''
     return len(rev_list) == 0
-
-
-@magnitude(norm=4, big=550, huge=2000)
-def test_get_images(limit):
-    get_imgs = GetImages('Coffee', limit)
-    imgs = call_and_ret(get_imgs)
-    return len(imgs) == limit or get_imgs.last_cont_str is None
-
-
-@magnitude(norm=5, big=550, huge=2000)
-def test_get_links(limit):
-    get_links = GetLinks('Coffee', limit)
-    links = call_and_ret(get_links)
-    return len(links) == limit
 
 
 '''
@@ -244,9 +190,9 @@ def test_get_all_image_infos(limit):
     return len(all_imgs) == limit
 
 
-@magnitude(norm=1, big=5, huge=600)
+@magnitude(norm=2, big=5, huge=600)
 def test_query_pages(limit):
-    qp_types = GetQueryPage.known_qps
+    qp_types = GetQueryPage.known_qps[:limit]
     ret = []
     for qpt in qp_types:
         get_pages = GetQueryPage(qpt, limit)
