@@ -7,15 +7,8 @@ from pprint import pprint
 
 import base
 from models import PageIdentifier
-from category import (GetCategory,
-                      GetCategoryList,
-                      GetSubcategoryInfos,
-                      GetFlattenedCategory,
-                      GetCategoryRecursive,
-                      GetCategoryPagesRecursive,
-                      GetAllCategoryInfos)
-from rand import GetRandom
-from protection import GetProtections
+from category import GetSubcategoryInfos, GetCategoryRecursive
+
 from links import (GetBacklinks,
                    GetLanguageLinks,
                    GetInterwikiLinks,
