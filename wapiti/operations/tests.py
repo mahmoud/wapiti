@@ -98,23 +98,23 @@ def get_operations():
             and issubclass(obj, base.Operation)]
 
 
-def get_example_operations(limit):
+def get_op_examples():
     ops = get_operations()
     ret = []
     for op in ops:
         examples = getattr(op, 'examples', None)
         if not examples:
             continue
-        op_limit = int(getattr(op, 'per_query_limit', 50)) * 2 + 1
-        for example in op.examples:
-            input_param = example.input_param
-            if input_param is None:
-                ret.append(op(limit=op_limit))
-            else:
-                ret.append(op(input_param, limit=op_limit))
-    for op in ret:
-        op()
+        ret.extend(op.examples)
     return ret
+
+
+def test_example_operations(limit=None):
+    ex_ops = get_op_examples()
+    results = {}
+    for ex in ex_ops:
+        results[ex.disp_name] = ex.make_op().process_all()
+    return results
 
 
 def test_unicode_title(limit):

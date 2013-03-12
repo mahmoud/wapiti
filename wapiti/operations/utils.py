@@ -54,17 +54,66 @@ class MaxInt(long):
 
 
 class OperationExample(object):
-    def __init__(self, input_param=None, limit=None, test=None):
-        self.input_param = input_param
-        if test is None:
-            test = bool
-        self.test = test
+    """
+    Like a partial, but specialer.
+
+    # types of tests: limit_equal_or_depleted, ?
+    """
+    def __init__(self,
+                 name='',
+                 param=None,
+                 limit=None,
+                 test=None,
+                 op_type=None):
+        self.name = name
+        self.op_type = op_type
+        self.param = param
+        self.limit = limit
+        self.test = test or limit_equal_or_depleted
+
+    @property
+    def disp_name(self):
+        ret = []
+        if self.name:
+            ret.append(repr(str(self.name)))
+        if self.op_type:
+            tmpl = '%(type)s(%(param)r, %(limit)s)'
+            if self.op_type.input_field is None:
+                tmpl = '%(type)s(%(limit)s)'
+
+            ret.append(tmpl % {'type': self.op_type.__name__,
+                               'param': self.param,
+                               'limit': self.limit})
+        if not ret:
+            return '(unbound OperationExample)'
+        return ' '.join(ret)
+
+    def bind_op_type(self, op_type):
+        if self.op_type is None:
+            self.op_type = op_type
+        if self.limit is None:
+            try:
+                pql = op_type.per_query_limit
+            except AttributeError:
+                pql = op_type.subop_chain[0].per_query_limit
+            self.limit = pql.get_limit()
+        print self.disp_name
+
+    def make_op(self, mag=1):
+        if not self.op_type:
+            raise TypeError('no Operation type assigned')
+        if self.op_type.input_field is None:
+            return self.op_type(self.limit * mag)
+        return self.op_type(self.param, self.limit * mag)
 
 
-def len_eq(length):
-    def test_len_eq(other):
-        return len(other) == length
-    return test_len_eq
+def limit_equal_or_depleted(op):
+    if op.is_depleted:
+        return True
+    elif len(op.results) == op.limit:
+        return True
+    return False
+
 
 """
 TypeWrapper and MetaTypeWrapper are a pair of what are technically

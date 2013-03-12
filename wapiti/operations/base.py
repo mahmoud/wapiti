@@ -187,6 +187,10 @@ class OperationMeta(ABCMeta):
         ret.is_bijective = True
         if type(output_type) is list and output_type:
             ret.is_bijective = False
+
+        for ex in getattr(ret, 'examples', []):
+            ex.bind_op_type(ret)
+
         ret.__doc__ = (ret.__doc__ and ret.__doc__ + '\n\n') or ''
         ret.__doc__ += operation_signature_doc(ret)
         return ret
@@ -473,7 +477,7 @@ class QueryOperation(Operation):
 
     @property
     def remaining(self):
-        if self.cont_strs and self.last_cont_str is None:
+        if self.is_depleted:
             return 0
         return super(QueryOperation, self).remaining
 
@@ -482,6 +486,12 @@ class QueryOperation(Operation):
         if not self.cont_strs:
             return None
         return self.cont_strs[-1]
+
+    @property
+    def is_depleted(self):
+        if self.cont_strs and self.last_cont_str is None:
+            return True
+        return False
 
     @classmethod
     def get_field_dict(cls):

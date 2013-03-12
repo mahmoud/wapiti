@@ -4,7 +4,8 @@ from __future__ import unicode_literals
 from base import QueryOperation, QueryLimit
 from params import StaticParam
 from models import PageIdentifier
-from utils import OperationExample, len_eq
+from utils import OperationExample
+
 
 class GetRandom(QueryOperation):
     """
@@ -17,7 +18,7 @@ class GetRandom(QueryOperation):
     input_field = None
     output_type = [PageIdentifier]
     per_query_limit = QueryLimit(10, 20)
-    examples = [OperationExample(test=len_eq)]
+    examples = [OperationExample('basic random')]
 
     def extract_results(self, query_resp):
         ret = []
