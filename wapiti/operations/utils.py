@@ -237,9 +237,14 @@ class PriorityQueue(object):
         entry[-1] = REMOVED
 
     def pop(self, default=REMOVED):
-        task = self.peek(default)
-        heappop(self._pq)
-        del self._entry_map[task]
+        try:
+            task = self.peek()
+            heappop(self._pq)
+            del self._entry_map[task]
+        except IndexError:
+            if default is REMOVED:
+                raise
+            return default
         return task
 
     def __len__(self):
