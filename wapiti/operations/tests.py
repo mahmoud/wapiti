@@ -148,24 +148,6 @@ def test_multiplexing(limit=None):
     return len(rev_infos) > (0.9 * limit)  # a couple might be missing
 
 
-def test_single_prot(limit):
-    get_coffee_prot = GetProtections('Coffee')
-    prots = call_and_ret(get_coffee_prot)
-    return len(prots) == 1
-
-
-def test_multi_prots_list(limit):
-    get_prots = GetProtections(['Coffee', 'House'])
-    prots = call_and_ret(get_prots)
-    return len(prots) == 2
-
-
-def test_multi_prots_str(limit):
-    get_prots = GetProtections('Coffee|House')
-    prots = call_and_ret(get_prots)
-    return len(prots) == 2
-
-
 def test_nonexistent_prot(limit):
     '''
     returns 'missing' and negative id

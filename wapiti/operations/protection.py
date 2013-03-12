@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from base import QueryOperation
 from params import MultiParam, StaticParam
 from models import ProtectionInfo
+from utils import OperationExample
 
 
 class GetProtections(QueryOperation):
@@ -12,6 +13,9 @@ class GetProtections(QueryOperation):
     fields = [StaticParam('prop', 'info'),
               StaticParam('inprop', 'protection')]
     output_type = ProtectionInfo
+    examples = [OperationExample('Coffee'),
+                OperationExample('Coffee|House'),
+                OperationExample(['Coffee', 'House'])]
 
     def extract_results(self, query_resp):
         ret = []
