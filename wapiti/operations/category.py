@@ -27,6 +27,7 @@ class GetCategoryList(QueryOperation):
               StaticParam('prop', 'categoryinfo'),
               SingleParam('gclshow', '')]  # hidden, !hidden
     output_type = [CategoryInfo]
+    examples = [OperationExample('Physics')]
 
     def extract_results(self, query_resp):
         ret = []

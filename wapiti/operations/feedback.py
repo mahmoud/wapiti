@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 from base import QueryOperation
 from params import SingleParam, StaticParam
+from utils import OperationExample
 
 
 class GetFeedbackV4(QueryOperation):
@@ -32,6 +33,7 @@ class GetFeedbackV5(QueryOperation):
     input_field = SingleParam('pageid')
     fields = [StaticParam('list', 'articlefeedbackv5-view-feedback')]
     output_type = list
+    examples = [OperationExample('604727')]
 
     def post_process_response(self, response):
         if not response.results:

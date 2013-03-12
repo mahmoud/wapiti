@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 from base import QueryOperation
 from params import SingleParam, StaticParam
 from models import RevisionInfo
+from utils import OperationExample
+
 
 DEFAULT_PROPS = 'ids|flags|timestamp|size|comment|tags|title'
 
@@ -14,6 +16,7 @@ class GetUserContribs(QueryOperation):
     fields = [StaticParam('list', 'usercontribs'),
               StaticParam('ucprop', DEFAULT_PROPS)]
     output_type = [RevisionInfo]
+    examples = [OperationExample('Jimbo Wales')]
 
     def extract_results(self, query_resp):
         ret = []

@@ -4,10 +4,10 @@ from __future__ import unicode_literals
 from base import QueryOperation
 from params import StaticParam, MultiParam, SingleParam
 from models import RevisionInfo, Revision
-from collections import OrderedDict
-import re
+from utils import OperationExample
 
 DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|parsedcomment|tags'
+
 
 class GetPageRevisionInfos(QueryOperation):
     """
@@ -18,6 +18,7 @@ class GetPageRevisionInfos(QueryOperation):
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS)]
     output_type = [RevisionInfo]
+    examples = [OperationExample('Coffee', 10)]
 
     def extract_results(self, query_resp):
         ret = []
@@ -39,6 +40,7 @@ class GetRevisionInfos(GetPageRevisionInfos):
     """
     input_field = MultiParam('revids', attr='rev_id', key_prefix=False)
     output_type = RevisionInfo
+    examples = [OperationExample(['538903663', '539916351', '531458383'])]
 
     def prepare_params(self, *a, **kw):
         ret = super(GetRevisionInfos, self).prepare_params()
@@ -84,6 +86,7 @@ class GetRevisionContent(GetCurrentContent):
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS + '|content'),
               SingleParam('parse', False)]
+    examples = [OperationExample('539916351')]
 
 
 class GetCurrentTalkContent(GetCurrentContent):

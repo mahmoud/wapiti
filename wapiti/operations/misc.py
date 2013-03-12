@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from collections import namedtuple
+
 from base import QueryOperation
 from params import SingleParam, MultiParam, StaticParam
 from models import PageIdentifier, CoordinateIdentifier, PageInfo, ImageInfo
-from collections import namedtuple
+from utils import OperationExample
 
 # TODO: These operations should be moved to the proper file
 
@@ -19,6 +21,7 @@ class GetCoordinates(QueryOperation):
               SingleParam('primary', 'all'),  # primary, secondary, all
               MultiParam('prop', 'type|name|dim|country|region')]
     output_type = [CoordinateIdentifier]
+    examples = [OperationExample(['White House', 'Mount Everest'])]
 
     def extract_results(self, query_resp):
         ret = []
@@ -93,26 +96,6 @@ class GetAllImageInfos(GetImageInfos):
               StaticParam('gaiprop', DEFAULT_IMAGE_PROPS)]
 
 
-class GetTemplates(QueryOperation):
-    field_prefix = 'gtl'
-    input_field = MultiParam('titles', key_prefix=False)
-    fields = [StaticParam('generator', 'templates'),
-              StaticParam('prop', 'info'),
-              StaticParam('inprop', 'subjectid|talkid|protection')]
-    output_type = [PageInfo]
-
-    def extract_results(self, query_resp):
-        ret = []
-        for k, pid_dict in query_resp['pages'].iteritems():
-            try:
-                page_ident = PageInfo.from_query(pid_dict,
-                                                 source=self.source)
-            except ValueError:
-                continue
-            ret.append(page_ident)
-        return ret
-
-
 class GetRecentChanges(QueryOperation):
     field_prefix = 'grc'
     input_field = None
@@ -120,6 +103,7 @@ class GetRecentChanges(QueryOperation):
               StaticParam('prop', 'info'),
               StaticParam('inprop', 'subjectid|talkid|protection')]
     output_type = [PageInfo]
+    examples = [OperationExample()]
 
     def extract_results(self, query_resp):
         ret = []

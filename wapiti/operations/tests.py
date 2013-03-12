@@ -23,16 +23,11 @@ from links import (GetBacklinks,
                    GetImages,
                    GetLinks)
 from feedback import GetFeedbackV5
-from revisions import (GetPageRevisionInfos,
-                       GetRevisionInfos,
-                       GetCurrentContent,
-                       GetCurrentTalkContent,
-                       GetRevisionContent)
+
 from templates import GetTranscludes
 from misc import (GetCoordinates,
                   GeoSearch,
                   GetImageInfos,
-                  GetTemplates,
                   GetQueryPage,
                   GetRecentChanges,
                   GetAllImageInfos)
@@ -93,9 +88,10 @@ def magnitude(norm, big=None, huge=None):
 
 
 def get_operations():
-    return [obj for obj in globals().values()
-            if isinstance(obj, type)
-            and issubclass(obj, base.Operation)]
+    return list(base.OperationMeta._all_ops)
+    #return [obj for obj in globals().values()
+    #        if isinstance(obj, type)
+    #        and issubclass(obj, base.Operation)]
 
 
 def get_op_examples():
@@ -234,25 +230,6 @@ def test_external_links(limit):
     return len(el_list) == limit
 
 
-#def test_feedback_v4(limit):  # no longer available, see feedback.py for info
-#    get_v4 = GetFeedbackV4('604727')
-#    v4_list = call_and_ret(get_v4)
-#    return len(v4_list) > 1
-
-
-def test_feedback_v5(limit):
-    get_v5 = GetFeedbackV5('604727')  # TODO: support ints
-    v5_list = call_and_ret(get_v5)
-    return isinstance(v5_list, list)
-
-
-@magnitude(norm=10, big=550, huge=2000)
-def test_revisions(limit):
-    get_revs = GetPageRevisionInfos('Coffee', 10)
-    rev_list = call_and_ret(get_revs)
-    return len(rev_list) == 10
-
-
 def test_missing_revisions(limit):
     get_revs = GetPageRevisionInfos('Coffee_lololololol')
     rev_list = call_and_ret(get_revs)
@@ -260,37 +237,6 @@ def test_missing_revisions(limit):
     Should return 'missing' and negative pageid
     '''
     return len(rev_list) == 0
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_transclusions(limit):
-    get_transcludes = GetTranscludes('Template:ArticleHistory', limit)
-    tr_list = call_and_ret(get_transcludes)
-    '''
-    Nonexistent title returns []
-    '''
-    return len(tr_list) == limit
-
-
-#@magnitude(norm=20, big=550, huge=2000)
-#def test_all_transcludes(limit):
-#    get_all_transcludes = GetAllTranscludes(limit)
-#    tr_list = call_and_ret(get_all_transcludes)
-#    return len(tr_list) == limit
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_resolve_subjects(limit):
-    get_res_transcludes = GetTranscludes('Template:ArticleHistory', limit)
-    pages = call_and_ret(get_res_transcludes)
-    return len(pages) == limit
-
-
-@magnitude(norm=11, big=550, huge=2000)
-def test_cat_list(limit):
-    get_cat_list = GetCategoryList('Physics', limit)
-    pages = call_and_ret(get_cat_list)
-    return len(pages) == limit
 
 
 @magnitude(norm=4, big=550, huge=2000)
@@ -307,10 +253,6 @@ def test_get_links(limit):
     return len(links) == limit
 
 
-def test_coordinates(limit):
-    get_coordinates = GetCoordinates(['White House', 'Golden Gate Bridge', 'Mount Everest'])
-    coords = call_and_ret(get_coordinates)
-    return len(coords) == 3
 
 
 def test_geosearch(limit):
@@ -333,18 +275,6 @@ def test_get_meta(limit):
 '''
 
 
-def test_get_revision_content(limit):
-    get_rev_content = GetRevisionContent('539916351')
-    rev_content = call_and_ret(get_rev_content)
-    return len(rev_content) == 1
-
-
-def test_get_revision_infos(limit):
-    get_revisions = GetRevisionInfos(['538903663', '539916351', '531458383'])
-    rev_infos = call_and_ret(get_revisions)
-    return len(rev_infos) == 3
-
-
 def test_get_image_info(limit):
     get_image_info = GetImageInfos('File:Logo.gif')
     image_info = call_and_ret(get_image_info)
@@ -356,13 +286,6 @@ def test_get_all_image_infos(limit):
     get_all_img = GetAllImageInfos(limit)
     all_imgs = call_and_ret(get_all_img)
     return len(all_imgs) == limit
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_get_templates(limit):
-    get_templates = GetTemplates('Coffee', limit)
-    tmpl = call_and_ret(get_templates)
-    return len(tmpl) == limit
 
 
 @magnitude(norm=1, big=5, huge=600)
@@ -381,13 +304,6 @@ def test_nonexistent_query_page(limit):
         call_and_ret(non_existent_qp)
     except ValueError:
         return True
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_recent_changes(limit):
-    get_recent_changes = GetRecentChanges(limit)
-    recent_changes = call_and_ret(get_recent_changes)
-    return len(recent_changes) == limit
 
 
 def create_parser():

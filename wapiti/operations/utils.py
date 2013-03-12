@@ -97,7 +97,7 @@ class OperationExample(object):
             except AttributeError:
                 pql = op_type.subop_chain[0].per_query_limit
             self.limit = pql.get_limit()
-        print self.disp_name
+        return
 
     def make_op(self, mag=None):
         if not self.op_type:
