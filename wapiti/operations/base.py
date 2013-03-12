@@ -17,7 +17,6 @@ from params import SingleParam
 from models import get_unique_func, get_priority_func
 from utils import PriorityQueue, MaxInt, chunked_iter, make_type_wrapper
 
-# TODO: prioritization
 # TODO: handle automatic redirecting better
 # TODO: support batching and optimization limits
 # TODO: concurrency. get_current_task() -> get_current_tasks()
@@ -25,11 +24,8 @@ from utils import PriorityQueue, MaxInt, chunked_iter, make_type_wrapper
 # TODO: separate structure for saving completed subops (for debugging?)
 # TODO: WebRequestOperation: accepts URL, action (default: GET)
 # TODO: Model links (url attribute)
-# TODO: TypeWrapper for Recursive such that it can be used in a subop_chain
-#       not as the subop_chain itself.
 # TODO: support field param_type (for cases with ints and strs)
 # TODO: use source descriptor instead of api_url? (for op.source)
-# TODO: Redirect resolution cannot be used together with the revids= param
 
 """
 - what if operations were iterable over their results and process()

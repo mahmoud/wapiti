@@ -9,7 +9,6 @@ import re
 
 DEFAULT_PROPS = 'ids|flags|timestamp|user|userid|size|sha1|comment|parsedcomment|tags'
 
-
 class GetPageRevisionInfos(QueryOperation):
     """
     Fetch revisions for pages.
@@ -82,6 +81,9 @@ class GetCurrentContent(QueryOperation):
 
 class GetRevisionContent(GetCurrentContent):
     input_field = SingleParam('revids', key_prefix=False, attr='rev_id')
+    fields = [StaticParam('prop', 'revisions'),
+              MultiParam('prop', DEFAULT_PROPS + '|content'),
+              SingleParam('parse', False)]
 
 
 class GetCurrentTalkContent(GetCurrentContent):
