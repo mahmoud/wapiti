@@ -6,6 +6,7 @@ from functools import wraps
 from pprint import pprint
 
 import base
+from models import PageIdentifier
 from category import (GetCategory,
                       GetCategoryList,
                       GetSubcategoryInfos,
@@ -120,6 +121,12 @@ def test_unicode_title(limit):
     get_beyonce = GetCurrentContent("Beyoncé Knowles")
     beyonce = call_and_ret(get_beyonce)
     return bool(beyonce)
+
+
+def test_coercion_basic(limit=None):
+    pid = PageIdentifier(title='Africa', page_id=123, ns=4, source='enwp')
+    get_subcats = GetSubcategoryInfos(pid, limit)
+    return get_subcats.input_param == 'Category:Africa'
 
 
 @magnitude(norm=20, big=550, huge=2000)

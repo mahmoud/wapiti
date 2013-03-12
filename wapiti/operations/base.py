@@ -26,6 +26,8 @@ from utils import PriorityQueue, MaxInt, chunked_iter, make_type_wrapper
 # TODO: Model links (url attribute)
 # TODO: support field param_type (for cases with ints and strs)
 # TODO: use source descriptor instead of api_url? (for op.source)
+# TODO: check that subop_chain types match up
+# TODO: check that priority attribute exists on output_type where applicable
 
 """
 - what if operations were iterable over their results and process()
