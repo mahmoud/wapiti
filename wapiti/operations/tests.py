@@ -22,16 +22,14 @@ from links import (GetBacklinks,
                    GetExternalLinks,
                    GetImages,
                    GetLinks)
-from feedback import GetFeedbackV5
 
-from templates import GetTranscludes
-from misc import (GetCoordinates,
-                  GeoSearch,
-                  GetImageInfos,
+from revisions import GetCurrentContent, GetPageRevisionInfos, GetRevisionInfos
+
+from misc import (GetImageInfos,
                   GetQueryPage,
                   GetRecentChanges,
                   GetAllImageInfos)
-from user import GetUserContribs #, GetUserContribRevisions
+
 from meta import GetSourceInfo
 
 PDB_ALL = True
@@ -106,13 +104,17 @@ def get_op_examples():
 
 
 def test_example_operations(limit=None):
+    try:
+        limit = int(limit)
+    except:
+        limit = 1
     ex_ops = get_op_examples()
     results = {}
     for ex in ex_ops:
         op = ex.make_op(mag=limit)
         op.process_all()
         results[ex.disp_name] = ex.test(op)
-    return results
+    return all(results.values())
 
 
 def test_unicode_title(limit):
@@ -183,13 +185,6 @@ def test_backlinks(limit):
     return len(bls) == limit
 
 
-@magnitude(norm=20, big=150, huge=300)
-def test_random(limit):
-    get_fifty_random = GetRandom(limit)
-    pages = call_and_ret(get_fifty_random)
-    return len(pages) == limit
-
-
 @magnitude(norm=5, big=550, huge=2000)
 def test_lang_links(limit):
     get_coffee_langs = GetLanguageLinks('Coffee', limit)
@@ -252,20 +247,6 @@ def test_get_links(limit):
     links = call_and_ret(get_links)
     return len(links) == limit
 
-
-
-
-def test_geosearch(limit):
-    geosearch = GeoSearch(('37.8197', '-122.479'))
-    geo = call_and_ret(geosearch)
-    return len(geo) > 1
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_get_user_contribs(limit):
-    get_contribs = GetUserContribs('Jimbo Wales', limit)
-    contribs = call_and_ret(get_contribs)
-    return len(contribs) == limit
 
 '''
 def test_get_meta(limit):

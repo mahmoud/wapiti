@@ -47,6 +47,7 @@ class GeoSearch(QueryOperation):
               SingleParam('namespace'),
               StaticParam('gsprop', 'type|name|dim|country|region')]
     output_type = [CoordinateIdentifier]
+    examples = [OperationExample(('37.8197', '-122.479'), 1)]
 
     def extract_results(self, query_resp):
         ret = []
