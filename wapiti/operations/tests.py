@@ -230,6 +230,7 @@ def main():
         _install_int_handler()
 
     if args.targets:
+        tests = {}
         for func in args.functions:
             try:
                 tests[func] = globals()[func]
