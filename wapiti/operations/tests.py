@@ -11,11 +11,9 @@ from category import GetSubcategoryInfos
 
 from revisions import GetCurrentContent, GetPageRevisionInfos, GetRevisionInfos
 
-from misc import (GetImageInfos,
-                  GetQueryPage,
-                  GetAllImageInfos)
-
+from misc import GetQueryPage
 from meta import GetSourceInfo
+
 
 PDB_ALL = True
 PDB_ERROR = False
@@ -68,6 +66,12 @@ def magnitude(norm, big=None, huge=None):
         wrapped.huge = huge
         return wrapped
     return mag_dec
+
+
+def get_tests():
+    tests = dict([(k, v) for k, v in globals().items()
+                  if callable(v) and k.startswith('test_')])
+    return tests
 
 
 def get_operations():
@@ -177,19 +181,6 @@ def test_get_meta(limit):
 '''
 
 
-def test_get_image_info(limit):
-    get_image_info = GetImageInfos('File:Logo.gif')
-    image_info = call_and_ret(get_image_info)
-    return image_info[0].url == 'http://upload.wikimedia.org/wikipedia/en/e/ea/Logo.gif'
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_get_all_image_infos(limit):
-    get_all_img = GetAllImageInfos(limit)
-    all_imgs = call_and_ret(get_all_img)
-    return len(all_imgs) == limit
-
-
 @magnitude(norm=2, big=5, huge=600)
 def test_query_pages(limit):
     qp_types = GetQueryPage.known_qps[:limit]
@@ -210,14 +201,21 @@ def test_nonexistent_query_page(limit):
 
 def create_parser():
     parser = ArgumentParser(description='Test operations')
-    parser.add_argument('functions', nargs='*')
+    parser.add_argument('targets', nargs='*')
     parser.add_argument('--pdb_all', '-a', action='store_true')
     parser.add_argument('--no_pdb_int', action='store_true')
-    parser.add_argument('--pdb_error', '-e', action='store_true')
+    parser.add_argument('--no_pdb_error', '-e', action='store_true')
     parser.add_argument('--do_print', '-p', action='store_true')
     parser.add_argument('--magnitude', '-m',
                         default=DEFAULT_MAGNITUDE)
     return parser
+
+
+def _install_int_handler():
+    import signal, pdb
+    def pdb_int_handler(sig, frame):
+        pdb.set_trace()
+    signal.signal(signal.SIGINT, pdb_int_handler)
 
 
 def main():
@@ -225,17 +223,13 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
     PDB_ALL = args.pdb_all
-    PDB_ERROR = args.pdb_error
+    PDB_ERROR = not args.no_pdb_error
     DO_PRINT = args.do_print
 
     if not args.no_pdb_int:
-        import signal
-        def pdb_int_handler(signal, frame):
-            import pdb;pdb.set_trace()
-        signal.signal(signal.SIGINT, pdb_int_handler)
+        _install_int_handler()
 
-    if args.functions:
-        tests = {}
+    if args.targets:
         for func in args.functions:
             try:
                 tests[func] = globals()[func]
@@ -243,8 +237,7 @@ def main():
                 print func, 'is not a valid test function'
                 continue
     else:
-        tests = dict([(k, v) for k, v in globals().items()
-                      if callable(v) and k.startswith('test_')])
+        tests = get_tests()
     results = {}
     for k, v in tests.items():
         results[k] = v(args.magnitude)
