@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 from base import QueryOperation
 from params import SingleParam, MultiParam, StaticParam
 from models import PageIdentifier, LanguageLink, InterwikiLink, ExternalLink
+from utils import OperationExample
 
 
 class GetImages(QueryOperation):
@@ -79,6 +80,7 @@ class GetExternalLinks(QueryOperation):
     input_field = SingleParam('titles', key_prefix=False)
     fields = [StaticParam('prop', 'extlinks')]
     output_type = [ExternalLink]
+    examples = [OperationExample('Croatian War of Independence')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -110,6 +112,7 @@ class GetLanguageLinks(QueryOperation):
     fields = [StaticParam('prop', 'langlinks'),
               SingleParam('url', True)]
     output_type = [LanguageLink]
+    examples = [OperationExample('Coffee')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -133,6 +136,7 @@ class GetInterwikiLinks(QueryOperation):
     fields = [StaticParam('prop', 'iwlinks'),
               SingleParam('url', True)]
     output_type = [InterwikiLink]
+    examples = [OperationExample('Coffee')]
 
     def extract_results(self, query_resp):
         ret = []
