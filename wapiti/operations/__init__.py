@@ -28,14 +28,12 @@ from revisions import (GetRevisionInfos,
                        GetPageRevisionInfos)
 from misc import (GetCoordinates,
                   GeoSearch,
-                  GetImageInfos,
-                  GetTemplates,
                   GetQueryPage,
-                  GetRecentChanges,
-                  GetAllImageInfos)
+                  GetRecentChanges)
+from files import GetImageInfos, GetAllImageInfos
 from meta import GetSourceInfo
 from user import GetUserContribs  # , GetUserContribRevisions
-from templates import GetTranscludes
+from templates import GetTranscludes, GetTemplates
 
 ALL_OPERATIONS = [GetCoordinates,
                   GeoSearch,
