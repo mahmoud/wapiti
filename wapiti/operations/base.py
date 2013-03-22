@@ -74,15 +74,25 @@ DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
 ALL = MaxInt('ALL')
 DEFAULT_MIN = 50
 
-DEFAULT_WEB_CLIENT = ransom.Client({'headers': DEFAULT_HEADERS})
-
-
 class WapitiException(Exception):
     pass
 
 
 class NoMoreResults(Exception):
     pass
+
+
+DEFAULT_WEB_CLIENT = ransom.Client({'headers': DEFAULT_HEADERS})
+
+
+class MockClient(object):
+    def __init__(self, is_bot=False):
+        self.web_client = DEFAULT_WEB_CLIENT
+        self.api_url = DEFAULT_API_URL
+        self.is_bot = is_bot
+
+
+DEFAULT_CLIENT = MockClient()
 
 
 Tune = make_type_wrapper('Tune', [('priority', None), ('buffer', None)])
@@ -259,12 +269,11 @@ class Operation(object):
 
     def __init__(self, input_param, limit=None, **kw):
         self.client = kw.pop('client', None)
-        if self.client:
-            self.api_url = self.client.api_url
-            self.is_bot_op = self.client.is_bot
-        else:
-            self.api_url = kw.get('api_url', DEFAULT_API_URL)
-            self.is_bot_op = False
+        if self.client is None:
+            self.client = DEFAULT_CLIENT
+        self.api_url = self.client.api_url
+        self.is_bot_op = self.client.is_bot
+
         self.set_input_param(input_param)
         self.set_limit(limit)
 
@@ -510,10 +519,7 @@ class QueryOperation(Operation):
         if not self.remaining:
             return None
         params = self.prepare_params(**self.kwargs)
-        # TODO: blargh
-        client = lambda: None
-        client.api_url = self.api_url
-        mw_call = MediaWikiCall(params, client=client)
+        mw_call = MediaWikiCall(params, client=self.client)
         return mw_call
 
     def prepare_params(self, **kw):
