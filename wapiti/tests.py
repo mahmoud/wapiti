@@ -212,14 +212,6 @@ def test_transclusions(limit):
 
 
 @magnitude(norm=20, big=550, huge=2000)
-def test_all_transcludes(limit):
-    client = WapitiClient('mahmoudrhashemi@gmail.com')
-    get_all_transcludes = partial(client.get_all_transcludes, limit)
-    tr_list = call_and_ret(get_all_transcludes)
-    return len(tr_list) == limit
-
-
-@magnitude(norm=20, big=550, huge=2000)
 def test_resolve_subjects(limit):
     client = WapitiClient('mahmoudrhashemi@gmail.com')
     get_res_transcludes = partial(client.get_transcludes, 'Template:ArticleHistory',
@@ -336,14 +328,6 @@ def test_get_revision_infos(limit):
     get_revisions = partial(client.get_revision_infos, ['538903663', '539916351', '531458383'])
     rev_infos = call_and_ret(get_revisions)
     return len(rev_infos) == 3
-
-
-@magnitude(norm=20, big=550, huge=2000)
-def test_get_contrib_rev_infos(limit):
-    client = WapitiClient('mahmoudrhashemi@gmail.com')
-    get_contrib_rev_infos = partial(client.get_user_contrib_revisions, 'Jimbo Wales', limit)
-    contrib_rev_infos = call_and_ret(get_contrib_rev_infos)
-    return len(contrib_rev_infos) == limit
 
 
 def test_get_image_info(limit):
