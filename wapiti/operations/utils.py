@@ -224,20 +224,6 @@ class Wrapper(object):
         return self._wrapped(*a, **kw)
 
 
-#class Recursive(TypeWrapper):
-#    def __init__(self, *a, **kw):
-#        super(Recursive, self).__init__(*a, **kw)
-#        self.is_recursive = True
-
-"""
-class _SentinelMeta(type):
-    def __new__(cls, name, bases, attrs):
-        pass
-
-def make_sentinel(name):
-    return _SentinelMeta(str(name), (object,), {})
-"""
-
 REMOVED = '<removed-task>'
 
 
