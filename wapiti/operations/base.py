@@ -596,8 +596,8 @@ class MediaWikiCall(Operation):
         self.raise_err = kw.pop('raise_err', True)
         self.raise_warn = kw.pop('raise_warn', False)
         self.client = kw.pop('client')
-        self.ransom_client = getattr(self.client,
-                                     'ransom_client',
+        self.web_client = getattr(self.client,
+                                     'web_client',
                                      DEFAULT_WEB_CLIENT)
         if kw:
             raise ValueError('got unexpected keyword arguments: %r'
@@ -622,7 +622,7 @@ class MediaWikiCall(Operation):
         # TODO: add URL to all exceptions
         resp = None
         try:
-            resp = self.ransom_client.get(self.api_url, self.params)
+            resp = self.web_client.get(self.api_url, self.params)
         except Exception as e:
             # TODO: log
             self.exception = e  # TODO: wrap
@@ -673,3 +673,37 @@ class MediaWikiCall(Operation):
         if self.done:
             return 0
         return 1
+
+
+class WebRequestOperation(Operation):
+    input_field = SingleParam('url')
+    output_type = Operation
+    _limit = 1
+
+    def __init__(self, input_param, **kw):
+        self.client = kw.pop('client', None)
+        self.web_client = getattr(self.client,
+                                  'web_client',
+                                  DEFAULT_WEB_CLIENT)
+        self.action = kw.pop('action', 'get')
+        self.raise_exc = kw.pop('raise_exc', True)
+        if kw:
+            raise ValueError('got unexpected keyword arguments: %r'
+                             % kw.keys())
+        self.set_input_param(input_param)
+        self.url = self._input_param
+        self.kwargs = kw
+        self.results = {}
+
+    def process(self):
+        resp = None
+        try:
+            resp = self.web_client.req(self.action, self.url)
+        except Exception as e:
+            self.exception = e
+            if self.raise_exc:
+                raise
+            return self
+        self.results[self.url] = resp.text
+        raise NoMoreResults()
+        #return self

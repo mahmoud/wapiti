@@ -126,6 +126,14 @@ def test_multiplexing(limit=None):
     return len(rev_infos) > (0.9 * limit)  # a couple might be missing
 
 
+def test_web_request(limit=None):
+    url = 'http://upload.wikimedia.org/wikipedia/commons/d/d2/Mcgregor.jpg'
+    get_photo = base.WebRequestOperation(url)
+    res = get_photo()
+    text = res[0]
+    return len(text) == 16408
+
+
 def test_nonexistent_cat_error(limit):
     '''
     Should return invalidcategory error
@@ -231,7 +239,7 @@ def main():
 
     if args.targets:
         tests = {}
-        for func in args.functions:
+        for func in args.targets:
             try:
                 tests[func] = globals()[func]
             except KeyError:
