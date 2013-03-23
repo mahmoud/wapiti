@@ -69,6 +69,8 @@ class WapitiClient(object):
         self.api_url = api_url or DEFAULT_API_URL
         self.is_bot = is_bot
 
+        import pdb;pdb.set_trace()
+
         self._create_ops()
         if init_source:
             self._init_source()
