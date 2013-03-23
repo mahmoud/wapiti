@@ -33,6 +33,8 @@ Need generic support for:
 '''
 import re
 from functools import partial
+
+import operations
 from operations import ALL_OPERATIONS, DEFAULT_API_URL
 
 
@@ -68,8 +70,6 @@ class WapitiClient(object):
         self.user_email = user_email
         self.api_url = api_url or DEFAULT_API_URL
         self.is_bot = is_bot
-
-        import pdb;pdb.set_trace()
 
         self._create_ops()
         if init_source:
