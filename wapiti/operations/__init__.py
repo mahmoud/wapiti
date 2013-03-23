@@ -18,7 +18,6 @@ from category import (GetCategoryList,
 from links import (GetBacklinks,
                    GetLanguageLinks,
                    GetInterwikiLinks,
-                   GetImages,
                    GetLinks,
                    GetExternalLinks)
 from feedback import GetFeedbackV5
@@ -30,7 +29,7 @@ from misc import (GetCoordinates,
                   GeoSearch,
                   GetQueryPage,
                   GetRecentChanges)
-from files import GetImageInfos, GetAllImageInfos
+from files import GetImageInfos, GetAllImageInfos, GetImages
 from meta import GetSourceInfo
 from user import GetUserContribs  # , GetUserContribRevisions
 from templates import GetTranscludes, GetTemplates
