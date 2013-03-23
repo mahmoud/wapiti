@@ -2,6 +2,8 @@
 *.pyo*
 *.sublime-project
 *.sublime-workspace
+*.egg-info
+dist/*
 
 .DS_Store
 .*.swp
