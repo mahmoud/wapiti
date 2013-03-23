@@ -566,6 +566,8 @@ class QueryOperation(Operation):
         if self.is_multiplexing:
             return super(QueryOperation, self).store_results(task, resp)
         if resp.notices:  # TODO: lift this
+            self._notices = list(resp.notices)
+            self._url = resp.url
             print "may have an error: %r (%r)" % (resp.notices, resp.url)
         processed_resp = self.post_process_response(resp)
         if processed_resp is None:
