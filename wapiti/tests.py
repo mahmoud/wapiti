@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from argparse import ArgumentParser
 from functools import wraps
 
-from wapiti import WapitiClient
+from client import WapitiClient
 from operations import tests
 
 from functools import partial
