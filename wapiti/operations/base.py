@@ -15,7 +15,11 @@ import ransom
 
 from params import SingleParam
 from models import get_unique_func, get_priority_func
-from utils import PriorityQueue, MaxInt, chunked_iter, make_type_wrapper
+from utils import (PriorityQueue,
+                   MaxInt,
+                   chunked_iter,
+                   make_type_wrapper,
+                   OperationExample)
 
 # TODO: handle automatic redirecting better
 # TODO: support batching and optimization limits
@@ -67,12 +71,14 @@ prioritization/batching/concurrency implementation thoughts:
 """
 
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
+DEFAULT_BASE_URL = 'http://en.wikipedia.org/wiki/'
 
 DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
                                   ' mahmoudrhashemi@gmail.com') }
 
 ALL = MaxInt('ALL')
 DEFAULT_MIN = 50
+
 
 class WapitiException(Exception):
     pass
@@ -707,3 +713,37 @@ class WebRequestOperation(Operation):
         self.results[self.url] = resp.text
         raise NoMoreResults()
         #return self
+
+
+class GetPageHTML(Operation):
+    input_field = SingleParam('title')
+    examples = [OperationExample('Africa', limit=1)]
+    output_type = Operation
+    _limit = 1
+
+    def __init__(self, *a, **kw):
+        super(GetPageHTML, self).__init__(*a, **kw)
+        self.web_client = getattr(self.client,
+                                  'web_client',
+                                  DEFAULT_WEB_CLIENT)
+        self.raise_exc = kw.pop('raise_exc', True)
+        source_info = getattr(self.client, 'source_info', None)
+        if source_info:
+            main_title = source_info.mainpage
+            main_url = source_info.base
+            self.base_url = main_url[:len(main_title)]
+        else:
+            self.base_url = DEFAULT_BASE_URL
+        self.url = self.base_url + self.input_param
+        self.results = {}
+
+    def process(self):
+        try:
+            resp = self.web_client.get(self.url)
+        except Exception as e:
+            self.exception = e
+            if self.raise_exc:
+                raise
+            return self
+        self.results[self.url] = resp.text
+        raise NoMoreResults()

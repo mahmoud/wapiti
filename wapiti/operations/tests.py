@@ -134,6 +134,13 @@ def test_web_request(limit=None):
     return len(text) == 16408
 
 
+def test_get_html(limit=None):
+    get_africa_html = base.GetPageHTML('Africa')
+    res = get_africa_html()
+    text = res[0]
+    return len(text) > 350000
+
+
 def test_nonexistent_cat_error(limit):
     '''
     Should return invalidcategory error
