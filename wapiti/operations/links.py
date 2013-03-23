@@ -7,31 +7,6 @@ from models import PageIdentifier, LanguageLink, InterwikiLink, ExternalLink
 from utils import OperationExample
 
 
-class GetImages(QueryOperation):
-    """
-    Fetch the images embedded on pages.
-    """
-    field_prefix = 'gim'
-    input_field = MultiParam('titles', key_prefix=False)
-    fields = [StaticParam('generator', 'images'),
-              StaticParam('prop', 'info')]
-    output_type = [PageIdentifier]
-    examples = [OperationExample('Coffee')]
-
-    def extract_results(self, query_resp):
-        ret = []
-        for pid, pid_dict in query_resp['pages'].iteritems():
-            if pid.startswith('-'):
-                pid_dict['pageid'] = None  # TODO: breaks consistency :/
-            try:
-                page_ident = PageIdentifier.from_query(pid_dict,
-                                                       source=self.source)
-            except ValueError:
-                continue
-            ret.append(page_ident)
-        return ret
-
-
 class GetBacklinks(QueryOperation):
     """
     Fetch page's incoming links from other pages on source wiki.
