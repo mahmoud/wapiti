@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from argparse import ArgumentParser
-from functools import wraps
+from functools import wraps, partial
 from pprint import pprint
 
 import base
@@ -13,6 +13,18 @@ from revisions import GetCurrentContent, GetPageRevisionInfos, GetRevisionInfos
 
 from misc import GetQueryPage
 from meta import GetSourceInfo
+
+import category
+# import feedback
+import files
+import links
+import meta
+import misc
+import protection
+import rand
+import revisions
+import templates
+import user
 
 
 PDB_ALL = True
@@ -90,6 +102,22 @@ def get_op_examples():
             continue
         ret.extend(op.examples)
     return ret
+
+
+def op_example(operation, limit=None):
+    try:
+        limit = int(limit)
+    except:
+        limit = 1
+    ret = {}
+    ops = get_operations()
+    for op in (o for o in ops if o.__name__ == operation):
+        example = getattr(op, 'examples', None)
+        for ex in example:
+            op = ex.make_op(mag=limit)
+            op.process_all()
+            ret[ex.disp_name] = ex.test(op)
+    return all(ret.values())
 
 
 def test_example_operations(limit=None):
@@ -217,6 +245,7 @@ def test_nonexistent_query_page(limit):
 def create_parser():
     parser = ArgumentParser(description='Test operations')
     parser.add_argument('targets', nargs='*')
+    parser.add_argument('--list', '-l', action='store_true')
     parser.add_argument('--pdb_all', '-a', action='store_true')
     parser.add_argument('--no_pdb_int', action='store_true')
     parser.add_argument('--no_pdb_error', '-e', action='store_true')
@@ -243,17 +272,27 @@ def main():
 
     if not args.no_pdb_int:
         _install_int_handler()
+    all_tests = get_tests()
+    possible_ops = [op.__name__ for op in get_operations() if getattr(op, 'examples', None)]
+    possible_ops += all_tests.keys()
 
     if args.targets:
         tests = {}
         for func in args.targets:
             try:
-                tests[func] = globals()[func]
+                if func in all_tests.keys():
+                    tests[func] = globals()[func]
+                else:
+                    tests[func] = partial(op_example, func)
             except KeyError:
                 print func, 'is not a valid test function'
                 continue
     else:
-        tests = get_tests()
+        tests = all_tests
+    if args.list:
+        print 'Available tests:'
+        pprint(possible_ops)
+        return
     results = {}
     for k, v in tests.items():
         results[k] = v(args.magnitude)

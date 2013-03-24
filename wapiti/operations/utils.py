@@ -109,7 +109,9 @@ class OperationExample(object):
 
 
 def limit_equal_or_depleted(op):
-    if getattr(op, 'is_depleted', None):
+    if getattr(op, '_notices', None):
+        return False
+    elif getattr(op, 'is_depleted', None):
         return True
     elif len(op.results) == op.limit:
         return True
