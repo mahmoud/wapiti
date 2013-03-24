@@ -731,7 +731,7 @@ class GetPageHTML(Operation):
         if source_info:
             main_title = source_info.mainpage
             main_url = source_info.base
-            self.base_url = main_url[:len(main_title)]
+            self.base_url = main_url[:-len(main_title)]
         else:
             self.base_url = DEFAULT_BASE_URL
         self.url = self.base_url + self.input_param
