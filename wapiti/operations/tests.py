@@ -15,7 +15,7 @@ from misc import GetQueryPage
 from meta import GetSourceInfo
 
 import category
-import feedback
+# import feedback
 import files
 import links
 import meta
