@@ -6,20 +6,20 @@ from params import SingleParam, StaticParam
 from utils import OperationExample
 
 
-class GetFeedbackV4(QueryOperation):
-    """
-    This API is no longer available (on en or de wikipedia).  As of
-    3/9/2013, this API does not even appear in the documentation at:
-    http://en.wikipedia.org/w/api.php
-    """
-    field_prefix = 'af'
-    input_field = SingleParam('pageid')
-    fields = [StaticParam('list', 'articlefeedback')]
-    output_type = list
-
-    def extract_results(self, query_resp):
-        ret = query_resp['articlefeedback'][0].get('ratings', [])
-        return ret
+#class GetFeedbackV4(QueryOperation):
+#    """
+#    This API is no longer available (on en or de wikipedia).  As of
+#    3/9/2013, this API does not even appear in the documentation at:
+#    http://en.wikipedia.org/w/api.php
+#    """
+#    field_prefix = 'af'
+#    input_field = SingleParam('pageid')
+#    fields = [StaticParam('list', 'articlefeedback')]
+#    output_type = list
+#
+#    def extract_results(self, query_resp):
+#        ret = query_resp['articlefeedback'][0].get('ratings', [])
+#        return ret
 
 
 class GetFeedbackV5(QueryOperation):

@@ -33,6 +33,8 @@ Need generic support for:
 '''
 import re
 from functools import partial
+
+import operations
 from operations import ALL_OPERATIONS, DEFAULT_API_URL
 
 
