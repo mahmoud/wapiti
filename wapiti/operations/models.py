@@ -29,6 +29,7 @@ InterwikiDescriptor = namedtuple('InterwikiDescriptor', 'alias url language')
 
 _MISSING = object()
 
+
 class NamespaceDescriptor(object):
     def __init__(self, id, title, canonical, **kw):
         self.id = id

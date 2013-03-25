@@ -30,3 +30,18 @@ class GetRandom(QueryOperation):
 
     def get_cont_str(self, *a, **kw):
         return ''
+
+
+class GetRandomArticles(GetRandom):
+    fields = GetRandom.fields + [StaticParam('grnnamespace', '0')]
+    examples = [OperationExample('random articles')]
+
+
+class GetRandomCategories(GetRandom):
+    fields = GetRandom.fields + [StaticParam('grnnamespace', '14')]
+    examples = [OperationExample('random categories')]
+
+
+class GetRandomFilePages(GetRandom):
+    fields = GetRandom.fields + [StaticParam('grnnamespace', '6')]
+    examples = [OperationExample('random file pages')]

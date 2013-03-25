@@ -149,9 +149,12 @@ def get_inputless_init(old_init):
     Used for Operations like get_random() which don't take an input
     parameter.
     """
+    if getattr(old_init, '_is_inputless', None):
+        return old_init
     @wraps(old_init)
     def inputless_init(self, limit=None, **kw):
         return old_init(self, None, limit, **kw)
+    inputless_init._is_inputless = True
     return inputless_init
 
 
