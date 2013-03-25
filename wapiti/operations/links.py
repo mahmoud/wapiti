@@ -3,11 +3,7 @@ from __future__ import unicode_literals
 
 from base import QueryOperation
 from params import SingleParam, MultiParam, StaticParam
-from models import (PageIdentifier,
-                    PageInfo,
-                    LanguageLink,
-                    InterwikiLink,
-                    ExternalLink)
+from models import (PageInfo, LanguageLink, InterwikiLink, ExternalLink)
 from utils import OperationExample
 
 
@@ -40,16 +36,17 @@ class GetLinks(QueryOperation):
     input_field = SingleParam('titles', key_prefix=False)
     fields = [StaticParam('generator', 'links'),
               StaticParam('prop', 'info'),
+              StaticParam('inprop', 'subjectid|talkid|protection'),
               MultiParam('namespace')]
-    output_type = [PageIdentifier]
+    output_type = [PageInfo]
     examples = [OperationExample('Coffee')]
 
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
-            page_ident = PageIdentifier.from_query(pid_dict,
-                                                   source=self.source)
-            ret.append(page_ident)
+            page_info = PageInfo.from_query(pid_dict,
+                                            source=self.source)
+            ret.append(page_info)
         return ret
 
 
