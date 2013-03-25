@@ -3,7 +3,11 @@ from __future__ import unicode_literals
 
 from base import QueryOperation
 from params import SingleParam, MultiParam, StaticParam
-from models import PageIdentifier, LanguageLink, InterwikiLink, ExternalLink
+from models import (PageIdentifier,
+                    PageInfo,
+                    LanguageLink,
+                    InterwikiLink,
+                    ExternalLink)
 from utils import OperationExample
 
 
@@ -11,18 +15,20 @@ class GetBacklinks(QueryOperation):
     """
     Fetch page's incoming links from other pages on source wiki.
     """
-    field_prefix = 'bl'
+    field_prefix = 'gbl'
     input_field = SingleParam('title')
-    fields = [StaticParam('list', 'backlinks')]
-    output_type = [PageIdentifier]
+    fields = [StaticParam('generator', 'backlinks'),
+              StaticParam('prop', 'info'),
+              StaticParam('inprop', 'subjectid|talkid|protection')]
+    output_type = [PageInfo]
     examples = [OperationExample('Coffee')]
 
     def extract_results(self, query_resp):
         ret = []
-        for pid_dict in query_resp.get('backlinks', []):
-            page_ident = PageIdentifier.from_query(pid_dict,
-                                                   source=self.source)
-            ret.append(page_ident)
+        for pid, pid_dict in query_resp.get('pages', {}).iteritems():
+            page_info = PageInfo.from_query(pid_dict,
+                                            source=self.source)
+            ret.append(page_info)
         return ret
 
 
