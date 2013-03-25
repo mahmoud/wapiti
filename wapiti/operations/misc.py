@@ -14,6 +14,27 @@ QueryPageInfo = namedtuple('QueryPageInfo', 'title ns value querypage cache')
 
 DEFAULT_COORD_PROPS = ['type', 'name', 'dim', 'country', 'region']
 
+
+class GetPageInfo(QueryOperation):
+    field_prefix = 'in'
+    input_field = MultiParam('titles', key_prefix=False)
+    fields = [StaticParam('prop', 'info'),
+              MultiParam('prop', 'subjectid|talkid|protection')]
+    output_type = PageInfo
+    examples = [OperationExample(['Coffee', 'Category:Africa'])]
+
+    def extract_results(self, query_resp):
+        ret = []
+        for k, pid_dict in query_resp['pages'].iteritems():
+            try:
+                page_info = PageInfo.from_query(pid_dict,
+                                                source=self.source)
+            except ValueError:
+                continue
+            ret.append(page_info)
+        return ret
+
+
 class GetCoordinates(QueryOperation):
     field_prefix = 'co'
     input_field = MultiParam('titles', key_prefix=False)
