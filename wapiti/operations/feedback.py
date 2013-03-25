@@ -22,6 +22,12 @@ from utils import OperationExample
 #        return ret
 
 
+_FV5_KNOWN_FILTERS = ['*', 'featured', 'unreviewed', 'helpful', 'unhelpful',
+                      'flagged', 'useful', 'resolved', 'noaction',
+                      'inappropriate', 'archived', 'allcomment', 'hidden',
+                      'requested', 'declined', 'oversighted', 'all']
+
+
 class GetFeedbackV5(QueryOperation):
     """
     article feedback v5 breaks standards in a couple ways.
@@ -31,7 +37,8 @@ class GetFeedbackV5(QueryOperation):
     """
     field_prefix = 'afvf'
     input_field = SingleParam('pageid')
-    fields = [StaticParam('list', 'articlefeedbackv5-view-feedback')]
+    fields = [StaticParam('list', 'articlefeedbackv5-view-feedback'),
+              SingleParam('filter', default='featured')]
     output_type = list
     examples = [OperationExample('604727')]
 
@@ -42,4 +49,4 @@ class GetFeedbackV5(QueryOperation):
 
     def extract_results(self, query_resp):
         count = query_resp['articlefeedbackv5-view-feedback']['count']
-        return ['TODO'] * count
+        return ['TODO'] * int(count)
