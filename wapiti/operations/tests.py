@@ -268,12 +268,14 @@ def main():
     args = parser.parse_args()
     PDB_ALL = args.pdb_all
     PDB_ERROR = not args.no_pdb_error
+    print PDB_ERROR
     DO_PRINT = args.do_print
 
     if not args.no_pdb_int:
         _install_int_handler()
     all_tests = get_tests()
-    possible_ops = [op.__name__ for op in get_operations() if getattr(op, 'examples', None)]
+    possible_ops = [op.__name__ for op in get_operations()
+                    if getattr(op, 'examples', None)]
     possible_ops += all_tests.keys()
 
     if args.targets:
@@ -294,9 +296,10 @@ def main():
         pprint(possible_ops)
         return
     results = {}
-    for k, v in tests.items():
-        results[k] = v(args.magnitude)
-        print k, results[k]
+    for test_name, test in tests.items():
+        magged_test_func = partial(test, args.magnitude)
+        results[test_name] = call_and_ret(magged_test_func)
+        print test_name, results[test_name]
     if not results:
         print '-- no tests run'
         return
