@@ -92,7 +92,7 @@ DEFAULT_WEB_CLIENT = ransom.Client({'headers': DEFAULT_HEADERS})
 
 
 class MockClient(object):
-    def __init__(self, is_bot=False):
+    def __init__(self, is_bot=False, **kwargs):
         self.web_client = DEFAULT_WEB_CLIENT
         self.api_url = DEFAULT_API_URL
         self.is_bot = is_bot
