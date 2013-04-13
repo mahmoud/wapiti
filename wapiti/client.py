@@ -71,6 +71,7 @@ class WapitiClient(object):
         self.api_url = api_url or DEFAULT_API_URL
         self.is_bot = is_bot
 
+        self.op_names = []
         self._create_ops()
         if init_source:
             self._init_source()
@@ -90,3 +91,4 @@ class WapitiClient(object):
             func_name = camel2under(op.__name__)
             call_op = partial(self.call_operation, op)
             setattr(self, func_name, call_op)
+            self.op_names.append(func_name)
