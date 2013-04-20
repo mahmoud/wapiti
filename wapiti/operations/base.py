@@ -92,7 +92,8 @@ DEFAULT_WEB_CLIENT = ransom.Client({'headers': DEFAULT_HEADERS})
 
 
 class MockClient(object):
-    def __init__(self, is_bot=False):
+    def __init__(self, is_bot=False, **kwargs):
+        self.debug = kwargs.pop('debug', False)
         self.web_client = DEFAULT_WEB_CLIENT
         self.api_url = DEFAULT_API_URL
         self.is_bot = is_bot
@@ -352,7 +353,8 @@ class Operation(object):
     def process(self):
         self.started = True
         task = self.get_current_task()
-        print self.__class__.__name__, self.remaining
+        if self.client.debug:
+            print self.__class__.__name__, self.remaining
         if task is None:
             raise NoMoreResults()
         elif isinstance(task, Operation):
@@ -415,7 +417,6 @@ class Operation(object):
                 self.process()
             except NoMoreResults:
                 break
-        print
         return self.results.values()
 
     __call__ = process_all

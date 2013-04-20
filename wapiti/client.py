@@ -63,13 +63,15 @@ class WapitiClient(object):
                  user_email,
                  api_url=None,
                  is_bot=False,
-                 init_source=True):
+                 init_source=True,
+                 debug=False):
         # set settings obj
         # set up source (from api_url in settings)
         # then you're ready to call ops
         self.user_email = user_email
         self.api_url = api_url or DEFAULT_API_URL
         self.is_bot = is_bot
+        self.debug = debug
 
         self.op_names = []
         self._create_ops()
