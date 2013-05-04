@@ -2,18 +2,37 @@
 A very simple Mediawiki template parser that turns template
 references into nested key-value, partial()-like objects.
 
-Thanks to Mark Williams for 95% of this.
+Thanks to Mark Williams for 95%+ of this.
 """
 
 import re
-import pprint
 import itertools
 import functools
 
 from collections import namedtuple
 
-Token = namedtuple('Token', 'name value')
 
+class TemplateReference(object):
+    def __init__(self, name, args, kwargs):
+        self.name = name
+        self.args = args
+        self.kwargs = kwargs
+
+    @classmethod
+    def from_string(cls, text):
+        parsed_tmpl = parse(text)
+        args = [p.value for p in parsed_tmpl['parameters']
+                if isinstance(p, Arg)]
+        kwargs = dict([(p.key, p.value) for p in parsed_tmpl['parameters']
+                       if isinstance(p, Kwarg)])
+        return cls(parsed_tmpl['name'], args, kwargs)
+
+    def __repr__(self):
+        cn = self.__class__.__name__
+        return '%s(%r, %r, %r)' % (cn, self.name, self.args, self.kwargs)
+
+
+Token = namedtuple('Token', 'name value')
 Arg = namedtuple('Arg', 'value')
 Kwarg = namedtuple('Kwarg', 'key value')
 
@@ -39,7 +58,6 @@ lex = re.Scanner([(r'\{\{', lambda s, t: Token('BEGIN', t)),
 
 
 class TokenStream(object):
-
     def __init__(self, tokens):
         self.iterator = iter(tokens)
         self.pushed = None
@@ -56,7 +74,6 @@ class TokenStream(object):
 
 def parse(s):
     tokens = TokenStream(lex.scan(s)[0])
-
     return match_template(tokens)
 
 
@@ -79,7 +96,6 @@ def match_template(tokens):
     template['name'] = name
 
     match_parameters(template, tokens)
-
     match_end(tokens)
 
     return template
@@ -90,7 +106,6 @@ def match_atom(tokens):
     if token.name != 'ATOM':
         tokens.pushed = token
         return None
-
     return token.value
 
 
@@ -137,14 +152,14 @@ def match_end(tokens):
     assert token.name == 'END', 'expected end but got {0}'.format(token.name)
 
 
-test = '''{{cite web
+_BASIC_CITE_TEST = '''{{cite web
 | url = [http://www.census.gov/geo/www/gazetteer/files/Gaz_places_national.txt U.S. Census]
 | publisher=US Census Bureau
 | accessdate =2011
 | title = U.S. Census
 }}'''
 
-test = '''{{citation
+_BIGGER_CITE_TEST = '''{{citation
 | last = Terplan
 | first = Egon
 | title = Organizing for Economic Growth
@@ -157,8 +172,7 @@ test = '''{{citation
 | accessdate = January 5, 2013
 }}'''
 
-
-test = '''{{climate chart
+_SF_CLIMATE_TEST = '''{{climate chart
 | San Francisco
 |46.2|56.9|4.5
 |48.1|60.2|4.61
@@ -175,47 +189,18 @@ test = '''{{climate chart
 |float=right
 |clear=none
 |units=imperial}}'''
-pprint.pprint(parse(test))
 
 
-# >>> {'name': 'climate chart',
-#  'parameters': [Arg(value='San Francisco'),
-#                 Arg(value=46.2),
-#                 Arg(value=56.9),
-#                 Arg(value=4.5),
-#                 Arg(value=48.1),
-#                 Arg(value=60.2),
-#                 Arg(value=4.61),
-#                 Arg(value=49.1),
-#                 Arg(value=62.9),
-#                 Arg(value=3.26),
-#                 Arg(value=49.9),
-#                 Arg(value=64.3),
-#                 Arg(value=1.46),
-#                 Arg(value=51.6),
-#                 Arg(value=65.6),
-#                 Arg(value=0.7),
-#                 Arg(value=53.3),
-#                 Arg(value=67.9),
-#                 Arg(value=0.16),
-#                 Arg(value=54.6),
-#                 Arg(value=68.2),
-#                 Arg(value=0),
-#                 Arg(value=55.6),
-#                 Arg(value=69.4),
-#                 Arg(value=0.06),
-#                 Arg(value=55.7),
-#                 Arg(value=71.3),
-#                 Arg(value=0.21),
-#                 Arg(value=54.3),
-#                 Arg(value=70.4),
-#                 Arg(value=1.13),
-#                 Arg(value=50.7),
-#                 Arg(value=63.2),
-#                 Arg(value=3.16),
-#                 Arg(value=46.7),
-#                 Arg(value=57.3),
-#                 Arg(value=4.56),
-#                 Kwarg(key='float', value='right'),
-#                 Kwarg(key='clear', value='none'),
-#                 Kwarg(key='units', value='imperial')]}
+_ALL_TEST_STRS = [_BASIC_CITE_TEST, _BIGGER_CITE_TEST, _SF_CLIMATE_TEST]
+
+def _main():
+    import pprint
+    for test in _ALL_TEST_STRS:
+        pprint.pprint(parse(test))
+    for test in _ALL_TEST_STRS:
+        print
+        pprint.pprint(TemplateReference.from_string(test))
+
+
+if __name__ == '__main__':
+    _main()
