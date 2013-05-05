@@ -58,6 +58,8 @@ class GetCurrentContent(QueryOperation):
               MultiParam('prop', DEFAULT_PROPS + '|content'),
               SingleParam('parse', False),
               SingleParam('redirects', True, key_prefix=False)]
+    examples = [OperationExample('This page does not exist'),
+                OperationExample('Coffee')]
     output_type = Revision
 
     def extract_results(self, query_resp):
@@ -69,7 +71,7 @@ class GetCurrentContent(QueryOperation):
 
         pages = query_resp.get('pages', {})
         for page_id, pid_dict in pages.iteritems():
-            if page_id < 0:
+            if int(page_id) < 0:
                 continue
             rev_dict = dict(pid_dict)
             rev_dict.update(pid_dict['revisions'][0])
