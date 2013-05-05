@@ -1,17 +1,45 @@
 # -*- coding: utf-8 -*-
 """\
 A very simple Mediawiki template parser that turns template
-references into nested key-value, partial()-like objects.
+references into nested key-value objects.
+
+From a Python perspective, one can think of TemplateReferences as the
+``partial()``s to MediaWiki templates.
 
 Thanks to Mark Williams for drafting this.
+
 """
 from __future__ import unicode_literals
 
 import re
 import itertools
-import functools
+"""
+Notes
+-----
 
-from collections import namedtuple
+- everything inside html comments is ignored
+- no html in keys
+- html in values
+- '=' only allowed after key if no '=' encountered yet
+
+_transitiony_things = \
+         {'template': {'key': ['=', '|', '}}'], 'value': ['|', '}}']},
+          'html_comment': ['-->'],
+          'link': [']]'],
+          'table': ['|}']}
+"""
+
+
+def is_iterable(obj):
+    try:
+        iter(obj)
+    except TypeError:
+        return False
+    return True
+
+
+def is_scalar(obj):
+    return not is_iterable(obj) or isinstance(obj, basestring)
 
 
 class TemplateReference(object):
@@ -29,38 +57,32 @@ class TemplateReference(object):
         cn = self.__class__.__name__
         return '%s(%r, %r, %r)' % (cn, self.name, self.args, self.kwargs)
 
+    def __getitem__(self, key):
+        try:
+            return self.kwargs[key]
+        except KeyError:
+            raise KeyError('%r template has no key %r' % (self.name, key))
+        """
+        if is_scalar(val) or isinstance(val, TemplateReference):
+            return val
+        for subval in val:
+            if subval
+            try:
+                return val[key]
+            except KeyError:
+                pass
+        else:
+            raise KeyError('%r template has no key %r' % (self.name, key))
+        """
+
+    def __iter__(self):
+        return itertools.chain(iter(self.args), self.kwargs.iteritems())
+
 
 def get_page_templates(source):
-    ret = []
-    if not source:
-        return ret
-    cur_start = source.find('{{', cur_start)
-    cur_end = cur_start
-    while cur_end < len(source):
-        if cur_start < 0:
-            break
-        cur_end = cur_start
-        try:
-            tmpl = Template.from_string(source[cur_start:cur_end])
-        except Exception as e:
-            import pdb;pdb.post_mortem()
-            cur_end = source.find('}}', cur_end) + 2
-        else:
-            ret.append(tmpl)
-            cur_start = cur_end
-            cur_start = source.find('{{', cur_start)
-    return ret
-
-Token = namedtuple('Token', 'name text')
-
-Arg = namedtuple('Arg', 'value')
-Kwarg = namedtuple('Kwarg', 'key value')
-
-
-# everything inside html comments is ignored
-# no html in keys
-# html in values
-# '=' only allowed after key if no '=' encountered yet
+    tokens = tokenize(source)
+    parsed = parse(tokens)
+    return [t for t in parsed if isinstance(t, TemplateReference)]
 
 
 class Token(object):
@@ -103,12 +125,6 @@ class StartTemplateToken(Token):
 
 class EndTemplateToken(SepToken):
     pass
-
-
-_modes = {'template': {'key': ['=', '|'], 'value': ['|']},
-          'html_comment': ['-->'],
-          'link': [']]'],
-          'table': ['|}']}
 
 
 LEXICON = \
@@ -161,13 +177,8 @@ def tokenize(source, lexicon=None):
     return all_tokens
 
 
-_modes = {'template': {'key': ['=', '|', '}}'], 'value': ['|', '}}']},
-          'html_comment': ['-->'],
-          'link': [']]'],
-          'table': ['|}']}
-
-
 def cond_join(items, sep='', cond=None):
+    # TODO: messsss
     if cond is None:
         cond = lambda s: isinstance(s, basestring)
     ret, tmp_buffer = [], []
@@ -189,7 +200,9 @@ def process_korv(korv):
         return ''
     # TODO: need fancy split() (for <str> <tmpl> <str> <tmpl>)
     korv = [_kv for _kv in cond_join(korv) if _kv]
-    if len(korv) == 1:
+    if not korv:
+        return ''
+    elif len(korv) == 1:
         korv = korv[0]
     if isinstance(korv, basestring):
         korv = korv.strip()
@@ -224,7 +237,8 @@ class ProtoTemplateRef(object):
         cn = self.__class__.__name__
         if not self.args:
             return '%s(%r)' % (cn, self.start_token,)
-        return '%s(%r, %r, %r)' % (cn, self.args[0], self.args[1:], self.kwargs)
+        return ('%s(%r, %r, %r)' %
+                (cn, self.args[0], self.args[1:], self.kwargs))
 
 
 def parse(tokens):
@@ -439,26 +453,29 @@ _SF_INFOBOX = '''{{Infobox settlement
 '''
 
 
-_ALL_TEST_STRS = [_BASIC_CITE_TEST, _BIGGER_CITE_TEST, _SF_CLIMATE_TEST, _SF_INFOBOX]
+_ALL_TEST_STRS = [_BASIC_CITE_TEST,
+                  _BIGGER_CITE_TEST,
+                  _SF_CLIMATE_TEST,
+                  _SF_INFOBOX]
 
 
 def _main():
     import pprint
+    ret = []
     try:
         for test in _ALL_TEST_STRS:
-            pprint.pprint(TemplateReference.from_string(test))
+            ret.append(TemplateReference.from_string(test))
+            pprint.pprint(ret[-1])
+        sf_infobox_tmpl = TemplateReference.from_string(_SF_INFOBOX)
+        print 'Testing accessor:', sf_infobox_tmpl['leader_name1']['title']
     except Exception as e:
-        import pdb;pdb.post_mortem()
+        print e
+        import pdb
+        pdb.post_mortem()
         raise
 
+    return ret
 
-def _main2():
-    import pprint
-    try:
-        pprint.pprint(TemplateReference.from_string(_SF_INFOBOX))
-    except Exception as e:
-        import pdb;pdb.post_mortem()
-        raise
 
 if __name__ == '__main__':
     _main()
