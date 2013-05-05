@@ -8,6 +8,19 @@ From a Python perspective, one can think of TemplateReferences as the
 
 Thanks to Mark Williams for drafting this.
 
+TODO
+----
+
+* Save original TemplateReference source
+* Nesting robustness
+  * Autoclose template?
+* Merge TemplateReference and ProtoTemplateRef
+* .add_item() for order preservation
+* items(), keys(), etc.
+* parse out limited html for attempted int/float extraction
+* traverse() helper
+* strip wiki syntax
+* .links, .tables, .subtemplates
 """
 from __future__ import unicode_literals
 
