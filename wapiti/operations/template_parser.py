@@ -23,13 +23,7 @@ class TemplateReference(object):
     @classmethod
     def from_string(cls, text):
         tokens = tokenize(text)
-        parsed_tmpl = parse(tokens)
-        args = [p.value for p in parsed_tmpl['parameters']
-                if isinstance(p, Arg)]
-        pairs = [(p.key, p.value) for p in parsed_tmpl['parameters']
-                 if isinstance(p, Kwarg)]
-        kwargs = dict(pairs)
-        return cls(parsed_tmpl['name'], args, kwargs)
+        return [t for t in parse(tokens) if isinstance(t, cls)][0]  # blargh
 
     def __repr__(self):
         cn = self.__class__.__name__
@@ -61,9 +55,6 @@ Token = namedtuple('Token', 'name text')
 
 Arg = namedtuple('Arg', 'value')
 Kwarg = namedtuple('Kwarg', 'key value')
-
-
-
 
 
 # everything inside html comments is ignored
@@ -455,9 +446,6 @@ def _main():
     import pprint
     try:
         for test in _ALL_TEST_STRS:
-            pprint.pprint(parse(test))
-        for test in _ALL_TEST_STRS:
-            print
             pprint.pprint(TemplateReference.from_string(test))
     except Exception as e:
         import pdb;pdb.post_mortem()
@@ -473,4 +461,4 @@ def _main2():
         raise
 
 if __name__ == '__main__':
-    _main2()
+    _main()
