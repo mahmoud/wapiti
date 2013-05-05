@@ -23,7 +23,6 @@ class TemplateReference(object):
     @classmethod
     def from_string(cls, text):
         tokens = tokenize(text)
-        import pdb;pdb.set_trace()
         parsed_tmpl = parse(tokens)
         args = [p.value for p in parsed_tmpl['parameters']
                 if isinstance(p, Arg)]
@@ -64,17 +63,8 @@ Arg = namedtuple('Arg', 'value')
 Kwarg = namedtuple('Kwarg', 'key value')
 
 
-def atomize(token):
-    token = token.strip()
-    converters = [int, float, unicode]
 
-    for convert in converters:
-        try:
-            return convert(token)
-        except ValueError:
-            pass
-    else:
-        raise ValueError('unknown token {0}'.format(token))
+
 
 # everything inside html comments is ignored
 # no html in keys
@@ -100,6 +90,10 @@ class BufferToken(Token):
     pass
 
 
+class CommentToken(BufferToken):
+    pass
+
+
 class LinkToken(BufferToken):
     pass
 
@@ -108,26 +102,16 @@ class TableToken(BufferToken):
     pass
 
 
-class SectionToken(Token):
-    def __init__(self, ctx_name, *a, **kw):
-        self.is_closing = kw.pop('is_closing', False)
-        self.ctx_name = ctx_name
-        super(SectionToken, self).__init__(*a, **kw)
-
-    @classmethod
-    def from_match(cls, ctx_name, match):
-        return cls(ctx_name, start_index=match.start(), text=match.group())
-
-    def __repr__(self):
-        cn = self.__class__.__name__
-        return ('%s(%r, %r, %r)'
-                % (cn, self.ctx_name, self.start_index, self.text))
+class SepToken(Token):
+    pass
 
 
-class ClosingToken(SectionToken):
-    def __init__(self, ctx_name, *a, **kw):
-        kw['is_closing'] = True
-        super(ClosingToken, self).__init__(ctx_name, *a, **kw)
+class StartTemplateToken(Token):
+    pass
+
+
+class EndTemplateToken(SepToken):
+    pass
 
 
 _modes = {'template': {'key': ['=', '|'], 'value': ['|']},
@@ -136,20 +120,14 @@ _modes = {'template': {'key': ['=', '|'], 'value': ['|']},
           'table': ['|}']}
 
 
-html_comment_re = re.compile(r'(<!--.+?-->)', flags=re.DOTALL)
-
-
 LEXICON = \
-    [(r'\{\{', lambda m, t: SectionToken.from_match('template', m)),
-     (r'\}\}', lambda m, t: ClosingToken.from_match('template', m)),
-     #(r'<!--', lambda m, t: SectionToken.from_match('html_comment', m)),
-     #(r'-->', lambda m, t:  ClosingToken.from_match('html_comment', m)),
-     (r'\[\[', lambda m, t: SectionToken.from_match('link', m)),
-     (r'\]\]', lambda m, t: ClosingToken.from_match('link', m)),
-     (r'\{\|', lambda m, t: SectionToken.from_match('table', m)),
-     (r'\|\}', lambda m, t: ClosingToken.from_match('table', m)),
-     (r'=', lambda m, t: Token.from_match(m)),
-     (r'\|', lambda m, t: Token.from_match(m))]
+    [(r'(\[\[.+?\]\])', lambda m, t: LinkToken.from_match(m)),
+     (r'(\{\|.+?\|\})', lambda m, t: TableToken.from_match(m)),
+     (r'(<!--.+?-->)', lambda m, t: CommentToken.from_match(m)),
+     (r'\{\{', lambda m, t: StartTemplateToken.from_match(m)),
+     (r'\}\}', lambda m, t: EndTemplateToken.from_match(m)),
+     (r'=', lambda m, t: SepToken.from_match(m)),
+     (r'\|', lambda m, t: SepToken.from_match(m))]
 
 
 def build_scanner(lexicon, flags=0):
@@ -173,29 +151,22 @@ def build_scanner(lexicon, flags=0):
 def tokenize(source, lexicon=None):
     lexicon = lexicon or LEXICON
     lex = build_scanner(lexicon, re.DOTALL)
-    com_nocom = html_comment_re.split(source)
     all_tokens = []
     start, end, prev_end = 0, 0, 0
-    for cnc in com_nocom:
-        if not cnc:
-            continue
-        if cnc.startswith('<!--'):
-            #print cnc  # TODO: save comments?
-            continue
-        for match in lex.finditer(source):
-            start, end = match.start(), match.end()
-            if prev_end < start:
-                all_tokens.append(BufferToken(start, source[prev_end:start]))
-            action = lexicon[match.lastindex - 1][1]
-            if callable(action):
-                # TODO: what should the callbacks want?
-                cur_token = action(match, match.group())
-                all_tokens.append(cur_token)
-            else:
-                raise TypeError('expected callable callback, not %r' % (action,))
-            prev_end = end
-        if prev_end < len(source):
-            all_tokens.append(BufferToken(prev_end, source[prev_end:]))
+    for match in lex.finditer(source):
+        start, end = match.start(), match.end()
+        if prev_end < start:
+            all_tokens.append(BufferToken(start, source[prev_end:start]))
+        action = lexicon[match.lastindex - 1][1]
+        if callable(action):
+            # TODO: what should the callbacks want?
+            cur_token = action(match, match.group())
+            all_tokens.append(cur_token)
+        else:
+            raise TypeError('expected callable callback, not %r' % (action,))
+        prev_end = end
+    if prev_end < len(source):
+        all_tokens.append(BufferToken(prev_end, source[prev_end:]))
     return all_tokens
 
 
@@ -205,28 +176,119 @@ _modes = {'template': {'key': ['=', '|', '}}'], 'value': ['|', '}}']},
           'table': ['|}']}
 
 
-def parse(tokens):
-    cs = []
-    cur_buff, cur_args, cur_kwargs = [], [], []
-    is_kwarg = None
-    get_cur_ctx = lambda: cs and cs[-1].ctx_name or None
-    for token in tokens:
-        cur_ctx_name = get_cur_ctx_name()
-        if isinstance(token, SectionToken):
-            if token.is_closing:
-                if cur_ctx_name is None:
-                    cur_buff.append(token.text)
-                elif cur_ctx_name == token.ctx_name:
-                    cs.pop()
-            else:
-                cs.push(token)
+def cond_join(items, sep='', cond=None):
+    if cond is None:
+        cond = lambda s: isinstance(s, basestring)
+    ret, tmp_buffer = [], []
+    for item in items:
+        if cond(item):
+            tmp_buffer.append(item.strip())  # TODO: remove strip()
         else:
-            cur_buff.append(token.text)
+            if tmp_buffer:
+                ret.append(sep.join(tmp_buffer))
+                tmp_buffer = []
+            ret.append(item)
+    if tmp_buffer:
+        ret.append(sep.join(tmp_buffer))
+    return ret
 
-        print repr(token)
 
-    template['parameters'] = [Arg(pair[0]) if pair[1] is None else Kwarg(*pair)
-                              for pair in pairs]
+def process_korv(korv):
+    if not korv:
+        return ''
+    # TODO: need fancy split() (for <str> <tmpl> <str> <tmpl>)
+    korv = [_kv for _kv in cond_join(korv) if _kv]
+    if len(korv) == 1:
+        korv = korv[0]
+    if isinstance(korv, basestring):
+        korv = korv.strip()
+        converters = [int, float, unicode]
+        for convert in converters:
+            try:
+                return convert(korv)
+            except ValueError:
+                pass
+            else:
+                raise ValueError('unknown key or value {0}'.format(korv))
+    return korv
+
+
+class ProtoTemplateRef(object):
+    def __init__(self, start_token):
+        self.start_token = start_token
+        self.args = []
+        self.kwargs = []
+        self.cur_val = []
+        self.tmp_key = None
+        self.end_token = None
+
+    def to_template_ref(self):
+        args = [process_korv(a) for a in self.args]
+        name, args = args[0], args[1:]
+        kwargs = [(process_korv(k), process_korv(v)) for (k, v) in self.kwargs]
+        kwargs = dict(kwargs)
+        return TemplateReference(name, args, kwargs)
+
+    def __repr__(self):
+        cn = self.__class__.__name__
+        if not self.args:
+            return '%s(%r)' % (cn, self.start_token,)
+        return '%s(%r, %r, %r)' % (cn, self.args[0], self.args[1:], self.kwargs)
+
+
+def parse(tokens):
+    ret = []
+    pts = []  # ProtoTemplate stack
+    interstish = []
+    for token in tokens:
+        if isinstance(token, CommentToken):
+            continue  # TODO: save comments?
+        if isinstance(token, StartTemplateToken):
+            if interstish:
+                ret.append(''.join(interstish))
+                interstish = []
+            pts.append(ProtoTemplateRef(token))
+            continue
+        elif not pts:
+            interstish.append(token.text)
+            continue
+        else:
+            cpt = pts[-1]
+
+        if isinstance(token, SepToken):
+            tmp_key, cur_val = cpt.tmp_key, cpt.cur_val
+            #''.join(cpt.cur_buff).strip()
+            if token.text == '|' or token.text == '}}':
+                if tmp_key is None:
+                    # cur_val is a value for a positional arg
+                    cpt.args.append(cur_val)
+                else:
+                    # cur_val is a value for a keyword arg
+                    cpt.kwargs.append((tmp_key, cur_val))
+                    cpt.tmp_key = None
+                cpt.cur_val = []
+            elif token.text == '=' and tmp_key is None:
+                # cur_val is a key
+                cpt.tmp_key = ''.join(cur_val).strip()  # TODO: int()s?
+                cpt.cur_val = []
+            else:
+                cpt.cur_val.append(token.text)
+        else:
+            # links and tables
+            cpt.cur_val.append(token.text)
+
+        if isinstance(token, EndTemplateToken):
+            # create real Template
+            pts.pop()
+            cpt.end_token = token
+            comp_tmpl = cpt.to_template_ref()
+            if pts:
+                pts[-1].cur_val.append(comp_tmpl)
+            else:
+                ret.append(comp_tmpl)
+        # end loop
+
+    return ret
 
 
 _BASIC_CITE_TEST = '''{{cite web
