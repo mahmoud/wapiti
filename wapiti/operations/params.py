@@ -195,3 +195,16 @@ class StaticParam(Param):
 
     def get_value(self, *a, **kw):
         return self.default
+
+
+class PassthroughParam(Param):
+    def __init__(self, *a, **kw):
+        super(PassthroughParam, self).__init__(*a, **kw)
+
+    def get_value(self, value, prefix=None):
+        return value
+
+    def get_value_list(self, value, prefix=None):
+        if is_scalar(value):
+            return [value]
+        return value
