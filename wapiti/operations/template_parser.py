@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
 """\
 A very simple Mediawiki template parser that turns template
 references into nested key-value, partial()-like objects.
 
-Thanks to Mark Williams for 95%+ of this.
+Thanks to Mark Williams for drafting this.
 """
+from __future__ import unicode_literals
 
 import re
 import itertools
@@ -20,11 +22,14 @@ class TemplateReference(object):
 
     @classmethod
     def from_string(cls, text):
-        parsed_tmpl = parse(text)
+        tokens = tokenize(text)
+        import pdb;pdb.set_trace()
+        parsed_tmpl = parse(tokens)
         args = [p.value for p in parsed_tmpl['parameters']
                 if isinstance(p, Arg)]
-        kwargs = dict([(p.key, p.value) for p in parsed_tmpl['parameters']
-                       if isinstance(p, Kwarg)])
+        pairs = [(p.key, p.value) for p in parsed_tmpl['parameters']
+                 if isinstance(p, Kwarg)]
+        kwargs = dict(pairs)
         return cls(parsed_tmpl['name'], args, kwargs)
 
     def __repr__(self):
@@ -32,14 +37,36 @@ class TemplateReference(object):
         return '%s(%r, %r, %r)' % (cn, self.name, self.args, self.kwargs)
 
 
-Token = namedtuple('Token', 'name value')
+def get_page_templates(source):
+    ret = []
+    if not source:
+        return ret
+    cur_start = source.find('{{', cur_start)
+    cur_end = cur_start
+    while cur_end < len(source):
+        if cur_start < 0:
+            break
+        cur_end = cur_start
+        try:
+            tmpl = Template.from_string(source[cur_start:cur_end])
+        except Exception as e:
+            import pdb;pdb.post_mortem()
+            cur_end = source.find('}}', cur_end) + 2
+        else:
+            ret.append(tmpl)
+            cur_start = cur_end
+            cur_start = source.find('{{', cur_start)
+    return ret
+
+Token = namedtuple('Token', 'name text')
+
 Arg = namedtuple('Arg', 'value')
 Kwarg = namedtuple('Kwarg', 'key value')
 
 
 def atomize(token):
     token = token.strip()
-    converters = [int, float, str]
+    converters = [int, float, unicode]
 
     for convert in converters:
         try:
@@ -47,109 +74,159 @@ def atomize(token):
         except ValueError:
             pass
     else:
-        raise RuntimeError('unknown token {0}'.format(token))
+        raise ValueError('unknown token {0}'.format(token))
+
+# everything inside html comments is ignored
+# no html in keys
+# html in values
+# '=' only allowed after key if no '=' encountered yet
 
 
-lex = re.Scanner([(r'\{\{', lambda s, t: Token('BEGIN', t)),
-                  (r'\}\}', lambda s, t: Token('END', t)),
-                  (r'[^|{}=]+', lambda s, t: Token('ATOM', atomize(t))),
-                  (r'=', lambda s, t: Token('EQUAL', t)),
-                  (r'\|', lambda s, t: Token('PARAMETER', t))])
+class Token(object):
+    def __init__(self, start_index, text):
+        self.start_index = start_index
+        self.text = text
+
+    @classmethod
+    def from_match(cls, match):
+        return cls(start_index=match.start(), text=match.group())
+
+    def __repr__(self):
+        cn = self.__class__.__name__
+        return '%s(%r)' % (cn, self.text)
 
 
-class TokenStream(object):
-    def __init__(self, tokens):
-        self.iterator = iter(tokens)
-        self.pushed = None
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        if self.pushed is not None:
-            pushed, self.pushed = self.pushed, None
-            return pushed
-        return next(self.iterator)
+class BufferToken(Token):
+    pass
 
 
-def parse(s):
-    tokens = TokenStream(lex.scan(s)[0])
-    return match_template(tokens)
+class LinkToken(BufferToken):
+    pass
 
 
-def advance(tokens):
-    return next(tokens, Token(None, None))
+class TableToken(BufferToken):
+    pass
 
 
-def match_template(tokens):
-    token = advance(tokens)
-    template = {}
+class SectionToken(Token):
+    def __init__(self, ctx_name, *a, **kw):
+        self.is_closing = kw.pop('is_closing', False)
+        self.ctx_name = ctx_name
+        super(SectionToken, self).__init__(*a, **kw)
 
-    if token.name != 'BEGIN':
-        tokens.pushed = token
-        return template
+    @classmethod
+    def from_match(cls, ctx_name, match):
+        return cls(ctx_name, start_index=match.start(), text=match.group())
 
-    name = match_atom(tokens)
-    if name is None:
-        name = match_template(tokens)
-
-    template['name'] = name
-
-    match_parameters(template, tokens)
-    match_end(tokens)
-
-    return template
+    def __repr__(self):
+        cn = self.__class__.__name__
+        return ('%s(%r, %r, %r)'
+                % (cn, self.ctx_name, self.start_index, self.text))
 
 
-def match_atom(tokens):
-    token = advance(tokens)
-    if token.name != 'ATOM':
-        tokens.pushed = token
-        return None
-    return token.value
+class ClosingToken(SectionToken):
+    def __init__(self, ctx_name, *a, **kw):
+        kw['is_closing'] = True
+        super(ClosingToken, self).__init__(ctx_name, *a, **kw)
 
 
-def match_parameters(template, tokens):
-    pairs = []
+_modes = {'template': {'key': ['=', '|'], 'value': ['|']},
+          'html_comment': ['-->'],
+          'link': [']]'],
+          'table': ['|}']}
 
-    def manage_pairs():
-        while True:
-            idx, value = yield
-            if value is None:
-                continue
-            if not idx:
-                pair = [None, None]
-                pairs.append(pair)
-            pair[idx] = value
 
-    pair_manager = manage_pairs()
-    next(pair_manager)
+html_comment_re = re.compile(r'(<!--.+?-->)', flags=re.DOTALL)
 
-    cycler = functools.partial(itertools.cycle, [0, 1])
 
-    while True:
-        token = advance(tokens)
-        if token.name == 'PARAMETER':
-            idx_cycle = cycler()
-            pair_manager.send((0, None))
-        elif token.name == 'ATOM':
-            pair_manager.send((next(idx_cycle), token.value))
-        elif token.name == 'BEGIN':
-            tokens.pushed = token
-            pair_manager.send((next(idx_cycle), match_template(tokens)))
-        elif token.name == 'EQUAL':
+LEXICON = \
+    [(r'\{\{', lambda m, t: SectionToken.from_match('template', m)),
+     (r'\}\}', lambda m, t: ClosingToken.from_match('template', m)),
+     #(r'<!--', lambda m, t: SectionToken.from_match('html_comment', m)),
+     #(r'-->', lambda m, t:  ClosingToken.from_match('html_comment', m)),
+     (r'\[\[', lambda m, t: SectionToken.from_match('link', m)),
+     (r'\]\]', lambda m, t: ClosingToken.from_match('link', m)),
+     (r'\{\|', lambda m, t: SectionToken.from_match('table', m)),
+     (r'\|\}', lambda m, t: ClosingToken.from_match('table', m)),
+     (r'=', lambda m, t: Token.from_match(m)),
+     (r'\|', lambda m, t: Token.from_match(m))]
+
+
+def build_scanner(lexicon, flags=0):
+    import sre_parse
+    import sre_compile
+    from sre_constants import BRANCH, SUBPATTERN
+    # combine phrases into a compound pattern
+    p = []
+    s = sre_parse.Pattern()
+    s.flags = flags
+    for phrase, action in lexicon:
+        p.append(sre_parse.SubPattern(s, [
+            (SUBPATTERN, (len(p) + 1, sre_parse.parse(phrase, flags))),
+        ]))
+    s.groups = len(p) + 1
+    p = sre_parse.SubPattern(s, [(BRANCH, (None, p))])
+    scanner = sre_compile.compile(p)
+    return scanner
+
+
+def tokenize(source, lexicon=None):
+    lexicon = lexicon or LEXICON
+    lex = build_scanner(lexicon, re.DOTALL)
+    com_nocom = html_comment_re.split(source)
+    all_tokens = []
+    start, end, prev_end = 0, 0, 0
+    for cnc in com_nocom:
+        if not cnc:
             continue
+        if cnc.startswith('<!--'):
+            #print cnc  # TODO: save comments?
+            continue
+        for match in lex.finditer(source):
+            start, end = match.start(), match.end()
+            if prev_end < start:
+                all_tokens.append(BufferToken(start, source[prev_end:start]))
+            action = lexicon[match.lastindex - 1][1]
+            if callable(action):
+                # TODO: what should the callbacks want?
+                cur_token = action(match, match.group())
+                all_tokens.append(cur_token)
+            else:
+                raise TypeError('expected callable callback, not %r' % (action,))
+            prev_end = end
+        if prev_end < len(source):
+            all_tokens.append(BufferToken(prev_end, source[prev_end:]))
+    return all_tokens
+
+
+_modes = {'template': {'key': ['=', '|', '}}'], 'value': ['|', '}}']},
+          'html_comment': ['-->'],
+          'link': [']]'],
+          'table': ['|}']}
+
+
+def parse(tokens):
+    cs = []
+    cur_buff, cur_args, cur_kwargs = [], [], []
+    is_kwarg = None
+    get_cur_ctx = lambda: cs and cs[-1].ctx_name or None
+    for token in tokens:
+        cur_ctx_name = get_cur_ctx_name()
+        if isinstance(token, SectionToken):
+            if token.is_closing:
+                if cur_ctx_name is None:
+                    cur_buff.append(token.text)
+                elif cur_ctx_name == token.ctx_name:
+                    cs.pop()
+            else:
+                cs.push(token)
         else:
-            break
-    tokens.pushed = token
+            cur_buff.append(token.text)
+
+        print repr(token)
 
     template['parameters'] = [Arg(pair[0]) if pair[1] is None else Kwarg(*pair)
                               for pair in pairs]
-
-
-def match_end(tokens):
-    token = advance(tokens)
-    assert token.name == 'END', 'expected end but got {0}'.format(token.name)
 
 
 _BASIC_CITE_TEST = '''{{cite web
@@ -190,17 +267,148 @@ _SF_CLIMATE_TEST = '''{{climate chart
 |clear=none
 |units=imperial}}'''
 
+_SF_INFOBOX = '''{{Infobox settlement
+|name = San Francisco
+|official_name = City and County of San Francisco
+|nickname = ''The City by the Bay''; ''Fog City''; ''S.F.''; ''Frisco'';<ref name="Frisco okay" /><ref name="Don't Call It Frisco" /><ref name="Frisco" /><ref name="Friscophobia" /> ''The City that Knows How'' (''antiquated'');<ref name="The City that Knows How" /> ''Baghdad by the Bay'' (''antiquated'');<ref name="Baghdad by the Bay" /> ''The Paris of the West''<ref name="The Paris of the West" />
+| settlement_type = [[Consolidated city-county|City and county]]
+| motto = ''Oro en Paz, Fierro en Guerra''<br />(English: "Gold in Peace, Iron in War")
+| image_skyline = SF From Marin Highlands3.jpg
+| imagesize = 280px
+| image_caption = San Francisco from the Marin Headlands, with the Golden Gate Bridge in the foreground
+| image_flag = Flag of San Francisco.svg
+| flag_size = 100px
+| image_seal = Sfseal.png
+| seal_size = 100px
+| image_map = California county map (San Francisco County enlarged).svg
+| mapsize = 200px
+| map_caption = Location of San Francisco in California
+| pushpin_map = USA2
+| pushpin_map_caption = Location in the United States
+<!-- Location ------------------>
+| coordinates_region = US-CA
+| subdivision_type = [[List of countries|Country]]
+| subdivision_name = {{USA}}
+| subdivision_type1 = [[Political divisions of the United States|State]]
+| subdivision_name1 = {{flag|California}}
 
-_ALL_TEST_STRS = [_BASIC_CITE_TEST, _BIGGER_CITE_TEST, _SF_CLIMATE_TEST]
+<!-- Politics ----------------->
+| government_type = [[Mayor-council government|Mayor-council]]
+| governing_body = [[San Francisco Board of Supervisors|Board of Supervisors]]
+| leader_title = [[Mayor of San Francisco]]
+| leader_name = [[Ed Lee (politician)|Ed Lee]]
+| leader_title1 = [[San Francisco Board of Supervisors|Board of Supervisors]]
+| leader_name1 = {{Collapsible list
+| title = Supervisors
+| frame_style = border:none; padding: 0;
+| list_style = text-align:left;
+| 1 = [[Eric Mar]]
+| 2 = [[Mark Farrell (politician)|Mark Farrell]]
+| 3 = [[David Chiu (politician)|David Chiu]]
+| 4 = [[Katy Tang]]
+| 5 = [[London Breed]]
+| 6 = [[Jane Kim]]
+| 7 = [[Norman Yee]]
+| 8 = [[Scott Wiener]]
+| 9 = [[David Campos]]
+| 10 = [[Malia Cohen]]
+| 11 = [[John Avalos]]}}
+| leader_title2 = [[California State Assembly]]
+| leader_name2 = [[Tom Ammiano]] ([[California Democratic Party|D]])<br />[[Phil Ting]] ([[California Democratic Party|D]])
+| leader_title3 = [[California State Senate]]
+| leader_name3 = [[Leland Yee]] ([[California Democratic Party|D]])<br />[[Mark Leno]] ([[California Democratic Party|D]])
+| leader_title4 = [[United States House of Representatives]]
+| leader_name4 = [[Nancy Pelosi]] ([[Democratic Party (United States)|D]])<br />[[Jackie Speier]] ([[Democratic Party (United States)|D]])
+| established_title = Founded
+| established_date = June 29, 1776
+| established_title1 = [[Municipal incorporation|Incorporated]]
+| established_date1 = April 15, 1850<ref>{{cite web
+| url = http://www6.sfgov.org/index.aspx?page=4
+| title = San Francisco: Government
+| publisher = SFGov.org
+| accessdate =March 8, 2012
+| quote = San Francisco was incorporated as a City on April 15th, 1850 by act of the Legislature.}}</ref>
+| founder = Lieutenant [[José Joaquin Moraga]] and [[Francisco Palóu]]
+| named_for = [[St. Francis of Assisi]]
+
+<!-- Area------------------>
+|area_magnitude =
+| unit_pref = US
+| area_footnotes = <ref name="Census 2010-GCT-PH1" />
+| area_total_sq_mi = 231.89
+| area_land_sq_mi = 46.87
+| area_water_sq_mi = 185.02
+| area_water_percent = 79.79
+| area_note =
+| area_metro_sq_mi = 3524.4
+
+<!-- Elevation ------------------------->
+| elevation_ft = 52
+| elevation_max_ft = 925
+| elevation_min_ft = 0
+
+<!-- Population ----------------------->
+| population_as_of = 2012
+| population_footnotes =
+| population_total = 815358 <ref>http://voices.yahoo.com/largest-us-cities-population-size-2012-6453656.html?cat=16</ref>
+| population_density_sq_mi = 17179.2
+| population = [[Combined statistical area|CSA]]: 8371000
+| population_metro = 4335391
+| population_urban = 3273190
+| population_demonym = San Franciscan
+
+<!-- General information --------------->
+| timezone = [[Pacific Time Zone|Pacific Standard Time]]
+| utc_offset = -8
+| timezone_DST = [[Pacific Time Zone|Pacific Daylight Time]]
+| utc_offset_DST = -7
+| latd = 37
+| latm = 47
+| latNS = N
+| longd = 122
+| longm = 25
+| longEW = W
+| coordinates_display = 8
+
+<!-- Area/postal codes & others -------->
+| postal_code_type = [[ZIP Code]]
+| postal_code = 94101–94112, 94114–94147, 94150–94170, 94172, 94175, 94177
+| area_code = [[Area code 415|415]]
+| blank_name = [[Federal Information Processing Standard|FIPS code]]
+| blank_info = 06-67000
+| blank1_name = [[Federal Information Processing Standard|FIPS code]]
+| blank1_info = 06-075
+| blank2_name = [[Geographic Names Information System|GNIS]] feature ID
+| blank2_info = 277593
+| website = {{URL|http://www.sfgov.org/}}
+| footnotes =
+}}
+'''
+
+
+_ALL_TEST_STRS = [_BASIC_CITE_TEST, _BIGGER_CITE_TEST, _SF_CLIMATE_TEST, _SF_INFOBOX]
+
 
 def _main():
     import pprint
-    for test in _ALL_TEST_STRS:
-        pprint.pprint(parse(test))
-    for test in _ALL_TEST_STRS:
-        print
-        pprint.pprint(TemplateReference.from_string(test))
+    try:
+        for test in _ALL_TEST_STRS:
+            pprint.pprint(parse(test))
+        for test in _ALL_TEST_STRS:
+            print
+            pprint.pprint(TemplateReference.from_string(test))
+    except Exception as e:
+        import pdb;pdb.post_mortem()
+        raise
 
+
+def _main2():
+    import pprint
+    try:
+        pprint.pprint(TemplateReference.from_string(_SF_INFOBOX))
+    except Exception as e:
+        import pdb;pdb.post_mortem()
+        raise
 
 if __name__ == '__main__':
-    _main()
+    _main2()
