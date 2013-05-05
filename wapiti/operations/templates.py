@@ -4,10 +4,11 @@ from __future__ import unicode_literals
 from collections import OrderedDict
 import re
 
-from base import QueryOperation
-from params import SingleParam, StaticParam, MultiParam
+from base import QueryOperation, Operation, NoMoreResults
+from params import SingleParam, StaticParam, MultiParam, PassthroughParam
 from models import PageInfo
 from utils import OperationExample
+from template_parser import get_page_templates, TemplateReference, _BASIC_CITE_TEST
 
 
 class GetTranscludes(QueryOperation):
@@ -50,6 +51,19 @@ class GetTemplates(QueryOperation):
                 continue
             ret.append(page_ident)
         return ret
+
+
+class GetParsedTemplates(Operation):
+    input_field = PassthroughParam('content')
+    output_type = [TemplateReference]
+    examples = [OperationExample(_BASIC_CITE_TEST, limit=1)]
+
+    def process(self):
+        if None in self.results:
+            raise NoMoreResults()
+        res = get_page_templates(self.input_param)
+        self.results[None] = res
+        return list(res)
 
 
 def tmpl_text_to_odict(text):
