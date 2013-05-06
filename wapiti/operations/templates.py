@@ -8,28 +8,8 @@ from base import QueryOperation, Operation, NoMoreResults
 from params import SingleParam, StaticParam, MultiParam, PassthroughParam
 from models import PageInfo
 from utils import OperationExample
+from revisions import GetCurrentContent
 from template_parser import get_page_templates, TemplateReference, _BASIC_CITE_TEST
-
-
-class GetTranscludes(QueryOperation):
-    input_field = SingleParam('title', val_prefix='Template:')
-    field_prefix = 'gei'
-    fields = [StaticParam('generator', 'embeddedin'),
-              StaticParam('prop', 'info'),
-              StaticParam('inprop', 'subjectid|talkid|protection')]
-    output_type = [PageInfo]
-    examples = [OperationExample('Template:ArticleHistory')]
-
-    def extract_results(self, query_resp):
-        ret = []
-        for k, pid_dict in query_resp.get('pages', {}).items():
-            try:
-                page_ident = PageInfo.from_query(pid_dict,
-                                                 source=self.source)
-            except ValueError:
-                continue
-            ret.append(page_ident)
-        return ret
 
 
 class GetTemplates(QueryOperation):
@@ -53,17 +33,60 @@ class GetTemplates(QueryOperation):
         return ret
 
 
+class GetTranscludes(QueryOperation):
+    input_field = SingleParam('title', val_prefix='Template:')
+    field_prefix = 'gei'
+    fields = [StaticParam('generator', 'embeddedin'),
+              StaticParam('prop', 'info'),
+              StaticParam('inprop', 'subjectid|talkid|protection')]
+    output_type = [PageInfo]
+    examples = [OperationExample('Template:ArticleHistory')]
+
+    def extract_results(self, query_resp):
+        ret = []
+        for k, pid_dict in query_resp.get('pages', {}).items():
+            try:
+                page_ident = PageInfo.from_query(pid_dict,
+                                                 source=self.source)
+            except ValueError:
+                continue
+            ret.append(page_ident)
+        return ret
+
+
 class GetParsedTemplates(Operation):
     input_field = PassthroughParam('content')
     output_type = [TemplateReference]
     examples = [OperationExample(_BASIC_CITE_TEST, limit=1)]
 
+    @property
+    def remaining(self):
+        if self.results:
+            return 0
+        return 1  # TODO: fix
+
     def process(self):
         if None in self.results:
             raise NoMoreResults()
-        res = get_page_templates(self.input_param)
+        res = get_page_templates(self.input_param.content)
         self.results[None] = res
         return list(res)
+
+
+class GetParsedTranscludes(Operation):
+    '''
+    Template names may redirect, but this operation doesn't handle that yet
+    '''
+    subop_chain = [GetTranscludes,
+                   GetCurrentContent,
+                   GetParsedTemplates]
+    examples = [OperationExample('ArticleHistory', 10)]
+
+    def _update_results(self, results):
+        _, _, tmpl_name = self.input_param.rpartition(':')
+        filt_res = [res for res in results
+                    if res.name.lower() == tmpl_name.lower()]
+        return super(GetParsedTranscludes, self)._update_results(filt_res)
 
 
 def tmpl_text_to_odict(text):
