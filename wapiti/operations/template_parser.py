@@ -92,9 +92,9 @@ class TemplateReference(object):
         return itertools.chain(iter(self.args), self.kwargs.iteritems())
 
 
-def get_page_templates(source):
+def get_page_templates(source, raise_exc=True):
     tokens = tokenize(source)
-    parsed = parse(tokens)
+    parsed = parse(tokens, raise_exc=raise_exc)
     return [t for t in parsed if isinstance(t, TemplateReference)]
 
 
@@ -242,6 +242,8 @@ class ProtoTemplateRef(object):
     def to_template_ref(self):
         args = [process_korv(a) for a in self.args]
         name, args = args[0], args[1:]
+        if not is_scalar(name):
+            raise ValueError('invalid template name %r' % (name,))  # todo:
         kwargs = [(process_korv(k), process_korv(v)) for (k, v) in self.kwargs]
         kwargs = dict(kwargs)
         return TemplateReference(name, args, kwargs)
@@ -254,7 +256,7 @@ class ProtoTemplateRef(object):
                 (cn, self.args[0], self.args[1:], self.kwargs))
 
 
-def parse(tokens):
+def parse(tokens, raise_exc=True):
     ret = []
     pts = []  # ProtoTemplate stack
     interstish = []
@@ -287,7 +289,12 @@ def parse(tokens):
                 cpt.cur_val = []
             elif token.text == '=' and tmp_key is None:
                 # cur_val is a key
-                cpt.tmp_key = ''.join(cur_val).strip()  # TODO: int()s?
+                try:
+                    cpt.tmp_key = ''.join(cur_val).strip()  # TODO: int()s?
+                except Exception as e:
+                    if raise_exc:
+                        raise
+
                 cpt.cur_val = []
             else:
                 cpt.cur_val.append(token.text)
@@ -299,7 +306,12 @@ def parse(tokens):
             # create real Template
             pts.pop()
             cpt.end_token = token
-            comp_tmpl = cpt.to_template_ref()
+            try:
+                comp_tmpl = cpt.to_template_ref()
+            except Exception as e:
+                if raise_exc:
+                    raise
+                continue
             if pts:
                 pts[-1].cur_val.append(comp_tmpl)
             else:
