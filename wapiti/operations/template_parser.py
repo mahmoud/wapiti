@@ -128,6 +128,10 @@ class TableToken(BufferToken):
     pass
 
 
+class TemplateLogicToken(BufferToken):
+    pass
+
+
 class SepToken(Token):
     pass
 
@@ -143,6 +147,8 @@ class EndTemplateToken(SepToken):
 LEXICON = \
     [(r'(\[\[.+?\]\])', lambda m, t: LinkToken.from_match(m)),
      (r'(\{\|.+?\|\})', lambda m, t: TableToken.from_match(m)),
+     (r'(\{\{\{.+?\}\}\})', lambda m, t: TemplateLogicToken.from_match(m)),
+     (r'(\{\{#.+?\|\}\})', lambda m, t: TemplateLogicToken.from_match(m)),
      (r'(<!--.+?-->)', lambda m, t: CommentToken.from_match(m)),
      (r'\{\{', lambda m, t: StartTemplateToken.from_match(m)),
      (r'\}\}', lambda m, t: EndTemplateToken.from_match(m)),
@@ -471,9 +477,10 @@ _ALL_TEST_STRS = [_BASIC_CITE_TEST,
                   _SF_CLIMATE_TEST,
                   _SF_INFOBOX]
 
-
 def _main():
+    import os
     import pprint
+    CUR_DIR = os.path.dirname(os.path.abspath(__file__))
     ret = []
     try:
         for test in _ALL_TEST_STRS:
@@ -481,6 +488,10 @@ def _main():
             pprint.pprint(ret[-1])
         sf_infobox_tmpl = TemplateReference.from_string(_SF_INFOBOX)
         print 'Testing accessor:', sf_infobox_tmpl['leader_name1']['title']
+
+        tmpl_tst = open(os.path.join(CUR_DIR, 'tmp_tmpl_test.txt')).read().decode('utf-8')
+        tmpls = get_page_templates(tmpl_tst)
+        import pdb;pdb.set_trace()
     except Exception as e:
         print e
         import pdb
