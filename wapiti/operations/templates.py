@@ -68,7 +68,8 @@ class GetParsedTemplates(Operation):
     def process(self):
         if None in self.results:
             raise NoMoreResults()
-        res = get_page_templates(self.input_param.content)
+        content = getattr(self.input_param, 'content', self.input_param)
+        res = get_page_templates(content, raise_exc=False)
         self.results[None] = res
         return list(res)
 
@@ -80,7 +81,7 @@ class GetParsedTranscludes(Operation):
     subop_chain = [GetTranscludes,
                    GetCurrentContent,
                    GetParsedTemplates]
-    examples = [OperationExample('ArticleHistory', 10)]
+    examples = [OperationExample('ArticleHistory')]
 
     def _update_results(self, results):
         _, _, tmpl_name = self.input_param.rpartition(':')
