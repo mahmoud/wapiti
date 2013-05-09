@@ -81,7 +81,7 @@ class GetParsedTranscludes(Operation):
     subop_chain = [GetTranscludes,
                    GetCurrentContent,
                    GetParsedTemplates]
-    examples = [OperationExample('ArticleHistory')]
+    examples = [OperationExample('ArticleHistory', 10)]
 
     def _update_results(self, results):
         _, _, tmpl_name = self.input_param.rpartition(':')
