@@ -489,8 +489,10 @@ def _main():
         sf_infobox_tmpl = TemplateReference.from_string(_SF_INFOBOX)
         print 'Testing accessor:', sf_infobox_tmpl['leader_name1']['title']
 
-        tmpl_tst = open(os.path.join(CUR_DIR, 'tmp_tmpl_test.txt')).read().decode('utf-8')
-        tmpls = get_page_templates(tmpl_tst)
+        test_path = os.path.join(CUR_DIR, '_test_tmpls',
+                                 'regr_moctezuma_parser_funcs.txt')
+        tmpl_test = open(test_path).read().decode('utf-8')
+        tmpls = get_page_templates(tmpl_test)
         import pdb;pdb.set_trace()
     except Exception as e:
         print e
