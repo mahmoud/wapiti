@@ -75,18 +75,6 @@ class TemplateReference(object):
             return self.kwargs[key]
         except KeyError:
             raise KeyError('%r template has no key %r' % (self.name, key))
-        """
-        if is_scalar(val) or isinstance(val, TemplateReference):
-            return val
-        for subval in val:
-            if subval
-            try:
-                return val[key]
-            except KeyError:
-                pass
-        else:
-            raise KeyError('%r template has no key %r' % (self.name, key))
-        """
 
     def __iter__(self):
         return itertools.chain(iter(self.args), self.kwargs.iteritems())
