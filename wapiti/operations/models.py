@@ -389,6 +389,9 @@ class ImageInfo(PageIdentifier):
                   WMA('bitdepth', default='')]
 
 
+#TODO: class ParsedTemplate(object):
+
+
 #
 # Protections
 #

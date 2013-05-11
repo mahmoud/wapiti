@@ -74,6 +74,13 @@ class GetParsedTemplates(Operation):
         return list(res)
 
 
+class GetParsedTemplatesPage(Operation):
+    subop_chain = [GetCurrentContent,
+                   GetParsedTemplates]
+
+    examples = [OperationExample('Coffee')]
+
+
 class GetParsedTranscludes(Operation):
     '''
     Template names may redirect, but this operation doesn't handle that yet
