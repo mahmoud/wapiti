@@ -32,7 +32,6 @@ Need generic support for:
  * Redirect following
 '''
 import re
-from functools import partial
 
 import operations
 from operations import ALL_OPERATIONS, DEFAULT_API_URL
@@ -54,6 +53,41 @@ def under2camel(string):
     return ''.join(w.capitalize() or '_' for w in string.split('_'))
 
 
+class BoundOperation(object):  # TODO: Operation subtype?
+    def __init__(self, op_type, client):
+        self.client = client
+        self.op_type = op_type
+        self.op_inst = None
+
+    def __call__(self, *a, **kw):
+        if not self.op_inst:
+            kw.setdefault('client', self.client)
+            self.op_inst = self.op_type(*a, **kw)
+            kw.pop('client')
+        return self.op_inst()
+
+    def __repr__(self):
+        cn = self.__class__.__name__
+        if self.op_inst:
+            return '<%s %r bound to %r>' % (cn, self.op_inst, self.client)
+        op_cn = self.op_type.__name__
+        return '<%s %s bound to %r>' % (cn, op_cn, self.client)
+
+
+class UnboundOperation(object):  # TODO: Operation subtype?
+    def __init__(self, op_type):
+        self.op_type = op_type
+
+    def bind(self, client):
+        return BoundOperation(self.op_type, client)
+
+    __call__ = bind
+
+    def __repr__(self):
+        cn = self.__class__.__name__
+        return '<%s %r>' % (cn, self.op_type)
+
+
 class WapitiClient(object):
     """
     Provides logging, caching, settings, and a convenient interface
@@ -73,24 +107,26 @@ class WapitiClient(object):
         self.is_bot = is_bot
         self.debug = debug
 
-        self.op_names = []
-        self._create_ops()
         if init_source:
             self._init_source()
 
     def _init_source(self):
-        self.source_info = self.get_source_info()[0]  # TODO: no input_field
-                                                      #       and single response
+        # TODO: no input_field and single respones
+        self.source_info = self.get_source_info()[0]
 
-    def call_operation(self, op_type, *a, **kw):
-        kw['client'] = self
-        operation = op_type(*a, **kw)
-        # TODO: add to queue or somesuch
-        return operation()
+    def __getattribute__(self, attr):
+        ret = super(WapitiClient, self).__getattribute__(attr)
+        if isinstance(ret, UnboundOperation):
+            return ret(self)
+        return ret
 
-    def _create_ops(self):
-        for op in ALL_OPERATIONS:  # TODO
-            func_name = camel2under(op.__name__)
-            call_op = partial(self.call_operation, op)
-            setattr(self, func_name, call_op)
-            self.op_names.append(func_name)
+    @property
+    def op_names(self):
+        return list(sorted(self.op_map.keys()))
+
+    # TODO: configurable operations
+    op_map = dict([(op.__name__, op) for op in ALL_OPERATIONS])
+    unbound_op_map = dict([(camel2under(op_name), UnboundOperation(op))
+                           for op_name, op in op_map.items()])
+    unbound_op_set = set(unbound_op_map.values())
+    locals().update(unbound_op_map)
