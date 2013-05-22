@@ -81,7 +81,10 @@ class UnboundOperation(object):  # TODO: Operation subtype?
     def bind(self, client):
         return BoundOperation(self.op_type, client)
 
-    __call__ = bind
+    def __get__(self, obj, obj_type=None):
+        if obj_type and isinstance(obj, WapitiClient):
+            return BoundOperation(self.op_type, obj)
+        return self
 
     def __repr__(self):
         cn = self.__class__.__name__
@@ -113,12 +116,6 @@ class WapitiClient(object):
     def _init_source(self):
         # TODO: no input_field and single respones
         self.source_info = self.get_source_info()[0]
-
-    def __getattribute__(self, attr):
-        ret = super(WapitiClient, self).__getattribute__(attr)
-        if isinstance(ret, UnboundOperation):
-            return ret(self)
-        return ret
 
     @property
     def op_names(self):
