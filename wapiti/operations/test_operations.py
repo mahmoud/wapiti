@@ -29,6 +29,16 @@ import templates
 import user
 
 
+def limit_equal_or_depleted(op):
+    if getattr(op, '_notices', None):
+        return False
+    elif getattr(op, 'is_depleted', None):
+        return True
+    elif len(op.results) == op.limit:
+        return True
+    return False
+
+
 def get_op_examples():
     ops = list(base.OperationMeta._all_ops)
     ret = []
@@ -41,18 +51,21 @@ def get_op_examples():
 
 
 EXAMPLES = get_op_examples()
-
+_TEST_TUPLES = [(ex.disp_name, ex) for ex in EXAMPLES]
 
 #def operation_example(request):
 #    return request.param
 
 
-@pytest.mark.parametrize(('name', 'opex'), [(repr(ex), ex) for ex in EXAMPLES])
-def test_op_example(name, opex, limit=None):
+@pytest.mark.parametrize(('name', 'op_ex'), _TEST_TUPLES)
+def test_op_example(name, op_ex, limit=None):
     try:
         limit = int(limit)
     except:
         limit = 1
-    op = opex.make_op(mag=limit)
+    op = op_ex.make_op(mag=limit)
     op.process_all()
-    assert opex.test(op)
+    if callable(op_ex.test):
+        assert op_ex.test(op)
+    else:
+        assert limit_equal_or_depleted(op)
