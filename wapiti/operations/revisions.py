@@ -98,3 +98,5 @@ class GetCurrentTalkContent(GetCurrentContent):
     for long.
     """
     input_field = MultiParam('titles', val_prefix='Talk:', key_prefix=False)
+    examples = [OperationExample('This page does not exist'),
+                OperationExample('Coffee')]
