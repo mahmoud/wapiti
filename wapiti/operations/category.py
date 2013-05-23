@@ -74,6 +74,7 @@ class GetCategoryPages(GetCategory):
     Fetch the pages (namespace 0 or 1) that are members of category.
     """
     fields = GetCategory.fields + [StaticParam('gcmnamespace', '0|1')]
+    examples = [OperationExample('Featured_articles')]
 
 
 class GetSubcategoryInfos(QueryOperation):
