@@ -53,9 +53,6 @@ def get_op_examples():
 EXAMPLES = get_op_examples()
 _TEST_TUPLES = [(ex.disp_name, ex) for ex in EXAMPLES]
 
-#def operation_example(request):
-#    return request.param
-
 
 @pytest.mark.parametrize(('name', 'op_ex'), _TEST_TUPLES)
 def test_op_example(name, op_ex, limit=None):
@@ -69,3 +66,60 @@ def test_op_example(name, op_ex, limit=None):
         assert op_ex.test(op)
     else:
         assert limit_equal_or_depleted(op)
+
+
+def test_unicode_title():
+    get_beyonce = GetCurrentContent("Beyoncé Knowles")
+    assert get_beyonce()
+
+
+def test_coercion_basic():
+    pid = PageIdentifier(title='Africa', page_id=123, ns=4, source='enwp')
+    get_subcats = GetSubcategoryInfos(pid)
+    assert get_subcats.input_param == 'Category:Africa'
+
+
+def test_web_request():
+    url = 'http://upload.wikimedia.org/wikipedia/commons/d/d2/Mcgregor.jpg'
+    get_photo = base.WebRequestOperation(url)
+    res = get_photo()
+    text = res[0]
+    assert len(text) == 16408
+
+
+def test_get_html():
+    get_africa_html = base.GetPageHTML('Africa')
+    res = get_africa_html()
+    text = res[0]
+    assert len(text) > 350000
+
+
+def test_missing_revisions():
+    get_revs = GetPageRevisionInfos('Coffee_lololololol')
+    rev_list = get_revs()
+    '''
+    Should return 'missing' and negative pageid
+    '''
+    assert len(rev_list) == 0
+
+
+def test_multiplexing(limit=5):
+    rev_ids = [str(x) for x in range(543184935 - limit, 543184935)]
+    get_rev_infos = GetRevisionInfos(rev_ids)
+    rev_infos = get_rev_infos()
+    assert len(rev_infos) > (0.9 * limit)  # a couple might be missing
+
+
+def test_query_pages(limit=3):
+    qp_types = GetQueryPage.known_qps[:limit]
+    ret = []
+    for qpt in qp_types:
+        get_pages = GetQueryPage(qpt, limit)
+        ret.extend(get_pages())
+    assert len(ret) == len(qp_types)
+
+
+def test_get_meta():
+    get_source_info = GetSourceInfo()
+    meta = get_source_info()
+    assert meta
