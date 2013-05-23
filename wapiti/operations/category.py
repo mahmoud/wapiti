@@ -112,7 +112,7 @@ class GetAllCategoryInfos(GetSubcategoryInfos):
     input_field = None
     fields = [StaticParam('generator', 'allcategories'),
               StaticParam('prop', 'categoryinfo')]
-    examples = [OperationExample('basic allcats test')]
+    examples = [OperationExample(doc='basic allcats')]
 
 
 class GetFlattenedCategory(Operation):

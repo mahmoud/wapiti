@@ -18,7 +18,7 @@ class GetRandom(QueryOperation):
     input_field = None
     output_type = [PageInfo]
     per_query_limit = QueryLimit(10, 20)
-    examples = [OperationExample('basic random')]
+    examples = [OperationExample(doc='basic random')]
 
     def extract_results(self, query_resp):
         ret = []
@@ -34,14 +34,14 @@ class GetRandom(QueryOperation):
 
 class GetRandomArticles(GetRandom):
     fields = GetRandom.fields + [StaticParam('grnnamespace', '0')]
-    examples = [OperationExample('random articles')]
+    examples = [OperationExample(doc='random articles')]
 
 
 class GetRandomCategories(GetRandom):
     fields = GetRandom.fields + [StaticParam('grnnamespace', '14')]
-    examples = [OperationExample('random categories')]
+    examples = [OperationExample(doc='random categories')]
 
 
 class GetRandomFilePages(GetRandom):
     fields = GetRandom.fields + [StaticParam('grnnamespace', '6')]
-    examples = [OperationExample('random file pages')]
+    examples = [OperationExample(doc='random file pages')]
