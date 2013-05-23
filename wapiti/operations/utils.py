@@ -107,6 +107,19 @@ class OperationExample(object):
             return self.op_type(self.limit * mag)
         return self.op_type(self.param, self.limit * mag)
 
+    def __repr__(self):
+        s, cn = self, self.__class__.__name__
+        t_name = self.test and self.test.func_name
+        op_name = self.op_type and self.op_type.__name__
+        if not self.name:
+            tmpl = '%s(op_type=%s, param=%r, limit=%r, test=%s)'
+            return tmpl % (cn, op_name, s.param, s.limit, t_name)
+        else:
+            tmpl = '%s(name=%r, op_type=%s, param=%r, limit=%r, test=%s)'
+            return tmpl % (cn, s.name, s.op_name, s.param, s.limit, t_name)
+
+    __str__ = __repr__
+
 
 def limit_equal_or_depleted(op):
     if getattr(op, '_notices', None):
