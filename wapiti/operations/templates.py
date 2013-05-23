@@ -78,7 +78,7 @@ class GetParsedTemplatesPage(Operation):
     subop_chain = [GetCurrentContent,
                    GetParsedTemplates]
 
-    examples = [OperationExample('Coffee')]
+    examples = [OperationExample('Coffee', limit=1)]
 
 
 class GetParsedTranscludes(Operation):
