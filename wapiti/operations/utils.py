@@ -55,38 +55,42 @@ class MaxInt(long):
 
 class OperationExample(object):
     """
-    Like a partial, but specialer.
+    Sort of like a partial, but specialer.
 
-    # types of tests: limit_equal_or_depleted, ?
+    # other types of tests?
     """
     def __init__(self,
                  param=None,
                  limit=None,
-                 test=None,
                  op_type=None,
                  **kw):
-        self.name = kw.pop('name', '')
         self.op_type = op_type
         self.param = param
         self.limit = limit
-        self.test = test or limit_equal_or_depleted
+
+        self.doc = kw.pop('doc', '')
+        self.test = kw.pop('test', None)
+        # test defaults to limit_equal_or_depleted in test_ops.py
+        if kw:
+            raise TypeError('got unexpected keyword arguments: %r' % kw)
+
+    @property
+    def op_name(self):
+        if self.op_type is None:
+            return None
+        return self.op_type.__name__
 
     @property
     def disp_name(self):
-        ret = []
-        if self.name:
-            ret.append(repr(str(self.name)))
-        if self.op_type:
-            tmpl = '%(type)s(%(param)r, %(limit)s)'
-            if self.op_type.input_field is None:
-                tmpl = '%(type)s(%(limit)s)'
-
-            ret.append(tmpl % {'type': self.op_type.__name__,
-                               'param': self.param,
-                               'limit': self.limit})
-        if not ret:
+        if not self.op_type:
             return '(unbound OperationExample)'
-        return ' '.join(ret)
+        tmpl = '%(type)s(%(param)r, limit=%(limit)s)'
+        if self.op_type.input_field is None:
+            tmpl = '%(type)s(limit=%(limit)s)'
+
+        return tmpl % {'type': self.op_type.__name__,
+                       'param': self.param,
+                       'limit': self.limit}
 
     def bind_op_type(self, op_type):
         if self.op_type is None:
@@ -103,32 +107,21 @@ class OperationExample(object):
         if not self.op_type:
             raise TypeError('no Operation type assigned')
         mag = int(mag or 1)
+        limit = self.limit * mag
         if self.op_type.input_field is None:
-            return self.op_type(self.limit * mag)
-        return self.op_type(self.param, self.limit * mag)
+            return self.op_type(limit=limit)
+        return self.op_type(self.param, limit=limit)
 
     def __repr__(self):
-        s, cn = self, self.__class__.__name__
-        t_name = self.test and self.test.func_name
-        op_name = self.op_type and self.op_type.__name__
-        if not self.name:
-            tmpl = '%s(op_type=%s, param=%r, limit=%r, test=%s)'
-            return tmpl % (cn, op_name, s.param, s.limit, t_name)
-        else:
-            tmpl = '%s(name=%r, op_type=%s, param=%r, limit=%r, test=%s)'
-            return tmpl % (cn, s.name, s.op_name, s.param, s.limit, t_name)
+        cn = self.__class__.__name__
+        kwargs = ['param', 'limit', 'test', 'doc']
+        kw_parts = ['op_type=%s' % self.op_name]
+        vals = [getattr(self, a) for a in kwargs if getattr(self, a)]
+        kw_parts.extend(['%s=%r' % (a, v) for a, v in zip(kwargs, vals)])
+        kwarg_str = ', '.join(kw_parts)
+        return '%s(%s)' % (cn, kwarg_str)
 
     __str__ = __repr__
-
-
-def limit_equal_or_depleted(op):
-    if getattr(op, '_notices', None):
-        return False
-    elif getattr(op, 'is_depleted', None):
-        return True
-    elif len(op.results) == op.limit:
-        return True
-    return False
 
 
 """
