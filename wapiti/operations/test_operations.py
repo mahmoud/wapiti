@@ -46,17 +46,19 @@ def pytest_generate_tests(metafunc):
     # keyword = metafunc.config.option.keyword
     # it's also too hard to override matching behavior
     if metafunc.function is test_op_example:
+        mag = metafunc.config.getoption('--mag')
         op_examples = get_op_examples()
         #op_examples = [ex for ex in op_examples
         #               if keyword.lower() in ex.op_name.lower()]
-        _test_tuples = [(ex.disp_name, ex) for ex in op_examples]
-        metafunc.parametrize(('op_name', 'op_ex'), _test_tuples)
+        ops = [op_ex.make_op(mag=mag) for op_ex in op_examples]
+        _test_tuples = [(repr(op), op) for op in ops]
+        metafunc.parametrize(('op_repr', 'op'), _test_tuples)
         pass
 
 
-def pytest_funcarg__mag(request):
-    # TODO: switch to command line argument
-    return MAGNITUDE
+#def pytest_funcarg__mag(request):
+#    # TODO: switch to command line argument
+#    return MAGNITUDE
 
 
 #def pytest_funcarg__limit(request):
@@ -83,14 +85,6 @@ def test_query_pages(mag):
     assert len(ret) == len(qp_types)
 
 
-def test_op_example(op_name, op_ex, mag):
-    try:
-        mag = int(mag)
-    except:
-        mag = 1
-    op = op_ex.make_op(mag=mag)
+def test_op_example(op_repr, op):
     op.process_all()
-    if callable(op_ex.test):
-        assert op_ex.test(op)
-    else:
-        assert limit_equal_or_depleted(op)
+    assert limit_equal_or_depleted(op)
