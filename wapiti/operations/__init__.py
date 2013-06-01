@@ -15,7 +15,7 @@ import rand
 import revisions
 import templates
 import user
-
+import query_operations
 
 for op in OperationMeta._all_ops:
     globals()[op.__name__] = op

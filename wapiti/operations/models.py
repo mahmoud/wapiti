@@ -477,3 +477,17 @@ class CoordinateIdentifier(object):
         else:
             self.primary = False
         return
+
+
+class QueryPageInfo(object):
+    def __init__(self,
+                 title,
+                 ns,
+                 value,
+                 querypage,
+                 cache):
+        self.title = title
+        self.ns = ns
+        self.value = value
+        self.querypage = querypage
+        self.cache = cache

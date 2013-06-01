@@ -105,67 +105,6 @@ class GetRecentChanges(QueryOperation):
             ret.append(page_ident)
         return ret
 
-
-class GetQueryPage(QueryOperation):
-    field_prefix = 'qp'
-    input_field = SingleParam('page')
-    fields = [StaticParam('list', 'querypage')]
-    output_type = QueryPageInfo
-    known_qps = ['Ancientpages',
-                 'BrokenRedirects',
-                 'Deadendpages',
-                 'Disambiguations',
-                 'DoubleRedirects',
-                 'Listredirects',
-                 'Lonelypages',
-                 'Longpages',
-                 'Mostcategories',
-                 'Mostimages',
-                 'Mostinterwikis',
-                 'Mostlinkedcategories',
-                 'Mostlinkedtemplates',
-                 'Mostlinked',
-                 'Mostrevisions',
-                 'Fewestrevisions',
-                 'Shortpages',
-                 'Uncategorizedcategories',
-                 'Uncategorizedpages',
-                 'Uncategorizedimages',
-                 'Uncategorizedtemplates',
-                 'Unusedcategories',
-                 'Unusedimages',
-                 'Wantedcategories',
-                 'Wantedfiles',
-                 'Wantedpages',
-                 'Wantedtemplates',
-                 # 'Unwatchedpages',  # requires logging in
-                 'Unusedtemplates',
-                 'Withoutinterwiki']
-
-    def __init__(self, qp, *a, **kw):
-        if qp not in self.known_qps:
-            raise ValueError('Unrecognized query page: %r' % qp)
-        super(GetQueryPage, self).__init__(qp, *a, **kw)
-
-    def extract_results(self, query_resp):
-        ret = []
-        cached = query_resp['querypage'].get('cachedtimestamp')
-        name = query_resp['querypage'].get('name')
-        for p in query_resp['querypage']['results']:
-            page = QueryPageInfo(p['title'],
-                                 p['ns'],
-                                 p['value'],
-                                 name,
-                                 cached)
-            ret.append(page)
-        return ret
-
-    def prepare_params(self, **kw):
-        params = super(GetQueryPage, self).prepare_params(**kw)
-        if params.get('qpcontinue'):
-            params['qpoffset'] = params.pop('qpcontinue')
-        return params
-
 '''
 If we are completionists (for action=query)
 
@@ -212,8 +151,6 @@ If we are completionists (for action=query)
   Perform a full text search
 * list=tags (tg) *
   List change tags
-* list=usercontribs (uc) *
-  Get all edits by a user
 * list=users (us) *
   Get information about a list of users
 * list=abuselog (afl) *
