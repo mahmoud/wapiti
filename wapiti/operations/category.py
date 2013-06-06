@@ -36,7 +36,6 @@ class GetCategoryList(QueryOperation):
                 cat_info = CategoryInfo.from_query(pid_dict,
                                                    source=self.source)
             except ValueError:
-                print ValueError
                 continue
             if cat_info.page_id < 0:
                 continue
@@ -78,8 +77,8 @@ class GetCategoryPages(GetCategory):
 
 
 class GetSubcategoryInfos(QueryOperation):
-    """
-    Fetch `CategoryInfo` for category, used to get the count of of members or
+    """\
+    Fetch `CategoryInfo` for category, used to count the members of
     sub-categories.
     """
     field_prefix = 'gcm'
