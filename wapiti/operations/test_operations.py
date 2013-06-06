@@ -15,7 +15,6 @@ import templates
 import user
 
 from revisions import GetRevisionInfos
-from misc import GetQueryPage
 
 MAGNITUDE = 1
 
@@ -73,16 +72,6 @@ def test_multiplexing(mag):
     get_rev_infos = GetRevisionInfos(rev_ids)
     rev_infos = get_rev_infos()
     assert len(rev_infos) > (0.9 * limit)  # a couple might be missing
-
-
-def test_query_pages(mag):
-    limit = mag * 2
-    qp_types = GetQueryPage.known_qps[:limit]
-    ret = []
-    for qpt in qp_types:
-        get_pages = GetQueryPage(qpt, limit)
-        ret.extend(get_pages())
-    assert len(ret) == len(qp_types)
 
 
 def test_op_example(op_repr, op):
