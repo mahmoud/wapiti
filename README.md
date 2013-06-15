@@ -3,35 +3,46 @@ wapiti
 
 ![Wapiti](http://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Elk_1_%28PSF%29.png/212px-Elk_1_%28PSF%29.png)
 
-A MediaWiki API wrapper in Python for humans and elk. 
+A MediaWiki API wrapper in Python for humans and elk.
 
-Wapiti makes it simple for python scripts to retrieve data from the [Wikipedia API](https://en.wikipedia.org/w/api.php). No more worries about query limits, continue strings, or formatting. Just ask for  data and get structured results.
+Wapiti makes it simple for python scripts to retrieve data from the
+[Wikipedia API](https://en.wikipedia.org/w/api.php). No more worries
+about query limits, continue strings, or formatting. Just ask for data
+and get structured results.
 
 Example
 -------
-Let's get the members of Wikipedia's [Category:Lists of superlatives](http://en.wikipedia.org/wiki/Category:Lists_of_superlatives). First, initialize a `WapitiClient` and change any settings. Next, run the operation `get_category_pages` on the category `'Lists of superlatives'`, with a limit of `10`:
+
+Let's get the members of Wikipedia's [Category:Lists of
+superlatives](http://en.wikipedia.org/wiki/Category:Lists_of_superlatives). First,
+initialize a `WapitiClient` and change any settings. Next, run the
+operation `get_category_pages` on the category `'Lists of
+superlatives'`, with a limit of `10`:
 
 ```python
 >>> import wapiti
->>> client = wapiti.WapitiClient()
->>> client.get_category_pages_recursive('Lists of superlatives', 10)
-[PageIdentifier(u'Ranked lists of Chilean regions', 25042332, 0, u'enwp'),
- PageIdentifier(u'List of the heaviest people', 3626619, 0, u'enwp'),
- PageIdentifier(u'List of heaviest bells', 25636339, 0, u'enwp'),
- PageIdentifier(u'List of elevation extremes by country', 24285393, 0, u'enwp'),
- PageIdentifier(u'List of automotive superlatives', 858694, 0, u'enwp'),
- PageIdentifier(u'Extremes on Earth', 736240, 0, u'enwp'),
- PageIdentifier(u'List of highest paid Major League Baseball players', 224893, 0, u'enwp'),
- PageIdentifier(u'List of fastest production motorcycles', 32140340, 0, u'enwp'),
- PageIdentifier(u'Angus Maddison statistics of the ten largest economies by GDP (PPP)', 38385899, 0, u'enwp'),
- PageIdentifier(u'List of fastest production motorcycles by acceleration', 34443631, 0, u'enwp')]
+>>> client = wapiti.WapitiClient('domas@mituzas.lt')
+>>> client.get_category_pages_recursive('Lists of superlatives', 10))
+[PageInfo(title=u'The Fifty Worst Films of All Time', page_id=1820513, ns=0),
+ PageInfo(title=u"World's busiest city airport systems by passenger traffic", page_id=33167241, ns=0),
+ PageInfo(title=u'List of oldest Major League Baseball players', page_id=1947309, ns=0),
+ PageInfo(title=u'List of firsts in India', page_id=3752148, ns=0),
+ PageInfo(title=u'List of the first female holders of political offices in Europe', page_id=18904865, ns=0),
+ PageInfo(title=u'List of the busiest airports in the Republic of Ireland', page_id=26712480, ns=0),
+ PageInfo(title=u'List of longest bridges above water in India', page_id=32312925, ns=0),
+ PageInfo(title=u'List of the busiest airports in China', page_id=33396262, ns=0),
+ PageInfo(title=u'List of most common surnames in Asia', page_id=26810011, ns=0),
+ PageInfo(title=u'List of largest mosques', page_id=20897194, ns=0)]
 ```
 
-This returns a list of `PageIdentifiers` for the category's members.
+This returns a list of `PageInfo` objects for the category's members.
 
 Operations
 ----------
-Operations usually take two positional arguments: the `query_param` (page, category, template, etc.), and `limit` (maximum number of results).
+
+Operations usually take two positional arguments: the `query_param`
+(page, category, template, etc.), and `limit` (maximum number of
+results).
 
 - `get_random(limit)` : returns a list of `PageIdentifiers` for random pages.
 - `get_category_pages(category, limit)` : returns a list of `PageIdentifiers` for the articles or talk pages in a category. If you are interested in getting pages beyond of the main and talk namespace, try `get_category`.
@@ -45,9 +56,12 @@ Other operations are available: see wapiti/operations
 
 Models
 ------
-Models describe the structure for result data. For the full list of models, see wapiti/operations/models.py
+
+Models describe the structure for result data. For the full list of
+models, see wapiti/operations/models.py
 
 ### PageIdentifier ###
+
 A `PageIdentifier` describes the standard information available for a  page.
 
 - **Title** : unique name of the page
@@ -59,6 +73,7 @@ A `PageIdentifier` describes the standard information available for a  page.
 - **Talk page ID** : the ID of the corresponding page in the [talk namespace](http://en.wikipedia.org/wiki/Help:Using_talk_pages)
 
 ### RevisionInfo ###
+
 A `RevisionInfo` describes the standard information for a revision.
 
 * **PageIdentifier** : the page's `PageIdentifier`
@@ -74,9 +89,10 @@ A `RevisionInfo` describes the standard information for a revision.
 * **Parsed** : whether the page is parsed (html) or not (wikitext)
 
 ### Revision ###
+
 A `Revision` includes the same data as `RevisionInfo`, plus full text content.
 
-todo
+TODO
 ----
 - Logging
 - Client settings
