@@ -154,7 +154,8 @@ def get_inputless_init(old_init):
         return old_init
     @wraps(old_init)
     def inputless_init(self, limit=None, **kw):
-        return old_init(self, None, limit, **kw)
+        kw['input_param'] = None
+        return old_init(self, limit=limit, **kw)
     inputless_init._is_inputless = True
     return inputless_init
 
