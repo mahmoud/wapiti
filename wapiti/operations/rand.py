@@ -2,10 +2,9 @@
 from __future__ import unicode_literals
 
 from base import QueryOperation, QueryLimit
-from params import StaticParam
+from params import StaticParam, SingleParam
 from models import PageInfo
-from utils import OperationExample
-
+from utils import OperationExample, coerce_namespace
 
 class GetRandom(QueryOperation):
     """
@@ -14,7 +13,8 @@ class GetRandom(QueryOperation):
     field_prefix = 'grn'
     fields = [StaticParam('generator', 'random'),
               StaticParam('prop', 'info'),
-              StaticParam('inprop', 'subjectid|talkid|protection')]
+              StaticParam('inprop', 'subjectid|talkid|protection'), 
+              SingleParam('namespace', default='', coerce=coerce_namespace)]
     input_field = None
     output_type = [PageInfo]
     per_query_limit = QueryLimit(10, 20)

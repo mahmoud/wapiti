@@ -412,3 +412,8 @@ def bucketize_bool(src, keyfunc=None):
     """
     bucketized = bucketize(src, keyfunc)
     return bucketized.get(True, []), bucketized.get(False, [])
+
+def coerce_namespace(ns_arg):
+    ns_str = str(ns_arg).capitalize()
+    return NAMESPACES.get(ns_str, ns_str)
+    
