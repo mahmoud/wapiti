@@ -78,6 +78,14 @@ def normalize_param(p, prefix=None, multi=None):
 # unacceptablllllllle
 PLURAL_MAP = {'titles': 'title', 'revids': 'revid'}
 
+def make_param_attr_getter(attr_name):
+    def param_attr_getter(obj):
+        ret = getattr(obj, attr_name)
+        if callable(ret):
+            raise AttributeError('unsuitable attribute value %r' % ret)
+        return ret
+
+    return param_attr_getter
 
 class Param(object):
     def __init__(self, key, default=None, val_prefix=None, **kw):
@@ -99,7 +107,7 @@ class Param(object):
                 if self.multi:
                     param_attr = PLURAL_MAP.get(param_attr, param_attr)
             if isinstance(param_attr, basestring):
-                coerce_func = lambda x: getattr(x, param_attr)
+                coerce_func = make_param_attr_getter(param_attr)
             elif param_attr is None:
                 coerce_func = lambda x: x
             else:
@@ -130,14 +138,17 @@ class Param(object):
         # TODO: it's real late and this is a bit of a sty
         # also, in some cases the bar-split normalization
         # should not occur (e.g., on a URL)
-        if not value or isinstance(value, basestring):
+        if value is None: 
             return value
         try:
             return self.coerce_func(value)
         except AttributeError:
             pass
 
-        if isinstance(value, (Sequence, Set)):
+        if is_scalar(value):
+            if isinstance(value, basestring):
+                return value
+        else:
             # some models are iterable, but none are sequences/sets (yet)
             coerced = []
             for v in value:
