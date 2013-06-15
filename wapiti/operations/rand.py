@@ -33,15 +33,21 @@ class GetRandom(QueryOperation):
 
 
 class GetRandomArticles(GetRandom):
-    fields = GetRandom.fields + [StaticParam('grnnamespace', '0')]
+    def __init__(self, *a, **kw):
+        kw['namespace'] = 0
+        super(GetRandomArticles, self).__init__(*a, **kw)
     examples = [OperationExample(doc='random articles')]
 
 
 class GetRandomCategories(GetRandom):
-    fields = GetRandom.fields + [StaticParam('grnnamespace', '14')]
+    def __init__(self, *a, **kw):
+        kw['namespace'] = 14
+        super(GetRandomCategories, self).__init__(*a, **kw)
     examples = [OperationExample(doc='random categories')]
 
 
 class GetRandomFilePages(GetRandom):
-    fields = GetRandom.fields + [StaticParam('grnnamespace', '6')]
+    def __init__(self, *a, **kw):
+        kw['namespace'] = 6
+        super(GetRandomFilePages, self).__init__(*a, **kw)
     examples = [OperationExample(doc='random file pages')]
