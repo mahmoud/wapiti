@@ -5,7 +5,7 @@ from argparse import ArgumentParser
 from functools import wraps
 
 from client import WapitiClient
-from operations import tests
+from operations import test_basic, test_operations
 
 from functools import partial
 
@@ -255,7 +255,10 @@ def test_flatten_category(limit):
 @magnitude(norm=10, big=550, huge=2000)
 def test_cat_mem_namespace(limit):
     client = WapitiClient('mahmoudrhashemi@gmail.com')
-    get_star_portals = partial(client.get_category, 'Astronomy_portals', limit, namespace=['100'])
+    get_star_portals = partial(client.get_category,
+                               'Astronomy_portals',
+                               limit,
+                               namespace=['100'])
     portals = call_and_ret(get_star_portals)
     return len(portals) == limit
 
@@ -263,9 +266,10 @@ def test_cat_mem_namespace(limit):
 @magnitude(norm=20, big=550, huge=2000)
 def test_cat_pages_recursive(limit):
     client = WapitiClient('mahmoudrhashemi@gmail.com')
-    get_cat_pages_rec = partial(client.get_category_pages_recursive, 'Africa',
-                                                  limit,
-                                                  resolve_to_subject=True)
+    get_cat_pages_rec = partial(client.get_category_articles_recursive,
+                                'Africa',
+                                limit,
+                                resolve_to_subject=True)
     pages = call_and_ret(get_cat_pages_rec)
     return len(pages) == limit
 
@@ -337,12 +341,14 @@ def test_get_image_info(limit):
     return image_info[0].url == 'http://upload.wikimedia.org/wikipedia/en/e/ea/Logo.gif'
 
 
+"""
 @magnitude(norm=20, big=550, huge=2000)
 def test_get_all_image_infos(limit):
     client = WapitiClient('mahmoudrhashemi@gmail.com')
     get_all_img = partial(client.get_all_image_infos, limit)
     all_imgs = call_and_ret(get_all_img)
     return len(all_imgs) == limit
+"""
 
 
 @magnitude(norm=20, big=550, huge=2000)
@@ -353,6 +359,7 @@ def test_get_templates(limit):
     return len(tmpl) == limit
 
 
+"""
 @magnitude(norm=1, big=5, huge=600)
 def test_query_pages(limit):
     client = WapitiClient('mahmoudrhashemi@gmail.com')
@@ -363,8 +370,9 @@ def test_query_pages(limit):
         get_pages = partial(client.get_query_page, qpt, limit)
         ret.extend(call_and_ret(get_pages))
     return len(ret) == limit * len(qp_types)
+"""
 
-
+"""
 def test_nonexistent_query_page(limit):
     client = WapitiClient('mahmoudrhashemi@gmail.com')
     try:
@@ -372,6 +380,7 @@ def test_nonexistent_query_page(limit):
         call_and_ret(non_existent_qp)
     except ValueError:
         return True
+"""
 
 
 @magnitude(norm=20, big=550, huge=2000)
