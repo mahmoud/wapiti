@@ -188,6 +188,7 @@ class WapitiModelBase(object):
     __metaclass__ = WapitiModelMeta
     attributes = []
     unique_on = lambda self: self
+    exists = True # Defaults to True, instances can represent non-existent pages
 
     def __init__(self, **kw):
         missing = []
@@ -265,6 +266,10 @@ class PageIdentifier(WapitiModelBase):
                   WMA('source')]
 
     unique_on = 'title'
+
+    @property
+    def exists(self):
+        return self.page_id is not None
 
     @property
     def is_subject_page(self):
