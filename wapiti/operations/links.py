@@ -45,16 +45,8 @@ class GetLinks(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for pid, pid_dict in query_resp['pages'].iteritems():
-            try:
-                page_info = PageInfo.from_query(pid_dict,
-                                                source=self.source)
-            except ValueError:
-                # TODO: red links have no page ID, maybe add a flag to
-                # include red links instead of skipping them? Or maybe
-                # a separate operation to get only red links. How
-                # often do folks want both instead of one or the
-                # other?
-                continue
+            page_info = PageInfo.from_query(pid_dict,
+                                            source=self.source)
             ret.append(page_info)
         return ret
 

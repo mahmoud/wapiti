@@ -32,11 +32,8 @@ class GetCategoryList(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
-            try:
-                cat_info = CategoryInfo.from_query(pid_dict,
-                                                   source=self.source)
-            except ValueError:
-                continue
+            cat_info = CategoryInfo.from_query(pid_dict,
+                                               source=self.source)
             if cat_info.page_id < 0:
                 continue
             ret.append(cat_info)
@@ -59,11 +56,8 @@ class GetCategory(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
-            try:
-                page_ident = PageInfo.from_query(pid_dict,
-                                                 source=self.source)
-            except ValueError:
-                continue
+            page_ident = PageInfo.from_query(pid_dict,
+                                             source=self.source)
             ret.append(page_ident)
         return ret
 
@@ -77,7 +71,7 @@ class GetCategoryArticles(GetCategory):
 
 
 class GetSubcategoryInfos(QueryOperation):
-    """\
+    """
     Fetch `CategoryInfo` for category, used to count the members of
     sub-categories.
     """
@@ -92,12 +86,9 @@ class GetSubcategoryInfos(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
-            try:
-                pid_dict.update(pid_dict.get('categoryinfo', {}))
-                cat_info = CategoryInfo.from_query(pid_dict,
-                                                   source=self.source)
-            except ValueError:
-                continue
+            pid_dict.update(pid_dict.get('categoryinfo', {}))
+            cat_info = CategoryInfo.from_query(pid_dict,
+                                               source=self.source)
             if cat_info.page_id < 0:
                 continue
             ret.append(cat_info)

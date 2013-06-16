@@ -260,7 +260,7 @@ class SourceInfo(WapitiModelBase):
 
 class PageIdentifier(WapitiModelBase):
     attributes = [WMA('title', display=True),
-                  WMA('page_id', mw_name='pageid', display=True),
+                  WMA('page_id', mw_name='pageid', display=True, default=None),
                   WMA('ns', display=True),
                   WMA('source')]
 
