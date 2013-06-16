@@ -26,11 +26,8 @@ class GetPageInfo(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
-            try:
-                page_info = PageInfo.from_query(pid_dict,
-                                                source=self.source)
-            except ValueError:
-                continue
+            page_info = PageInfo.from_query(pid_dict,
+                                            source=self.source)
             ret.append(page_info)
         return ret
 
@@ -47,13 +44,10 @@ class GetCoordinates(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
-            try:
-                page_ident = PageIdentifier.from_query(pid_dict,
-                                                       source=self.source)
-                for coord in pid_dict['coordinates']:
-                    coord_ident = CoordinateIdentifier(coord, page_ident)
-            except ValueError:
-                continue
+            page_ident = PageIdentifier.from_query(pid_dict,
+                                                   source=self.source)
+            for coord in pid_dict['coordinates']:
+                coord_ident = CoordinateIdentifier(coord, page_ident)
             ret.append(coord_ident)
         return ret
 
@@ -73,12 +67,9 @@ class GeoSearch(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for pid_dict in query_resp['geosearch']:
-            try:
-                page_ident = PageIdentifier.from_query(pid_dict,
-                                                       source=self.source)
-                coord_ident = CoordinateIdentifier(pid_dict, page_ident)
-            except ValueError:
-                continue
+            page_ident = PageIdentifier.from_query(pid_dict,
+                                                   source=self.source)
+            coord_ident = CoordinateIdentifier(pid_dict, page_ident)
             ret.append(coord_ident)
         return ret
 
@@ -97,11 +88,8 @@ class GetRecentChanges(QueryOperation):
         for pid, pid_dict in query_resp['pages'].iteritems():
             if pid.startswith('-'):
                 continue
-            try:
-                page_ident = PageInfo.from_query(pid_dict,
-                                                 source=self.source)
-            except ValueError:
-                continue
+            page_ident = PageInfo.from_query(pid_dict,
+                                             source=self.source)
             ret.append(page_ident)
         return ret
 

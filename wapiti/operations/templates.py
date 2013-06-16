@@ -24,11 +24,8 @@ class GetTemplates(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
-            try:
-                page_ident = PageInfo.from_query(pid_dict,
-                                                 source=self.source)
-            except ValueError:
-                continue
+            page_ident = PageInfo.from_query(pid_dict,
+                                             source=self.source)
             ret.append(page_ident)
         return ret
 
@@ -45,11 +42,8 @@ class GetTranscludes(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp.get('pages', {}).items():
-            try:
-                page_ident = PageInfo.from_query(pid_dict,
-                                                 source=self.source)
-            except ValueError:
-                continue
+            page_ident = PageInfo.from_query(pid_dict,
+                                             source=self.source)
             ret.append(page_ident)
         return ret
 

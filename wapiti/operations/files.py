@@ -30,11 +30,8 @@ class GetImages(QueryOperation):
         for pid, pid_dict in query_resp['pages'].iteritems():
             if pid.startswith('-'):
                 pid_dict['pageid'] = None  # TODO: breaks consistency :/
-            try:
-                page_ident = PageInfo.from_query(pid_dict,
-                                                 source=self.source)
-            except ValueError:
-                continue
+            page_ident = PageInfo.from_query(pid_dict,
+                                             source=self.source)
             ret.append(page_ident)
         return ret
 

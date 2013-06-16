@@ -21,12 +21,9 @@ class GetUserContribs(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for rev_dict in query_resp.get('usercontribs', []):
-            try:
-                user_contrib = RevisionInfo.from_query(rev_dict,
-                                                       source=self.source)
-                ret.append(user_contrib)
-            except ValueError:
-                continue
+            user_contrib = RevisionInfo.from_query(rev_dict,
+                                                   source=self.source)
+            ret.append(user_contrib)
         return ret
 
 
