@@ -405,6 +405,8 @@ class Operation(object):
         for res in results:
             if not self.remaining:
                 break
+            if 'exists' in self.kwargs and res.exists is not self.kwargs['exists']:
+                continue
             unique_key = getattr(res, 'unique_key', res)
             if unique_key in self.results:
                 continue
