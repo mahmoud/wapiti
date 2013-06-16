@@ -68,11 +68,11 @@ class GetCategory(QueryOperation):
         return ret
 
 
-class GetCategoryPages(GetCategory):
+class GetCategoryArticles(GetCategory):
     """
     Fetch the pages (namespace 0 or 1) that are members of category.
     """
-    fields = GetCategory.fields + [StaticParam('gcmnamespace', '0|1')]
+    fields = GetCategory.fields + [StaticParam('gcmnamespace', '0')]
     examples = [OperationExample('Featured_articles')]
 
 
@@ -135,11 +135,20 @@ class GetCategoryRecursive(Operation):
     examples = [OperationExample('Africa', 100)]
 
 
-class GetCategoryPagesRecursive(Operation):
+class GetCategoryArticlesRecursive(Operation):
     """
     Fetch all pages (namespace 0 and 1) in category and its sub-
     categories.
     """
     subop_chain = (GetFlattenedCategory,
-                   Tune(GetCategoryPages, priority='page_count'))
-    examples = [OperationExample('Africa', 100)]
+                   Tune(GetCategoryArticles, priority='page_count'))
+    examples = [OperationExample('Africa', 100),
+                OperationExample('Lists of slang', 10)]
+
+    def __init__(self, input_param, *a, **kw):
+        cls = GetCategoryArticlesRecursive
+        super(cls, self).__init__(input_param, *a, **kw)
+        root_cat_op = GetCategoryArticles(input_param,
+                                          limit=self,
+                                          client=self.client)
+        self.subop_queues[-1].op_queue.add(root_cat_op, 10 ** 6)
