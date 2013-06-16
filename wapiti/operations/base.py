@@ -402,10 +402,12 @@ class Operation(object):
 
     def _update_results(self, results):
         ret = []
+        filt_exists = self.kwargs.get('exists')
+        filt_exists = filt_exists if filt_exists is None else bool(filt_exists)
         for res in results:
             if not self.remaining:
                 break
-            if 'exists' in self.kwargs and res.exists is not self.kwargs['exists']:
+            if filt_exists is not None and res.exists is not filt_exists:
                 continue
             unique_key = getattr(res, 'unique_key', res)
             if unique_key in self.results:
