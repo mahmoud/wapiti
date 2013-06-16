@@ -132,7 +132,14 @@ class GetCategoryRecursive(Operation):
     """
     subop_chain = (GetFlattenedCategory,
                    Tune(GetCategory, priority='total_count'))
-    examples = [OperationExample('Africa', 100)]
+    examples = [OperationExample('Africa', 100),
+                OperationExample('Lists of slang', 10)]
+
+    def __init__(self, input_param, *a, **kw):
+        super(GetCategoryRecursive, self).__init__(input_param, *a, **kw)
+        root_cat_op = GetCategory(input_param,
+                                  client=self.client)
+        self.subop_queues[-1].op_queue.add(root_cat_op, 10 ** 6)
 
 
 class GetCategoryArticlesRecursive(Operation):
@@ -149,6 +156,5 @@ class GetCategoryArticlesRecursive(Operation):
         cls = GetCategoryArticlesRecursive
         super(cls, self).__init__(input_param, *a, **kw)
         root_cat_op = GetCategoryArticles(input_param,
-                                          limit=self,
                                           client=self.client)
         self.subop_queues[-1].op_queue.add(root_cat_op, 10 ** 6)
