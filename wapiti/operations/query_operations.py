@@ -18,12 +18,8 @@ class GetQueryPage(QueryOperation):
     def extract_results(self, query_resp):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
-            try:
-                page = PageInfo.from_query(pid_dict,
-                                           source=self.source)
-            except ValueError:
-                # no page_id?
-                continue
+            page = PageInfo.from_query(pid_dict,
+                                       source=self.source)
             ret.append(page)
         return ret
 
