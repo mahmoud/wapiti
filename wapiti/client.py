@@ -34,7 +34,7 @@ Need generic support for:
 import re
 
 from operations import ALL_OPERATIONS, DEFAULT_API_URL
-
+from operations.params import StaticParam
 
 DEFAULT_TIMEOUT = 15
 import socket
@@ -148,8 +148,12 @@ class WapitiClient(object):
 
             print 'OPTIONS:'
             if 'fields' in dir(op):
-                for field in op.fields:
-                    print '\t%s' % self.get_field_str(field)
+                print_fields = [f for f in op.fields if not isinstance(f, StaticParam)]
+                if len(print_fields):
+                    for field in print_fields:
+                        print '\t%s' % self.get_field_str(field)
+                else:
+                    print '\t(none)'
             else:
                 print '\t(none)'
 
