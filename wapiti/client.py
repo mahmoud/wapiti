@@ -33,9 +33,8 @@ Need generic support for:
 '''
 import re
 
-import operations
 from operations import ALL_OPERATIONS, DEFAULT_API_URL
-
+from operations.params import StaticParam
 
 DEFAULT_TIMEOUT = 15
 import socket
@@ -120,6 +119,55 @@ class WapitiClient(object):
     @property
     def op_names(self):
         return list(sorted(self.op_map.keys()))
+
+    def get_field_str(self, field):
+        out_str = field.key
+        mods = []
+        if field.required:
+            mods.append('required')
+        if field.multi:
+            mods.append('multi')
+        if len(mods):
+            out_str += ' (%s)' % ', '.join(mods)
+        return out_str
+
+    def print_op_usage(self, query=None):
+        if query:
+            op_names = [o for o in self.op_names if query.lower() in o.lower()]
+        else:
+            op_names = self.op_names
+
+        for op_name in op_names:
+            op = self.op_map[op_name]
+            print op_name
+            print 'INPUT:'
+            if 'input_field' in dir(op) and op.input_field:
+                print '\t%s' % self.get_field_str(op.input_field)
+            else:
+                print '\t(none)'
+
+            print 'OPTIONS:'
+            if 'fields' in dir(op):
+                print_fields = [f for f in op.fields if not isinstance(f, StaticParam)]
+                if len(print_fields):
+                    for field in print_fields:
+                        print '\t%s' % self.get_field_str(field)
+                else:
+                    print '\t(none)'
+            else:
+                print '\t(none)'
+
+            print 'OUTPUT:'
+            if 'output_type' in dir(op):
+                print '\t%s' % repr(op.output_type)
+            else:
+                print '\t(none)'
+
+            if 'examples' in dir(op):
+                print 'EX:'
+                print '\t%s' % ','.join([repr(x) for x in op.examples])
+
+            print '\n'
 
     # TODO: configurable operations
     op_map = dict([(op.__name__, op) for op in ALL_OPERATIONS])
