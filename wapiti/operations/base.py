@@ -13,7 +13,7 @@ from os.path import dirname, abspath
 sys.path.append(dirname(dirname(abspath(__file__))))
 import ransom
 
-from params import SingleParam
+from params import SingleParam, StaticParam
 from models import get_unique_func, get_priority_func
 from utils import (PriorityQueue,
                    MaxInt,
@@ -160,15 +160,39 @@ def get_inputless_init(old_init):
     return inputless_init
 
 
+def get_field_str(field):
+    out_str = field.key
+    mods = []
+    if field.required:
+        mods.append('required')
+    if field.multi:
+        mods.append('multi')
+    if mods:
+        out_str += ' (%s)' % ', '.join(mods)
+    return out_str
+
 def operation_signature_doc(operation):
     if operation.input_field is None:
         doc_input = 'None'
     else:
         doc_input = operation.input_field.key
     doc_output = operation.singular_output_type.__name__
-    doc_template = 'Input: %s, Output: %s'
-    if not operation.is_bijective:
-        doc_template = 'Input: %s, Output: List of %ss'
+    doc_template = 'Input: %s\n'
+    if operation.is_bijective:
+        doc_template += 'Output: %s\n'
+    else:
+        doc_template += 'Output: List of %s\n'
+
+    print_fields = [f for f in getattr(operation, 'fields', [])
+                    if not isinstance(f, StaticParam)]
+    if print_fields:
+        doc_template += 'Options: '
+        doc_template += ','.join([get_field_str(f) for f in print_fields]) + '\n'
+
+    if hasattr(operation, 'examples'):
+        doc_template += 'Examples: \n\t'
+        doc_template += '\n\t'.join([repr(x) for x in operation.examples]) + '\n'
+
     return doc_template % (doc_input, doc_output)
 
 
@@ -214,11 +238,19 @@ class OperationMeta(ABCMeta):
         for ex in getattr(ret, 'examples', []):
             ex.bind_op_type(ret)
 
-        ret.__doc__ = (ret.__doc__ and ret.__doc__ + '\n\n') or ''
+        ret.__doc__ = (ret.__doc__ and ret.__doc__ + '\n') or ''
         ret.__doc__ += operation_signature_doc(ret)
         cls._all_ops.append(ret)
         return ret
 
+    @property
+    def help_str(self):
+        ret = '\n\t'.join([self.__name__] + self.__doc__.strip().split('\n'))
+
+        # TODO move options and examples to the __doc__
+
+        ret += '\n'
+        return ret
 
 class OperationQueue(object):
     # TODO: chunking/batching should probably happen here
