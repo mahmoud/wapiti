@@ -431,7 +431,7 @@ class ProtectionInfo(object):
                 expiry = parse_timestamp(p['expiry'])
             else:
                 expiry = 'infinity'
-            level = self.levels[p['level']]
+            level = self.levels.get(p['level'], p['level'])
             self.protections[p['type']] = Protection(level, expiry)
 
     @property
