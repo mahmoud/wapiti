@@ -22,7 +22,7 @@ superlatives'`, with a limit of `10`:
 ```python
 >>> import wapiti
 >>> client = wapiti.WapitiClient('domas@mituzas.lt')
->>> client.get_category_pages_recursive('Lists of superlatives', 10))
+>>> client.get_category_articles_recursive('Lists of superlatives', 10))
 [PageInfo(title=u'The Fifty Worst Films of All Time', page_id=1820513, ns=0),
  PageInfo(title=u"World's busiest city airport systems by passenger traffic", page_id=33167241, ns=0),
  PageInfo(title=u'List of oldest Major League Baseball players', page_id=1947309, ns=0),
@@ -45,8 +45,8 @@ Operations usually take two positional arguments: the `query_param`
 results).
 
 - `get_random(limit)` : returns a list of `PageIdentifiers` for random pages.
-- `get_category_pages(category, limit)` : returns a list of `PageIdentifiers` for the articles or talk pages in a category. If you are interested in getting pages beyond of the main and talk namespace, try `get_category`.
-- `get_category_pages_recursive(category, limit)` : returns a list of `PageIdentifiers` for the articles or talk pages in a category and its subcategories. If you are interested in getting pages beyond of the main and talk namespace, try `get_category_recursive`.
+- `get_category_articles(category, limit)` : returns a list of `PageIdentifiers` for the articles or talk pages in a category. If you are interested in getting pages beyond of the main and talk namespace, try `get_category`.
+- `get_category_articles_recursive(category, limit)` : returns a list of `PageInfos` for the articles in a category and its subcategories. If you are interested in getting pages beyond of the main and talk namespace, try `get_category_recursive`.
 - `get_transcludes(page, limit)` : returns a list of `PageIdentifiers` for the articles that embed (transclude) a page. For example, see the pages that embed [Template:Infobox](http://en.wikipedia.org/wiki/Special:WhatLinksHere/Template:Infobox) with `client.get_transcludes('Infobox')`.
 - `get_backlinks(page, limit)` : returns a list of `PageIdentifiers` for pages that internally link back to a page. For example, see the pages that [link to 'Coffee'](http://en.wikipedia.org/wiki/Special:WhatLinksHere/Coffee) with `client.get_backlinks('Coffee')`.
 - `get_revision_infos(page, limit)` : returns a list of `RevisionInfos` for a page's revisions.
