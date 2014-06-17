@@ -12,6 +12,8 @@ from os.path import dirname, abspath
 # just until ransom becomes its own package
 sys.path.append(dirname(dirname(abspath(__file__))))
 import ransom
+import hematite
+from hematite import client as hematite_client  # tmp
 
 from params import SingleParam, StaticParam
 from models import get_unique_func, get_priority_func
@@ -73,8 +75,7 @@ prioritization/batching/concurrency implementation thoughts:
 DEFAULT_API_URL = 'http://en.wikipedia.org/w/api.php'
 DEFAULT_BASE_URL = 'http://en.wikipedia.org/wiki/'
 
-DEFAULT_HEADERS = {'User-Agent': ('Wapiti/0.0.0 Mahmoud Hashemi'
-                                  ' mahmoudrhashemi@gmail.com') }
+USER_AGENT = 'Wapiti/0.0.0 Mahmoud Hashemi mahmoud@hatnote.com'
 
 ALL = MaxInt('ALL')
 DEFAULT_MIN = 50
@@ -88,7 +89,7 @@ class NoMoreResults(Exception):
     pass
 
 
-DEFAULT_WEB_CLIENT = ransom.Client({'headers': DEFAULT_HEADERS})
+DEFAULT_WEB_CLIENT = hematite_client.Client(user_agent=USER_AGENT)
 
 
 class MockClient(object):
@@ -646,8 +647,8 @@ class MediaWikiCall(Operation):
         self.raise_warn = kw.pop('raise_warn', False)
         self.client = kw.pop('client')
         self.web_client = getattr(self.client,
-                                     'web_client',
-                                     DEFAULT_WEB_CLIENT)
+                                  'web_client',
+                                  DEFAULT_WEB_CLIENT)
         if kw:
             raise ValueError('got unexpected keyword arguments: %r'
                              % kw.keys())
@@ -682,7 +683,7 @@ class MediaWikiCall(Operation):
             self.url = getattr(resp, 'url', '')
 
         try:
-            self.results = json.loads(resp.text)
+            self.results = json.loads(resp.get_data())
         except Exception as e:
             self.exception = e  # TODO: wrap
             if self.raise_exc:

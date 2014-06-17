@@ -1,0 +1,13 @@
+HTTP/1.1 301 Moved Permanently
+location: http://www.google.com/
+content-type: text/html; charset=UTF-8
+date: Sat, 01 Mar 2014 23:10:17 GMT
+expires: Mon, 31 Mar 2014 23:10:17 GMT
+cache-control: public, max-age=2592000
+server: gws
+content-length: 219
+x-xss-protection: 1; mode=block
+x-frame-options: SAMEORIGIN
+alternate-protocol: 80:quic
+connection: close
+

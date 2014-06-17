@@ -1,0 +1,48 @@
+* Overview
+  - namedtuples map roughly to productions in rfc 2616's grammar
+  - each knows how to serialize and deserialize itself.  respectively:
+    + =_asbytes()= (which becomes =__str__= or =__bytes__=)
+    + =parsefrom*(...)= (e.g. =parsefrombytes(...)=, =parsefromsocket(...)=)
+      - these parse methods will probably always be very specific to
+        their source, since you can't read from a socket the same way
+        you can read from a file (=socket._fileobject.readline= is
+        slow!)
+  - =core.advancer= compiles a regex and provides a wrapper for its
+    =.match(...)= method that returns a string with the matched prefix
+    removed (the advancement) and the resulting regex.
+  - lots of precise exceptions for raising at appropriate points
+    (e.g. BadVersion, BadStatusCode, etc.)
+** TODOs
+*** DONE Parsing [3/3]
+    CLOSED: [2014-03-03 Mon 08:49]
+    - [X] Use something like =re.Scanner= or wapiti's =Lexer=
+      + MOVED TO [[absorption][ABSORPTION]]
+    - [X] Investigate =bytearrays= (memory efficiency is less
+      important than speed, so strings win)
+      : mrw@hammal:~$ python -m timeit -s "import string; \
+      : > y = bytearray(string.lowercase)" "y[10:]"
+      : 10000000 loops, best of 3: 0.116 usec per loop
+      : mrw@hammal:~$ python -m timeit -s "import string; \
+      : > y = (string.lowercase)" "y[10:]"
+      : 10000000 loops, best of 3: 0.0562 usec per loop
+    - [X] =StatusLine= and =RequestLine= currently assume their =bstr=
+      terminates in CRLF.  That makes =Request='s and =Response='s parsing job too
+      hard, so move that assertion into those classes.
+*** DONE Naming
+    CLOSED: [2014-03-03 Mon 08:47]
+    Bad vs Invalid for exceptions -- choose one!
+# <<absorption>>
+*** TODO Absorption
+    - [ ] To reduce function call overhead it should be possible to
+      collect sub-productions' regular expression and splice them
+      upward into their parents'.  For example: =StatusLine= currently
+      calls =HTTPVersion= and =StatusCode= to parse their namesakes in
+      an error-aware way.  Instead, use a metaclass to collect each
+      =advancer= so they can be assembled into a =fastfrombytes(...)=
+      method.
+    - [ ] Use something like =re.Scanner= or wapiti's =Lexer=
+*** TODO Testing
+    - [ ] set up pytest-cov
+    - [ ] improve coverage
+    - [ ] setup tox to test python 3.3 support
+*** TODO Body, features, etc. -- More todos!

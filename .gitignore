@@ -16,3 +16,4 @@ dist/*
 log*
 build/*
 *.swp
+htmlcov
