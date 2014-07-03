@@ -25,7 +25,7 @@ class GetCategoryList(QueryOperation):
     input_field = MultiParam('titles', key_prefix=False)
     fields = [StaticParam('generator', 'categories'),
               StaticParam('prop', 'categoryinfo'),
-              SingleParam('gclshow', '')]  # hidden, !hidden
+              SingleParam('show', '')]  # hidden, !hidden
     output_type = [CategoryInfo]
     examples = [OperationExample('Physics')]
 
@@ -33,7 +33,8 @@ class GetCategoryList(QueryOperation):
         ret = []
         for k, pid_dict in query_resp['pages'].iteritems():
             cat_info = CategoryInfo.from_query(pid_dict,
-                                               source=self.source)
+                                               source=self.source,
+                                               **pid_dict['categoryinfo'])
             if cat_info.page_id < 0:
                 continue
             ret.append(cat_info)
