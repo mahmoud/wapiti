@@ -23,6 +23,8 @@ from utils import (PriorityQueue,
                    make_type_wrapper,
                    OperationExample)
 
+from request import MWResponse, WapitiException
+
 # TODO: handle automatic redirecting better
 # TODO: support batching and optimization limits
 # TODO: concurrency. get_current_task() -> get_current_tasks()
@@ -79,10 +81,6 @@ USER_AGENT = 'Wapiti/0.0.0 Mahmoud Hashemi mahmoud@hatnote.com'
 
 ALL = MaxInt('ALL')
 DEFAULT_MIN = 50
-
-
-class WapitiException(Exception):
-    pass
 
 
 class NoMoreResults(Exception):
@@ -172,6 +170,7 @@ def get_field_str(field):
         out_str += ' (%s)' % ', '.join(mods)
     return out_str
 
+
 def operation_signature_doc(operation):
     if operation.input_field is None:
         doc_input = 'None'
@@ -253,6 +252,7 @@ class OperationMeta(ABCMeta):
         ret += '\n'
         return ret
 
+
 class OperationQueue(object):
     # TODO: chunking/batching should probably happen here
     # with the assistance of another queue for prioritized params
@@ -325,13 +325,31 @@ class Operation(object):
         self.started = False
         self.results = OrderedDict()
 
-        subop_queues = [OperationQueue(0, type(self))]
+        ident_queue = OperationQueue(0, type(self))
+        subop_queues = [ident_queue]
         if self.subop_chain:
             subop_queues.extend([OperationQueue(i + 1, st) for i, st
                                  in enumerate(self.subop_chain)])
             subop_queues[1].enqueue_many(self.input_param_list,
                                          client=self.client)
         self.subop_queues = subop_queues
+
+    @property
+    def current_task(self):
+        if self.is_multiplexing:
+            return super(QueryOperation, self).get_current_task()
+        if not self.remaining:
+            return None
+        if len(self.subop_queues) == 1:
+            return self
+        for subop_queue in reversed(self.subop_queues):
+            while subop_queue:
+                subop = subop_queue.peek()
+                if subop.remaining:
+                    return subop
+                else:
+                    subop_queue.pop()
+        return None
 
     def get_progress(self):
         return len(self.results)
@@ -491,6 +509,21 @@ class QueryOperation(Operation):
             self._setup_multiplexing()
         else:
             self.is_multiplexing = False
+
+        self.complete_resps = OrderedDict()
+        self.incomplete_resps = OrderedDict()
+        first_resp = MWResponse(self.prepare_params(**self.kwargs),
+                                client=self.client)
+        self.incomplete_resps[first_resp.url] = first_resp
+
+    def process_responses(self):
+        for url, resp in self.incomplete_resps.items():
+            if not resp.is_complete:
+                continue
+            self.incomplete_resps.pop(url)
+            self.complete_resps[url] = resp
+            resp.do_complete()
+            self.store_results(self, resp)
 
     def _set_params(self):
         is_bot_op = self.is_bot_op
