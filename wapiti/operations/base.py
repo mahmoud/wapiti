@@ -424,10 +424,10 @@ class Operation(object):
         origin_queue = self.subop_queues[oqi]
         is_recursive = origin_queue.options.get('is_recursive')
         if is_recursive:
-            origin_queue.enqueue_many(results)
+            origin_queue.enqueue_many(results, client=self.client)
         if dqi < len(self.subop_queues):
             dest_queue = self.subop_queues[dqi]
-            dest_queue.enqueue_many(results)
+            dest_queue.enqueue_many(results, client=self.client)
         else:
             new_res = self._update_results(results)
         return new_res
@@ -523,7 +523,7 @@ class QueryOperation(Operation):
         subop_queue = self.subop_queues[0]
         chunk_size = self.per_query_param_limit
         for chunk in chunked_iter(self.input_param_list, chunk_size):
-            subop_queue.enqueue(tuple(chunk))  # TODO
+            subop_queue.enqueue(tuple(chunk), client=self.client)  # TODO
         return
 
     @property
