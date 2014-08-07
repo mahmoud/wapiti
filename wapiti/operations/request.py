@@ -29,6 +29,7 @@ class MWResponse(hematite_client.ClientResponse):
         self.raise_err = kw.pop('raise_err', True)
         self.raise_warn = kw.pop('raise_warn', False)
         self.client = kw.pop('client')
+        self.origin_op = kw.pop('origin_op')
         self.web_client = getattr(self.client,
                                   'web_client',
                                   DEFAULT_WEB_CLIENT)
