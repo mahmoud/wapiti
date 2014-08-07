@@ -112,7 +112,7 @@ class GetFlattenedCategory(Operation):
     Fetch all category's sub-categories.
     """
     subop_chain = [Tune(Recursive(GetSubcategoryInfos),
-                        priority='subcat_count')]
+                        priority_key='subcat_count')]
     examples = [OperationExample('Africa', 100)]
 
 
@@ -123,7 +123,7 @@ class GetCategoryRecursive(Operation):
     operation will prioritize the larger categories by default.
     """
     subop_chain = (GetFlattenedCategory,
-                   Tune(GetCategory, priority='total_count'))
+                   Tune(GetCategory, priority_key='total_count'))
     examples = [OperationExample('Africa', 100),
                 OperationExample('Lists of slang', 10)]
 
@@ -140,7 +140,7 @@ class GetCategoryArticlesRecursive(Operation):
     categories.
     """
     subop_chain = (GetFlattenedCategory,
-                   Tune(GetCategoryArticles, priority='page_count'))
+                   Tune(GetCategoryArticles, priority_key='page_count'))
     examples = [OperationExample('Africa', 100),
                 OperationExample('Lists of slang', 10)]
 

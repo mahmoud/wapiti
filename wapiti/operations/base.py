@@ -5,7 +5,6 @@ import json
 from abc import ABCMeta
 
 from collections import OrderedDict
-from functools import wraps
 
 import sys
 from os.path import dirname, abspath
@@ -15,13 +14,14 @@ import ransom
 import hematite
 from hematite import client as hematite_client  # tmp
 
-from params import SingleParam, StaticParam
+from params import SingleParam, StaticParam, MultiParam
 from models import get_unique_func, get_priority_func
 from utils import (PriorityQueue,
                    MaxInt,
                    chunked_iter,
                    make_type_wrapper,
                    OperationExample)
+from base_meta import OperationMeta
 
 from request import MWResponse, WapitiException
 
@@ -101,7 +101,7 @@ class MockClient(object):
 DEFAULT_CLIENT = MockClient()
 
 
-Tune = make_type_wrapper('Tune', [('priority', None), ('buffer', None)])
+Tune = make_type_wrapper('Tune', [('priority_key', None), ('buffer', None)])
 Recursive = make_type_wrapper('Recursive', [('is_recursive', True)])
 
 
@@ -142,115 +142,6 @@ class QueryLimit(LimitSpec):
 PL_50_500 = ParamLimit(50, 500)
 QL_50_500 = QueryLimit(50, 500, 10)
 DEFAULT_QUERY_LIMIT = QL_500_5000 = QueryLimit(500, 5000, 10)
-
-
-def get_inputless_init(old_init):
-    """
-    Used for Operations like get_random() which don't take an input
-    parameter.
-    """
-    if getattr(old_init, '_is_inputless', None):
-        return old_init
-    @wraps(old_init)
-    def inputless_init(self, limit=None, **kw):
-        kw['input_param'] = None
-        return old_init(self, limit=limit, **kw)
-    inputless_init._is_inputless = True
-    return inputless_init
-
-
-def get_field_str(field):
-    out_str = field.key
-    mods = []
-    if field.required:
-        mods.append('required')
-    if field.multi:
-        mods.append('multi')
-    if mods:
-        out_str += ' (%s)' % ', '.join(mods)
-    return out_str
-
-
-def operation_signature_doc(operation):
-    if operation.input_field is None:
-        doc_input = 'None'
-    else:
-        doc_input = operation.input_field.key
-    doc_output = operation.singular_output_type.__name__
-    doc_template = 'Input: %s\n'
-    if operation.is_bijective:
-        doc_template += 'Output: %s\n'
-    else:
-        doc_template += 'Output: List of %s\n'
-
-    print_fields = [f for f in getattr(operation, 'fields', [])
-                    if not isinstance(f, StaticParam)]
-    if print_fields:
-        doc_template += 'Options: '
-        doc_template += ','.join([get_field_str(f) for f in print_fields]) + '\n'
-
-    if hasattr(operation, 'examples'):
-        doc_template += 'Examples: \n\t'
-        doc_template += '\n\t'.join([repr(x) for x in operation.examples]) + '\n'
-
-    return doc_template % (doc_input, doc_output)
-
-
-class OperationMeta(ABCMeta):
-    _all_ops = []
-
-    def __new__(cls, name, bases, attrs):
-        ret = super(OperationMeta, cls).__new__(cls, name, bases, attrs)
-        if name == 'Operation' or name == 'QueryOperation':
-            return ret  # TODO: add elegance?
-        subop_chain = getattr(ret, 'subop_chain', [])
-        try:
-            input_field = ret.input_field
-        except AttributeError:
-            input_field = subop_chain[0].input_field
-            ret.input_field = input_field
-        if input_field is None:
-            ret.__init__ = get_inputless_init(ret.__init__)
-        else:
-            input_field.required = True
-        # TODO: run through subop_chain, checking the outputs match up
-        try:
-            output_type = ret.output_type
-        except AttributeError:
-            output_type = subop_chain[-1].singular_output_type
-            for st in subop_chain:
-                if not st.is_bijective:
-                    output_type = [output_type]
-                    break
-            ret.output_type = output_type
-
-        try:
-            ret.singular_output_type = ret.output_type[0]
-        except (TypeError, IndexError):
-            ret.singular_output_type = ret.output_type
-
-        # TODO: support manual overrides for the following?
-        ret.is_multiargument = getattr(input_field, 'multi', False)
-        ret.is_bijective = True
-        if type(output_type) is list and output_type:
-            ret.is_bijective = False
-
-        for ex in getattr(ret, 'examples', []):
-            ex.bind_op_type(ret)
-
-        ret.__doc__ = (ret.__doc__ and ret.__doc__ + '\n') or ''
-        ret.__doc__ += operation_signature_doc(ret)
-        cls._all_ops.append(ret)
-        return ret
-
-    @property
-    def help_str(self):
-        ret = '\n\t'.join([self.__name__] + self.__doc__.strip().split('\n'))
-
-        # TODO move options and examples to the __doc__
-
-        ret += '\n'
-        return ret
 
 
 class OperationQueue(object):
@@ -303,10 +194,6 @@ class OperationQueue(object):
 
 
 class Operation(object):
-    """
-    An abstract class connoting some semblance of statefulness and
-    introspection (e.g., progress monitoring).
-    """
     __metaclass__ = OperationMeta
 
     subop_chain = []
@@ -318,11 +205,12 @@ class Operation(object):
         self.api_url = self.client.api_url
         self.is_bot_op = self.client.is_bot
 
+        self.kwargs = kw
         self.set_input_param(input_param)
         self.set_limit(limit)
 
-        self.kwargs = kw
-        self.started = False
+        self.complete_resps = OrderedDict()
+        self.incomplete_resps = OrderedDict()
         self.results = OrderedDict()
 
         ident_queue = OperationQueue(0, type(self))
@@ -403,7 +291,6 @@ class Operation(object):
         return max(0, limit - len(self.results))
 
     def process(self):
-        self.started = True
         task = self.get_current_task()
         if self.client.debug:
             print self.__class__.__name__, self.remaining
@@ -489,6 +376,105 @@ class Operation(object):
         return tmpl % (cn, ip_disp, self.limit)
 
 
+from collections import Counter
+
+
+class ParameterQueue(object):
+    def __init__(self, qid, unique_key, priority_key):
+        self.qid = qid
+        self.unique_key = unique_key
+        self.unique_func = get_unique_func(unique_key)
+        self.priority_key = priority_key
+        self.priority_func = get_priority_func(priority_key)
+
+        self.queue = PriorityQueue()
+        self.counter = Counter()
+
+    def enqueue(self, param):
+        unique_key = self.unique_func(param)
+        if unique_key in self.counter:
+            self.counter[unique_key] += 1
+            return
+        self.counter[unique_key] = 1
+        priority = self.priority_func(param)
+        self.queue.add(param, priority)
+
+    def enqueue_many(self, params):
+        for param in params:
+            self.enqueue(param)
+        return
+
+
+class CompoundOperation(object):
+    def __init__(self, input_param, limit=None, **kw):
+        super(self, CompoundOperation).__init__(input_param, limit=limit, **kw)
+        param_queues = []
+        subop_types = []
+        subop_lists = []
+        for i, subop_type in enumerate(self.subop_chain):
+            options, unwrapped = get_unwrapped_options(subop_type)
+            unique_key = options.get('unique_key', 'unique_key')
+            priority_key = options.get('priority_key', 0)
+
+            p_queue = ParameterQueue(i, unique_key, priority_key)
+            param_queues.append(p_queue)
+            subop_types.append(subop_type)
+            subop_lists.append([])
+        self.param_queues = param_queues
+        self.subop_types = subop_types
+        self.subop_lists = subop_lists
+
+        first_op = subop_types[0](input_param, limit=ALL)
+        first_op._oqid = 0
+        subop_lists[0].append(first_op)
+        self.incomplete_resps.extend(first_op.incomplete_resps)
+        self.current_op = first_op
+
+    def process_responses(self):
+        cur_ops = set([resp.origin_op for resp in
+                       self.incomplete_resps.values()])
+        for op in cur_ops:
+            new_results = op.process_responses()
+            if not new_results:
+                continue
+            cur_qid = op._oqid
+            new_qid = cur_qid + 1
+            if new_qid == len(self.subop_types):
+                self.results.extend(new_results)
+            else:
+                new_type = self.subop_types[new_qid]
+                subop_list = self.subop_lists[new_qid]
+                if isinstance(new_type.input_field, SingleParam):
+                    new_ops = [new_type(input_param=nr) for nr in new_results]
+                elif isinstance(new_type.input_field, MultiParam):
+                    new_ops = [new_type(input_param=new_results)]
+                else:
+                    print 'warning, input_field is weird'
+                    new_ops = [new_type()]
+                for op in new_ops:
+                    op._oqid = new_qid
+                subop_list.extend(new_ops)
+                from itertools import chain
+                self.incomplete_resps.extend(chain([op.incomplete_resps
+                                                    for op in new_ops]))
+                for key, resp in self.incomplete_resps.items():
+                    if resp.is_complete:
+                        pass
+
+    def _generate_new_responses(self):
+        for param_queue in enumerate(self.param_queues):
+            if not param_queue:
+                continue
+
+            while param_queue:
+                subop = param_queue.peek()
+                if subop.remaining:
+                    return subop
+                else:
+                    subop_queue.pop()
+
+
+
 class QueryOperation(Operation):
     api_action = 'query'
     field_prefix = None        # e.g., 'gcm'
@@ -509,25 +495,41 @@ class QueryOperation(Operation):
             self._setup_multiplexing()
         else:
             self.is_multiplexing = False
+        self._init_requests()
 
-        self.complete_resps = OrderedDict()
-        self.incomplete_resps = OrderedDict()
-        first_resp = MWResponse(self.prepare_params(**self.kwargs),
-                                client=self.client)
-        self.incomplete_resps[first_resp.url] = first_resp
+    def get_current_responses(self):
+        return self.incomplete_resps.values()
 
     def process_responses(self):
+        new_results = []
         for url, resp in self.incomplete_resps.items():
             if not resp.is_complete:
                 continue
             self.incomplete_resps.pop(url)
             self.complete_resps[url] = resp
             resp.do_complete()
-            self.store_results(self, resp)
+            new_results.extend(self.store_results(self, resp))
+        return new_results
 
-    def _set_params(self):
+    def set_limit(self, limit):
+        super(QueryOperation, self).set_limit(limit)
         is_bot_op = self.is_bot_op
 
+        if self.input_field:
+            field_limit = self.input_field.limit or PL_50_500
+            try:
+                pq_pl = field_limit.get_limit(is_bot_op)
+            except AttributeError:
+                pq_pl = int(field_limit)
+            self.per_query_param_limit = pq_pl
+
+        try:
+            per_query_limit = self.per_query_limit.get_limit(is_bot_op)
+        except AttributeError:
+            per_query_limit = int(self.per_query_limit)
+        self.per_query_limit = per_query_limit
+
+    def _set_params(self):
         params = {}
         for field in self.fields:
             pref_key = field.get_key(self.field_prefix)
@@ -537,21 +539,25 @@ class QueryOperation(Operation):
             qp_key_pref = self.input_field.get_key(self.field_prefix)
             qp_val = self.input_field.get_value(self.input_param)
             params[qp_key_pref] = qp_val
-
-            field_limit = self.input_field.limit or PL_50_500
-            try:
-                pq_pl = field_limit.get_limit(is_bot_op)
-            except AttributeError:
-                pq_pl = int(field_limit)
-            self.per_query_param_limit = pq_pl
         self.params = params
-        try:
-            per_query_limit = self.per_query_limit.get_limit(is_bot_op)
-        except AttributeError:
-            per_query_limit = int(self.per_query_limit)
-        self.per_query_limit = per_query_limit
 
         return
+
+    def _init_requests(self):
+        resps = self.incomplete_resps
+
+        if self.is_bijective:
+            pq_pl = self.per_query_param_limit
+            for chunk in chunked_iter(self.input_param_list, pq_pl):
+                print chunk
+                resp = MWResponse(self.prepare_params(input_param_list=chunk),
+                                  client=self.client,
+                                  origin_op=self)
+                resps[resp.url] = resp
+        else:
+            resp = MWResponse(self.prepare_params(), client=self.client,
+                              origin_op=self)
+            resps[resp.url] = resp
 
     def _setup_multiplexing(self):
         subop_queue = self.subop_queues[0]
@@ -599,12 +605,24 @@ class QueryOperation(Operation):
             return super(QueryOperation, self).get_current_task()
         if not self.remaining:
             return None
-        params = self.prepare_params(**self.kwargs)
+        params = self.prepare_params()
         mw_call = MediaWikiCall(params, client=self.client)
         return mw_call
 
-    def prepare_params(self, **kw):
-        params = dict(self.params)
+    def prepare_params(self, input_param_list=None):
+        params = {}
+        input_param_list = input_param_list or self.input_param_list
+
+        if self.input_field:
+            qp_key_pref = self.input_field.get_key(self.field_prefix)
+            qp_val = self.input_field.get_value(input_param_list)
+            params[qp_key_pref] = qp_val
+
+        for field in self.fields:
+            pref_key = field.get_key(self.field_prefix)
+            kw_val = self.kwargs.get(field.key)
+            params[pref_key] = field.get_value(kw_val)
+
         if not self.is_bijective:
             params[self.field_prefix + 'limit'] = self.current_limit
         if self.last_cont_str:
@@ -638,8 +656,8 @@ class QueryOperation(Operation):
         return qc_val[next_key][self.cont_str_key]
 
     def store_results(self, task, resp):
-        if self.is_multiplexing:
-            return super(QueryOperation, self).store_results(task, resp)
+        #if self.is_multiplexing:
+        #    return super(QueryOperation, self).store_results(task, resp)
         if resp.notices:  # TODO: lift this
             self._notices = list(resp.notices)
             self._url = resp.url
@@ -654,8 +672,11 @@ class QueryOperation(Operation):
         except Exception:
             raise
         super(QueryOperation, self).store_results(task, new_results)
-        new_cont_str = self.get_cont_str(resp)
-        self.cont_strs.append(new_cont_str)
+        if not self.is_bijective and self.remaining:
+            self.cont_strs.append(self.get_cont_str(resp))
+            next_resp = MWResponse(self.prepare_params(), client=self.client,
+                                   origin_op=self)
+            self.incomplete_resps[next_resp.url] = next_resp
         return new_results
 
 
