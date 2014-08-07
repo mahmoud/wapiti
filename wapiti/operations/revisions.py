@@ -42,8 +42,8 @@ class GetRevisionInfos(GetPageRevisionInfos):
     output_type = RevisionInfo
     examples = [OperationExample(['538903663', '539916351', '531458383'])]
 
-    def prepare_params(self, *a, **kw):
-        ret = super(GetRevisionInfos, self).prepare_params()
+    def prepare_params(self, **kw):
+        ret = super(GetRevisionInfos, self).prepare_params(**kw)
         ret.pop(self.field_prefix + 'limit', None)
         return ret
 

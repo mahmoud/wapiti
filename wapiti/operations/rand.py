@@ -6,6 +6,7 @@ from params import StaticParam, SingleParam
 from models import PageInfo
 from utils import OperationExample, coerce_namespace
 
+
 class GetRandom(QueryOperation):
     """
     Fetch random pages using MediaWiki's Special:Random.
@@ -13,11 +14,12 @@ class GetRandom(QueryOperation):
     field_prefix = 'grn'
     fields = [StaticParam('generator', 'random'),
               StaticParam('prop', 'info'),
-              StaticParam('inprop', 'subjectid|talkid|protection'), 
+              StaticParam('inprop', 'subjectid|talkid|protection'),
               SingleParam('namespace', default='', coerce=coerce_namespace)]
     input_field = None
     output_type = [PageInfo]
     per_query_limit = QueryLimit(10, 20)
+    default_limit = 10
     examples = [OperationExample(doc='basic random')]
 
     def extract_results(self, query_resp):
