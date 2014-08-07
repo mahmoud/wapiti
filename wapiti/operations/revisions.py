@@ -52,7 +52,7 @@ class GetCurrentContent(QueryOperation):
     """
     Fetch full content for current (top) revision.
     """
-    input_field = SingleParam('titles', key_prefix=False, attr='title')
+    input_field = MultiParam('titles', key_prefix=False, attr='title')
     field_prefix = 'rv'
     fields = [StaticParam('prop', 'revisions'),
               MultiParam('prop', DEFAULT_PROPS + '|content'),
